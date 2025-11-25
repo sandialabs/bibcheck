@@ -74,7 +74,7 @@ func TestArticleMetadata(t *testing.T) {
 	apiKey, ok := os.LookupEnv("ELSEVIER_API_KEY")
 
 	if !ok {
-		t.Errorf("ELSEVIER_API_KEY not provided")
+		t.Skipf("ELSEVIER_API_KEY not provided")
 	}
 
 	client := NewClient(apiKey, WithTimeout(10*time.Second))
