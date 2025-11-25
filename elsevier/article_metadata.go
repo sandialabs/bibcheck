@@ -73,10 +73,10 @@ func (q *Query) toString() string {
 	return s
 }
 
-// SearchArticleMetadata searches for articles in ScienceDirect
+// ArticleMetadataRaw searches performs an Article Metadata query in ScienceDirect
 //
 // query: https://dev.elsevier.com/sd_article_meta_tips.html
-func (c *Client) SearchArticleMetadataRaw(query string, params *ArticleMetadataParams) (*ArticleMetadataResponse, error) {
+func (c *Client) ArticleMetadataRaw(query string, params *ArticleMetadataParams) (*ArticleMetadataResponse, error) {
 	endpoint := fmt.Sprintf("%s/content/metadata/article", c.baseUrl)
 
 	// Build query parameters
@@ -138,9 +138,9 @@ func (c *Client) SearchArticleMetadataRaw(query string, params *ArticleMetadataP
 	return &result, nil
 }
 
-// SearchArticleMetadata searches for articles in ScienceDirect
+// ArticleMetadata searches for articles in ScienceDirect
 //
 // query: https://dev.elsevier.com/sd_article_meta_tips.html
-func (c *Client) SearchArticleMetadata(query *Query, params *ArticleMetadataParams) (*ArticleMetadataResponse, error) {
-	return c.SearchArticleMetadataRaw(query.toString(), params)
+func (c *Client) ArticleMetadata(query *Query, params *ArticleMetadataParams) (*ArticleMetadataResponse, error) {
+	return c.ArticleMetadataRaw(query.toString(), params)
 }
