@@ -3,7 +3,6 @@ package elsevier
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -42,7 +41,7 @@ type Link struct {
 type ArticleEntry struct {
 	Identifier      string              `json:"dc:identifier"`
 	Title           string              `json:"dc:title"`
-	Creator         string              `json:"dc:creator"`
+	Creator         []string            `json:"dc:creator"`
 	PublicationName string              `json:"prism:publicationName"`
 	CoverDate       string              `json:"prism:coverDate"`
 	DOI             string              `json:"prism:doi"`
@@ -78,7 +77,7 @@ func (q *Query) toString() string {
 //
 // query: https://dev.elsevier.com/sd_article_meta_tips.html
 func (c *Client) SearchArticleMetadataRaw(query string, params *ArticleMetadataParams) (*ArticleMetadataResponse, error) {
-	// endpoint := fmt.Sprintf("%s/content/metadata/article", c.baseUrl)
+	endpoint := fmt.Sprintf("%s/content/metadata/article", c.baseUrl)
 
 	// Build query parameters
 	queryParams := url.Values{}
@@ -104,27 +103,19 @@ func (c *Client) SearchArticleMetadataRaw(query string, params *ArticleMetadataP
 	}
 
 	// Create request
-	// reqURL := fmt.Sprintf("%s?%s", endpoint, queryParams.Encode())
-	reqURL := fmt.Sprintf("https://google.com")
+	reqURL := fmt.Sprintf("%s?%s", endpoint, queryParams.Encode())
 	req, err := http.NewRequest(http.MethodGet, reqURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	// Set required headers
-	// req.Header.Set("X-ELS-APIKey", c.apiKey)
-	// req.Header.Set("Accept", "application/json")
-	// req.Header.Set("User-Agent", "github.com/sandialabs/bibcheck")
-	fmt.Println(req)
+	req.Header.Set("X-ELS-APIKey", c.apiKey)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "github.com/sandialabs/bibcheck")
 
 	// Execute request
-
-	proxyUrl, _ := http.ProxyFromEnvironment(req)
-	log.Println(proxyUrl)
-
-	// client := &http.Client{Timeout: c.timeout}
-	client := &http.Client{}
-	fmt.Print(client)
+	client := &http.Client{Timeout: c.timeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("http client error: %w", err)
@@ -138,6 +129,8 @@ func (c *Client) SearchArticleMetadataRaw(query string, params *ArticleMetadataP
 
 	// Parse response
 	var result ArticleMetadataResponse
+	// s, _ := io.ReadAll(resp.Body)
+	// fmt.Print(string(s))
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
