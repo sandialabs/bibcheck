@@ -79,7 +79,7 @@ func TestArticleMetadata(t *testing.T) {
 
 	client := NewClient(apiKey, WithTimeout(10*time.Second))
 
-	_, err := client.SearchArticleMetadata(&Query{
+	_, err := client.ArticleMetadata(&Query{
 		Authors: []string{"IDO, NOTEXIST"},
 	}, nil)
 	if err != nil {
