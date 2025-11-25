@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func TestDialProxy(t *testing.T) {
+func TestProxyReachable(t *testing.T) {
 
 	// Create a dummy request to extract proxy settings
 	// The URL matters because proxy selection can be URL-dependent
@@ -53,9 +53,9 @@ func TestDialProxy(t *testing.T) {
 	fmt.Println("Successfully connected to proxy")
 }
 
-func TestSimple(t *testing.T) {
+func TestElsevierReachable(t *testing.T) {
 
-	resp, err := http.Get("https://google.com")
+	resp, err := http.Get("https://api.elsevier.com")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -63,12 +63,10 @@ func TestSimple(t *testing.T) {
 
 	fmt.Println("Status:", resp.Status)
 
-	body, err := io.ReadAll(resp.Body)
+	_, err = io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	fmt.Println("Body:", string(body))
 }
 
 func TestArticleMetadata(t *testing.T) {
@@ -77,19 +75,14 @@ func TestArticleMetadata(t *testing.T) {
 
 	if !ok {
 		t.Errorf("ELSEVIER_API_KEY not provided")
-		return
 	}
 
 	client := NewClient(apiKey, WithTimeout(10*time.Second))
 
-	resp, err := client.SearchArticleMetadata(&Query{
-		Authors: []string{"Carl Pearson"},
+	_, err := client.SearchArticleMetadata(&Query{
+		Authors: []string{"IDO, NOTEXIST"},
 	}, nil)
 	if err != nil {
 		t.Errorf("elsevier client error: %v", err)
-		return
 	}
-
-	fmt.Println(resp)
-
 }
