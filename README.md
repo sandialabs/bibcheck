@@ -175,6 +175,21 @@ https://scholar.google.com/scholar?hl=en&as_sdt=0%2C32&q=Quantum+information&btn
 
 To list third-party licenses:
 
+
+```markdown
+{{ range . }}
+## {{ .Name }}
+
+* Name: {{ .Name }}
+* Version: {{ .Version }}
+* License: [{{ .LicenseName }}]({{ .LicenseURL }})
+
+```
+{{ .LicenseText }}
+```
+{{ end }}
+```
+
 ```bash
 go install github.com/google/go-licenses/v2@latest
 
