@@ -1,7 +1,6 @@
 package osti
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -23,14 +22,12 @@ func TestOstiGet(t *testing.T) {
 
 	resp, err := http.Get("https://www.osti.gov")
 	if err != nil {
-		log.Fatal(err)
+		t.Fatalf("http.Get error: %v", err)
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("Status:", resp.Status)
-
 	_, err = io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatalf("io.ReadAll error: %v", err)
 	}
 }
