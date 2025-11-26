@@ -35,12 +35,7 @@ func NewParseAuthorsRF() *openai.ResponseFormat {
 	}
 }
 
-type ParsedAuthors struct {
-	Authors    []string `json:"authors"`
-	Incomplete bool     `json:"has_et_al"`
-}
-
-func (w *Workflow) ParseAuthors(text string) (*ParsedAuthors, error) {
+func (w *Workflow) ParseAuthors(text string) (*entries.Authors, error) {
 	model := "meta-llama/Llama-3.3-70B-Instruct"
 
 	temp := new(float64)
@@ -71,7 +66,7 @@ func (w *Workflow) ParseAuthors(text string) (*ParsedAuthors, error) {
 		return nil, fmt.Errorf("expected one choice in response")
 	}
 
-	s := ParsedAuthors{}
+	s := entries.Authors{}
 	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &s); err != nil {
 		return &s, fmt.Errorf("couldn't unmarshal structured JSON response: %w", err)
 	}
