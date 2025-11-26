@@ -14,6 +14,11 @@ type Website struct {
 	URL     string   `json:"url"`
 }
 
+type Authors struct {
+	Authors    []string `json:"authors"`
+	Incomplete bool     `json:"has_et_al"`
+}
+
 type Parser interface {
 	ParseDOI(entry string) (string, error)
 	ParseArxiv(entry string) (string, error)
@@ -21,4 +26,8 @@ type Parser interface {
 	ParseOSTI(entry string) (string, error)
 	ParseWebsite(entry string) (*Website, error)
 	ParseSoftware(entry string) (*Software, error)
+
+	ParseAuthors(entry string) (*Authors, error)
+	ParseTitle(entry string) (string, error)
+	ParsePub(entry string) (string, error)
 }

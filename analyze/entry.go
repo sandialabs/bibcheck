@@ -16,7 +16,6 @@ import (
 const (
 	SearchStatusNotAttempted string = ""
 	SearchStatusDone         string = "done"
-	SearchStatusError        string = "error"
 )
 
 type Search struct {
@@ -42,36 +41,11 @@ type EntryAnalysis struct {
 	OSTI     Metadata
 	URL      Search
 	Web      Search
+	Elsevier Metadata
 }
 
-func (ea *EntryAnalysis) SetArxivSearchError(err error) {
-	ea.Arxiv.Status = SearchStatusError
-	ea.Arxiv.Error = err
-}
-
-func (ea *EntryAnalysis) SetCrossrefSearchError(err error) {
-	ea.Crossref.Status = SearchStatusError
-	ea.Crossref.Error = err
-}
-
-func (ea *EntryAnalysis) SetDOISearchError(err error) {
-	ea.DOIOrg.Status = SearchStatusError
-	ea.DOIOrg.Error = err
-}
-
-func (ea *EntryAnalysis) SetOSTISearchError(err error) {
-	ea.OSTI.Status = SearchStatusError
-	ea.OSTI.Error = err
-}
-
-func (ea *EntryAnalysis) SetWebSearchError(err error) {
-	ea.Web.Status = SearchStatusError
-	ea.Web.Error = err
-}
-
-func (ea *EntryAnalysis) SetURLSearchError(err error) {
-	ea.URL.Status = SearchStatusError
-	ea.URL.Error = err
+type EntryConfig struct {
+	ElsevierApiKey string
 }
 
 // analyze bib entry `text`
@@ -81,6 +55,7 @@ func Entry(text string, mode string,
 	extract documents.MetaExtractor,
 	entryParser entries.Parser,
 	searcher search.Searcher,
+	cfg *EntryConfig,
 ) (*EntryAnalysis, error) {
 
 	EA := &EntryAnalysis{}
@@ -88,7 +63,7 @@ func Entry(text string, mode string,
 	if mode == "crossref" {
 		result, err := CrossrefBibliography(text)
 		if err != nil {
-			EA.SetCrossrefSearchError(err)
+			EA.Crossref.Error = err
 		} else {
 			crossrefExists := (result.Entry != nil)
 			EA.Exists = crossrefExists
@@ -108,53 +83,17 @@ func Entry(text string, mode string,
 
 	// extract records
 
-	var arxiv string
-	var doi string
-	var osti string
 	var url string
-	var arxivError error
-	var doiError error
-	var ostiError error
 	var urlError error
 	var wg sync.WaitGroup
 
-	wg.Add(4)
-	go func() {
-		defer wg.Done()
-		arxiv, arxivError = entryParser.ParseArxiv(text)
-	}()
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		url, urlError = entryParser.ParseURL(text)
 	}()
-	go func() {
-		defer wg.Done()
-		osti, ostiError = entryParser.ParseOSTI(text)
-	}()
-	go func() {
-		defer wg.Done()
-		doi, doiError = entryParser.ParseDOI(text)
-	}()
-
 	wg.Wait()
 
-	if arxivError != nil {
-		log.Printf("arXiv extract error: %v", arxivError)
-	} else if arxiv != "" {
-		fmt.Println("Detected arXiv:", arxiv)
-	}
-	if doiError != nil {
-		log.Printf("DOI extract error: %v", doiError)
-		EA.SetDOISearchError(fmt.Errorf("extract DOI error: %w", doiError))
-	} else if doi != "" {
-		fmt.Println("Detected DOI:", doi)
-	}
-	if ostiError != nil {
-		log.Printf("OSTI extract error: %v", ostiError)
-		EA.SetDOISearchError(fmt.Errorf("extract OSTI error: %w", ostiError))
-	} else if osti != "" {
-		fmt.Println("Detected OSTI:", osti)
-	}
 	if urlError != nil {
 		log.Printf("extract URL error: %v", urlError)
 	} else if url != "" {
@@ -162,15 +101,19 @@ func Entry(text string, mode string,
 	}
 
 	// check DOI if present
-	if doi != "" {
+	doi, err := entryParser.ParseDOI(text)
+	if err != nil {
+		log.Printf("DOI extract error: %v", err)
+		EA.DOIOrg.Error = fmt.Errorf("ParseDOI error: %w", err)
+	} else if doi != "" {
+		log.Println("Detected DOI", doi)
 		doiExists, err := CheckDOI(doi)
 		if err != nil {
-			EA.SetDOISearchError(fmt.Errorf("doi.org check error: %w", err))
+			EA.DOIOrg.Error = fmt.Errorf("doi.org check error: %w", err)
 		} else {
 			EA.Exists = false
 			EA.DOIOrg.Status = SearchStatusDone
 			EA.DOIOrg.Found = doiExists
-
 			if doiExists {
 				EA.DOIOrg.Result = "doi.org entry found"
 			}
@@ -181,11 +124,16 @@ func Entry(text string, mode string,
 		}
 	}
 
-	// Search OSTI if present
-	if osti != "" {
+	// Check OSTI if present
+	osti, err := entryParser.ParseOSTI(text)
+	if err != nil {
+		log.Printf("OSTI extract error: %v", err)
+		EA.OSTI.Error = fmt.Errorf("ParseOSTI error: %w", err)
+	} else if osti != "" {
+		fmt.Println("Detected OSTI:", osti)
 		rec, err := GetOSTIRecord(osti, text)
 		if err != nil {
-			EA.SetOSTISearchError(fmt.Errorf("OSTI check error: %w", err))
+			EA.OSTI.Error = fmt.Errorf("OSTI check error: %w", err)
 		} else {
 			ostiExists := rec != nil
 			EA.Exists = ostiExists
@@ -202,10 +150,15 @@ func Entry(text string, mode string,
 	}
 
 	// Check arXiv if present
-	if arxiv != "" {
+	arxiv, err := entryParser.ParseArxiv(text)
+	if err != nil {
+		log.Printf("arXiv parse error: %v", err)
+		EA.Arxiv.Error = err
+	} else if arxiv != "" {
+		fmt.Println("Detected arXiv:", arxiv)
 		rec, err := GetArxivMetadata(arxiv, text)
 		if err != nil {
-			EA.SetArxivSearchError(fmt.Errorf("arxiv check error: %w", err))
+			EA.Arxiv.Error = fmt.Errorf("arxiv check error: %w", err)
 		} else {
 			arxivExists := rec != nil
 			EA.Exists = arxivExists
@@ -218,6 +171,62 @@ func Entry(text string, mode string,
 			}
 			return EA, nil
 		}
+	}
+
+	log.Println("Extracting metadata for Elsevier search...")
+	var authorsErr, titleErr, pubErr error
+	var authors *entries.Authors
+	var title, pub string
+	wg.Add(3)
+	go func() {
+		defer wg.Done()
+		authors, authorsErr = entryParser.ParseAuthors(text)
+	}()
+	go func() {
+		defer wg.Done()
+		title, titleErr = entryParser.ParseTitle(text)
+	}()
+	go func() {
+		defer wg.Done()
+		pub, pubErr = entryParser.ParsePub(text)
+	}()
+	wg.Wait()
+
+	// Elsevier search
+	if authorsErr != nil {
+		log.Printf("ParseAuthors error: %v\n", authorsErr)
+		EA.Elsevier.Error = fmt.Errorf("ParseAuthors error: %w", authorsErr)
+	} else if titleErr != nil {
+		log.Printf("ParseTitle error: %v\n", titleErr)
+		EA.Elsevier.Error = fmt.Errorf("ParseTitle error: %w", titleErr)
+	} else if pubErr != nil {
+		log.Printf("ParsePub error: %v\n", pubErr)
+		EA.Elsevier.Error = fmt.Errorf("ParsePub error: %w", pubErr)
+	} else if len(authors.Authors) > 0 && title != "" && pub != "" {
+		client := elsevier.NewClient(cfg.ElsevierApiKey)
+
+		resp, err := client.Search(&elsevier.SearchQuery{
+			Title:   "title",
+			Authors: strings.Join(authors.Authors, " AND "),
+			Pub:     pub,
+		})
+
+		if err != nil {
+			log.Printf("elsevier.Search error: %v", err)
+			EA.Elsevier.Error = fmt.Errorf("elsevier.Search error: %w", err)
+		} else if len(resp.Results) < 1 {
+			log.Printf("elsevier.Search returned no results")
+			EA.Elsevier.Found = false
+			EA.Elsevier.Result = "no matching results from Elsevier"
+		} else {
+			best := resp.Results[0]
+			EA.Elsevier.Found = true
+			EA.Elsevier.Result = best.ToString()
+		}
+
+	} else {
+		log.Println("unable to parse sufficient metadata for Elsevier search")
+		EA.Elsevier.Result = "unable to parse sufficient metadata for Elsevier search"
 	}
 
 	kind, err := class.Classify(text)
