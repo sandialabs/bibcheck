@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 type SearchQuery struct {
@@ -40,6 +41,37 @@ type SearchResult struct {
 type Pages struct {
 	First string `json:"first"`
 	Last  string `json:"last"`
+}
+
+func (sr *SearchResult) ToString() string {
+
+	s := ""
+
+	if len(sr.Authors) > 0 {
+		s += strings.Join(sr.Authors, ", ") + "."
+	}
+
+	if sr.Title != "" {
+		s += " " + sr.Title + "."
+	}
+
+	if sr.SourceTitle != "" {
+		s += " In " + sr.SourceTitle
+
+		if sr.VolumeIssue != "" {
+			s += " (" + sr.VolumeIssue + ")"
+		}
+		if sr.Pages.First != "" {
+			s += " " + sr.Pages.First
+		}
+		if sr.Pages.Last != "" {
+			s += "-" + sr.Pages.Last
+		}
+
+		s += "."
+
+	}
+
 }
 
 // Search searches for articles in ScienceDirect API v2
