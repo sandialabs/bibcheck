@@ -1,7 +1,6 @@
 package shirty
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -40,6 +39,4 @@ func TestShirtyChatGptOss120b(t *testing.T) {
 	if choice.Message.Role != openai.RoleAssistant {
 		t.Fatalf("expected assistant role in response")
 	}
-
-	fmt.Println(choice.Message.Content)
 }
