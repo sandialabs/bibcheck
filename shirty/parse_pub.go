@@ -43,11 +43,7 @@ func (w *Workflow) ParsePub(text string) (string, error) {
 - Produce JSON
 - Extract a journal or book title; DO NOT EXTRACT the title of the article (or whatever) itself. 
 - Extract the journal or book title exactly as it appears in the bibliography entry
-<<<<<<< HEAD
 - If there is no journal or book title matching the above rules, produce an empty string.
-=======
-- If there is no journal or book title, produce an empty string.
->>>>>>> 9fc81f2 (add shirty.ParsePub)
 `),
 			openai.MakeUserMessage(text),
 		},
