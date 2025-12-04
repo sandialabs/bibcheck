@@ -41,9 +41,9 @@ func (w *Workflow) ParsePub(text string) (string, error) {
 		Messages: []openai.Message{
 			openai.MakeSystemMessage(`Extract the title of the journal or book from the provided bibliography entry.
 - Produce JSON
-- Extract a journal or book title; DO NOT EXTRACT the title of the article (or whatever) itself. 
-- Extract the journal or book title exactly as it appears in the bibliography entry
-- If there is no journal or book title matching the above rules, produce an empty string.
+- Extract a journal or book title; DO NOT EXTRACT the title of the article (or whatever) itself.
+- Extract the journal or book title exactly as it appears in the bibliography entry.
+- If there is no such journal or book title, produce an empty string.
 `),
 			openai.MakeUserMessage(text),
 		},

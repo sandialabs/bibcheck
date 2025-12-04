@@ -72,6 +72,7 @@ func (sr *SearchResult) ToString() string {
 
 	}
 
+	return s
 }
 
 // Search searches for articles in ScienceDirect API v2
