@@ -17,17 +17,17 @@ import (
 
 // DOIResponse represents the JSON response from the DOI REST API
 type DOIResponse struct {
-	ResponseCode int     `json:"responseCode"`
-	Handle       string  `json:"handle"`
-	Values       []Value `json:"values,omitempty"`
-	Message      string  `json:"message,omitempty"`
+	ResponseCode   int             `json:"responseCode"`
+	Handle         string          `json:"handle"`
+	RecordElements []RecordElement `json:"values,omitempty"`
+	Message        string          `json:"message,omitempty"`
 }
 
-// Value represents a DOI record element
-type Value struct {
+// RecordElement represents a DOI record element
+type RecordElement struct {
 	Index     int         `json:"index"`
 	Type      string      `json:"type"`
-	Data      interface{} `json:"data"`
+	Value     ValueData   `json:"data"`
 	Timestamp string      `json:"timestamp"`
 	TTL       interface{} `json:"ttl"` // Can be int or string
 }
@@ -161,18 +161,4 @@ func resolveDOIWithParams(doi string, params url.Values) (*DOIResponse, error) {
 	default:
 		return nil, fmt.Errorf("unknown response code %d: %s", doiResp.ResponseCode, doiResp.Message)
 	}
-}
-
-// GetURL extracts the URL from a DOI response (convenience function)
-func GetURL(resp *DOIResponse) (string, error) {
-	for _, value := range resp.Values {
-		if value.Type == "URL" {
-			if data, ok := value.Data.(map[string]interface{}); ok {
-				if val, ok := data["value"].(string); ok {
-					return val, nil
-				}
-			}
-		}
-	}
-	return "", fmt.Errorf("no URL found in DOI response")
 }
