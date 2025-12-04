@@ -46,8 +46,11 @@ func (w *Workflow) ParseWebsite(text string) (*entries.Website, error) {
 		Model: model,
 		Messages: []openai.Message{
 			openai.MakeSystemMessage(`Extract the title, authors, and URL of the website from this bibliography entry.
-If not provided, leave empty.
-Produce JSON.`),
+- Produce JSON
+- If the bibliography entry does not have a URL, produce an empty string for all values
+- If the bibliography entry is not a website, produce an empty string for all values
+- If the title or authors are missing, produce an empty string for the corresponding value
+`),
 			openai.MakeUserMessage(text),
 		},
 		ResponseFormat: NewParseWebsiteRF(),

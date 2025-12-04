@@ -10,7 +10,6 @@ import (
 )
 
 func TestOstiDial(t *testing.T) {
-
 	conn, err := net.DialTimeout("tcp", "osti.gov:443", 5*time.Second)
 	if err != nil {
 		log.Fatal("DialTimeout error: ", err)

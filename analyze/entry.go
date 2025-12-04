@@ -45,7 +45,7 @@ type EntryAnalysis struct {
 }
 
 type EntryConfig struct {
-	ElsevierApiKey string
+	ElsevierClient *elsevier.Client
 }
 
 // analyze bib entry `text`
@@ -193,172 +193,155 @@ func Entry(text string, mode string,
 	wg.Wait()
 
 	// Elsevier search
-	if authorsErr != nil {
-		log.Printf("ParseAuthors error: %v\n", authorsErr)
-		EA.Elsevier.Error = fmt.Errorf("ParseAuthors error: %w", authorsErr)
-	} else if titleErr != nil {
-		log.Printf("ParseTitle error: %v\n", titleErr)
-		EA.Elsevier.Error = fmt.Errorf("ParseTitle error: %w", titleErr)
-	} else if pubErr != nil {
-		log.Printf("ParsePub error: %v\n", pubErr)
-		EA.Elsevier.Error = fmt.Errorf("ParsePub error: %w", pubErr)
-	} else if len(authors.Authors) > 0 && title != "" && pub != "" {
-		client := elsevier.NewClient(cfg.ElsevierApiKey)
+	if cfg != nil && cfg.ElsevierClient != nil {
 
-		resp, err := client.Search(&elsevier.SearchQuery{
-			Title:   "title",
-			Authors: strings.Join(authors.Authors, " AND "),
-			Pub:     pub,
-		})
+		if authorsErr != nil {
+			log.Printf("ParseAuthors error: %v\n", authorsErr)
+			EA.Elsevier.Error = fmt.Errorf("ParseAuthors error: %w", authorsErr)
+		} else if titleErr != nil {
+			log.Printf("ParseTitle error: %v\n", titleErr)
+			EA.Elsevier.Error = fmt.Errorf("ParseTitle error: %w", titleErr)
+		} else if pubErr != nil {
+			log.Printf("ParsePub error: %v\n", pubErr)
+			EA.Elsevier.Error = fmt.Errorf("ParsePub error: %w", pubErr)
+		} else if len(authors.Authors) > 0 && title != "" && pub != "" {
+			resp, err := cfg.ElsevierClient.Search(&elsevier.SearchQuery{
+				Title:   "title",
+				Authors: strings.Join(authors.Authors, " AND "),
+				Pub:     pub,
+			})
 
-		if err != nil {
-			log.Printf("elsevier.Search error: %v", err)
-			EA.Elsevier.Error = fmt.Errorf("elsevier.Search error: %w", err)
-		} else if len(resp.Results) < 1 {
-			log.Printf("elsevier.Search returned no results")
-			EA.Elsevier.Found = false
-			EA.Elsevier.Result = "no matching results from Elsevier"
-		} else {
-			best := resp.Results[0]
-			EA.Elsevier.Found = true
-			EA.Elsevier.Result = best.ToString()
-		}
-
-	} else {
-		log.Println("unable to parse sufficient metadata for Elsevier search")
-		EA.Elsevier.Result = "unable to parse sufficient metadata for Elsevier search"
-	}
-
-	kind, err := class.Classify(text)
-	if err != nil {
-		log.Printf("error classifying citation: %v", err)
-		log.Println("assuming unknown kind")
-		kind = entries.KindUnknown
-	}
-	fmt.Printf("Kind: %s\n", kind)
-
-	// Search web
-	if kind == entries.KindWebsite {
-
-		// try direct URL access
-		if url != "" {
-			fmt.Println("direct URL access...")
-			exists, comment, err := CompareURL(url, text, comp, extract)
 			if err != nil {
-				EA.SetURLSearchError(err)
-				return EA, nil
+				log.Printf("elsevier.Search error: %v", err)
+				EA.Elsevier.Error = fmt.Errorf("elsevier.Search error: %w", err)
+			} else if len(resp.Results) < 1 {
+				log.Printf("elsevier.Search returned no results")
+				EA.Elsevier.Found = false
+				EA.Elsevier.Result = "no matching results from Elsevier"
+			} else {
+				best := resp.Results[0]
+				EA.Elsevier.Found = true
+				EA.Elsevier.Result = best.ToString()
 			}
-			EA.Exists = exists
-			EA.URL.Comment = comment
-			EA.URL.Exists = exists
-			EA.URL.Status = SearchStatusDone
 
-			if EA.Exists {
-				return EA, nil
-			}
+		} else {
+			log.Println("unable to parse sufficient metadata for Elsevier search")
+			EA.Elsevier.Result = "unable to parse sufficient metadata for Elsevier search"
 		}
+	}
 
-		website, err := entryParser.ParseWebsite(text)
-		if err != nil {
-			EA.SetWebSearchError(err)
-			return EA, nil
-		}
-
+	website, err := entryParser.ParseWebsite(text)
+	if err != nil {
+		msg := fmt.Sprintf("ParseWebsite error: %v", err)
+		log.Println(msg)
+	} else {
 		fmt.Println("Website:")
 		fmt.Println("  URL:    ", website.URL)
 		fmt.Println("  Title:  ", website.Title)
 		fmt.Println("  Authors:", strings.Join(website.Authors, ", "))
+	}
 
-		if searcher != nil {
-			exists, comment, err := searcher.SearchWebsite(website)
-			if err != nil {
-				EA.SetWebSearchError(err)
-			} else {
-
-				EA.Exists = exists
-				EA.Web.Status = SearchStatusDone
-				EA.Web.Comment = comment
-				EA.Web.Exists = exists
-			}
-		}
-
-		return EA, nil
-	} else if kind == entries.KindSoftwarePackage {
-
-		software, err := entryParser.ParseSoftware(text)
+	// try direct URL access
+	if website != nil && website.URL != "" {
+		fmt.Println("direct URL access...")
+		exists, comment, err := CompareURL(url, text, comp, extract)
 		if err != nil {
-			EA.SetWebSearchError(err)
+			EA.URL.Error = err
 			return EA, nil
 		}
+		EA.Exists = exists
+		EA.URL.Comment = comment
+		EA.URL.Exists = exists
+		EA.URL.Status = SearchStatusDone
 
-		// try direct URL access
-		if software.HomepageUrl != "" {
-			fmt.Println("direct URL access...")
-			exists, comment, err := CompareURL(software.HomepageUrl, text, comp, extract)
-			if err != nil {
-				EA.SetURLSearchError(err)
-				return EA, nil
-			}
-			EA.Exists = exists
-			EA.URL.Comment = comment
-			EA.URL.Exists = exists
-			EA.URL.Status = SearchStatusDone
-
-			if EA.Exists {
-				return EA, nil
-			}
+		if EA.Exists {
+			return EA, nil
 		}
-
-		if searcher != nil {
-			exists, comment, err := searcher.SearchSoftware(software)
-			if err != nil {
-				EA.SetWebSearchError(err)
-			} else {
-				EA.Exists = exists
-				EA.Web.Status = SearchStatusDone
-				EA.Web.Comment = comment
-				EA.Web.Exists = exists
-			}
-		} else {
-			EA.Web.Status = SearchStatusNotAttempted
-			EA.Web.Comment = "Search capability not available"
-		}
-		return EA, nil
-	} else {
-
-		result, err := CrossrefBibliography(text)
-		if err != nil {
-			EA.SetCrossrefSearchError(err)
-		} else {
-			crossrefExists := result.Entry != nil
-			EA.Exists = crossrefExists
-			EA.Crossref.Status = SearchStatusDone
-			EA.Crossref.Found = crossrefExists
-
-			if crossrefExists {
-				EA.Crossref.Result = result.Entry.ToString()
-			} else {
-				EA.Crossref.Result = result.Comment
-			}
-
-			if crossrefExists {
-				return EA, nil
-			}
-		}
-
-		if searcher != nil {
-			exists, comment, err := searcher.SearchEntry(text)
-			if err != nil {
-				EA.SetWebSearchError(err)
-			} else {
-				EA.Exists = exists
-				EA.Web.Status = SearchStatusDone
-				EA.Web.Comment = comment
-				EA.Web.Exists = exists
-			}
-		}
-		return EA, nil
 	}
+
+	// try web search
+	if website != nil && searcher != nil {
+		exists, comment, err := searcher.SearchWebsite(website)
+		if err != nil {
+			EA.Web.Error = err
+		} else {
+			EA.Exists = exists
+			EA.Web.Status = SearchStatusDone
+			EA.Web.Comment = comment
+			EA.Web.Exists = exists
+		}
+	}
+
+	software, err := entryParser.ParseSoftware(text)
+	if err != nil {
+		log.Printf("ParseSoftware error: %v", err)
+	}
+
+	// try direct URL access
+	if software != nil && software.HomepageUrl != "" {
+		fmt.Println("direct URL access...")
+		exists, comment, err := CompareURL(software.HomepageUrl, text, comp, extract)
+		if err != nil {
+			EA.URL.Error = err
+			return EA, nil
+		}
+		EA.Exists = exists
+		EA.URL.Comment = comment
+		EA.URL.Exists = exists
+		EA.URL.Status = SearchStatusDone
+
+		if EA.Exists {
+			return EA, nil
+		}
+	}
+
+	if software != nil && searcher != nil {
+		exists, comment, err := searcher.SearchSoftware(software)
+		if err != nil {
+			EA.Web.Error = err
+		} else {
+			EA.Exists = exists
+			EA.Web.Status = SearchStatusDone
+			EA.Web.Comment = comment
+			EA.Web.Exists = exists
+		}
+	} else {
+		EA.Web.Status = SearchStatusNotAttempted
+		EA.Web.Comment = "Search capability not available"
+	}
+
+	result, err := CrossrefBibliography(text)
+	if err != nil {
+		EA.Crossref.Error = err
+	} else {
+		crossrefExists := result.Entry != nil
+		EA.Exists = crossrefExists
+		EA.Crossref.Status = SearchStatusDone
+		EA.Crossref.Found = crossrefExists
+
+		if crossrefExists {
+			EA.Crossref.Result = result.Entry.ToString()
+		} else {
+			EA.Crossref.Result = result.Comment
+		}
+
+		if crossrefExists {
+			return EA, nil
+		}
+	}
+
+	if result != nil && searcher != nil {
+		exists, comment, err := searcher.SearchEntry(text)
+		if err != nil {
+			EA.Web.Error = err
+		} else {
+			EA.Exists = exists
+			EA.Web.Status = SearchStatusDone
+			EA.Web.Comment = comment
+			EA.Web.Exists = exists
+		}
+	}
+	return EA, nil
 }
 
 // analyze entry `id` from base-64 encoded pdf file `encoded`
@@ -369,6 +352,7 @@ func EntryFromBase64(encoded string, id int, mode string,
 	docMeta documents.MetaExtractor,
 	entryParser entries.Parser,
 	searcher search.Searcher,
+	cfg *EntryConfig,
 ) (*EntryAnalysis, error) {
 
 	if mode == "" {
@@ -384,7 +368,7 @@ func EntryFromBase64(encoded string, id int, mode string,
 	}
 	fmt.Println(text)
 
-	return Entry(text, mode, comp, class, docMeta, entryParser, searcher)
+	return Entry(text, mode, comp, class, docMeta, entryParser, searcher, cfg)
 }
 
 // analyze entry `id` from document text `text`
@@ -395,6 +379,7 @@ func EntryFromText(text string, id int, mode string,
 	docMeta documents.MetaExtractor,
 	entryParser entries.Parser,
 	searcher search.Searcher,
+	cfg *EntryConfig,
 ) (*EntryAnalysis, error) {
 
 	if mode == "" {
@@ -410,5 +395,5 @@ func EntryFromText(text string, id int, mode string,
 	}
 	fmt.Println(text)
 
-	return Entry(text, mode, comp, class, docMeta, entryParser, searcher)
+	return Entry(text, mode, comp, class, docMeta, entryParser, searcher, cfg)
 }
