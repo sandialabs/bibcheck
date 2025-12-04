@@ -122,6 +122,21 @@ Then navigate to http://localhost:8080 in your browser
 * Perplexity really wants to summarize the results.
 * Some papers are easily found on Google Scholar, but Perplexity does not surface them.
 
+## "Search" strategy
+
+* Unique ID lookup
+  * Some references have a unique ID:
+      * OSTI
+      * DOI
+      * ArXiv
+  * We can directly looks these up:
+      * OSTI directly provides metadata in the response
+      * ArXiv directly provides metadata in the response
+      * doi.org does NOT provide metadata, but at least we can confirm the DOI points at _something_
+  * For OSTI and ArXiv, we can parse the bibliography entry, and present it side-by-side with the retrieve metadata for comparison
+* URL lookup: some entries have a URL (e.g. a documentation website, a blog post, a software homepage, etc)
+    * We can retrieve the contents of the URL, extract the metadata, and present it side-by-side with the bibliography entry
+
 ## Roadmap:
 
 * docker/podman build instructions
