@@ -49,6 +49,11 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 				shirty.WithBaseUrl(shirtyBaseUrl))
 		}
 
+		var elsevierClient *elsevier.Client
+		if elsevierApiKey != "" {
+			elsevierClient = elsevier.NewClient(elsevierApiKey)
+		}
+
 		// different representations of the file
 		var pdfEncoded string
 		var pdfText string
@@ -123,12 +128,16 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 
 		}
 
+		cfg := &analyze.EntryConfig{
+			ElsevierClient: elsevierClient,
+		}
+
 		for i := entryStart; i < entryStart+entryCount; i++ {
 			var ea *analyze.EntryAnalysis
 			if docRawExtract != nil {
-				ea, err = analyze.EntryFromBase64(pdfEncoded, i, pipeline, comp, class, docRawExtract, docMeta, entryParser, searcher)
+				ea, err = analyze.EntryFromBase64(pdfEncoded, i, pipeline, comp, class, docRawExtract, docMeta, entryParser, searcher, cfg)
 			} else if docTextExtract != nil {
-				ea, err = analyze.EntryFromText(pdfText, i, pipeline, comp, class, docTextExtract, docMeta, entryParser, searcher)
+				ea, err = analyze.EntryFromText(pdfText, i, pipeline, comp, class, docTextExtract, docMeta, entryParser, searcher, cfg)
 			} else {
 				log.Fatalf("requires something that can extract a bib entry from a pdf")
 			}

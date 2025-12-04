@@ -104,7 +104,7 @@ func parse_authors_impl(t *testing.T, entry string, expected entries.Authors) {
 	}
 
 	for ei, e := range expected.Authors {
-		if strings.ToLower(e) != strings.ToLower(actual.Authors[ei]) {
+		if !strings.EqualFold(e, actual.Authors[ei]) {
 			t.Errorf("expected %s, got %s", e, actual.Authors[ei])
 		}
 	}
