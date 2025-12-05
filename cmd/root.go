@@ -206,6 +206,7 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 				row = append(row, "")
 			}
 			t.AppendRow(row)
+			t.AppendSeparator()
 		}
 
 		t.Render()
