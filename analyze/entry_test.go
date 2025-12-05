@@ -44,7 +44,7 @@ through Hierarchical Communicators. Parallel Comput. 76 (2018),
 			}
 		}
 	} else {
-		t.Skip("no SHIRTY_API_KEY not provided")
+		t.Skip("SHIRTY_API_KEY not provided")
 	}
 }
 
@@ -66,7 +66,7 @@ sparse/dense linear algebra and graph kernels. arXiv preprint arXiv:2103.11991 -
 			}
 		}
 	} else {
-		t.Skip("no SHIRTY_API_KEY not provided")
+		t.Skip("SHIRTY_API_KEY not provided")
 	}
 
 }
@@ -88,7 +88,7 @@ through Hierarchical Communicators. Parallel Comput. 76 (2018),
 			t.Fatalf("made up an Arxiv entry")
 		}
 	} else {
-		t.Skip("no SHIRTY_API_KEY not provided")
+		t.Skip("SHIRTY_API_KEY not provided")
 	}
 
 }
@@ -218,7 +218,7 @@ user_guide.html`
 		}
 
 	} else {
-		t.Skip("no SHIRTY_API_KEY not provided")
+		t.Skip("SHIRTY_API_KEY not provided")
 	}
 
 }
