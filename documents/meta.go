@@ -19,5 +19,23 @@ type MetaExtractor interface {
 }
 
 func (m *Metadata) ToString() string {
-	return fmt.Sprintf("%s. %s. %s", m.Title, strings.Join(m.Authors, ", "), m.PublicationDate)
+
+	s := ""
+	if len(m.Authors) > 0 {
+		s += strings.Join(m.Authors, ", ") + "."
+	}
+	if m.Title != "" {
+		if s != "" {
+			s += " "
+		}
+		s += m.Title
+	}
+	if m.PublicationDate != "" {
+		if s != "" {
+			s += " "
+		}
+		s += fmt.Sprintf("(%s)", m.PublicationDate)
+	}
+
+	return s
 }
