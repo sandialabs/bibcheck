@@ -4,9 +4,13 @@ package analyze
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"net/http"
+	"net/url"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/entries"
@@ -59,6 +63,12 @@ type CrossrefResult struct {
 	Error   error
 }
 
+type OnlineResult struct {
+	Status   string
+	Metadata *documents.Metadata
+	Error    error
+}
+
 type EntryAnalysis struct {
 	Exists bool // overall result
 
@@ -67,12 +77,39 @@ type EntryAnalysis struct {
 	DOIOrg   DOIOrgResult
 	Elsevier ElsevierResult
 	OSTI     OSTIResult
-	URL      Search
+	Online   OnlineResult
 	Web      Search
 }
 
 type EntryConfig struct {
 	ElsevierClient *elsevier.Client
+	ShirtyWorkflow *shirty.Workflow
+}
+
+func retrieveUrl(url string) ([]byte, string, error) {
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	log.Println("GET", url)
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, "", fmt.Errorf("http.Client.Get error: %w", err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", fmt.Errorf("read body error: %w", err)
+	}
+
+	// Try to get content type from header first
+	contentType := resp.Header.Get("Content-Type")
+
+	// If header is missing or generic, detect from content
+	if contentType == "" || contentType == "application/octet-stream" {
+		contentType = http.DetectContentType(body)
+	}
+
+	return body, contentType, nil
 }
 
 // analyze bib entry `text`
@@ -81,7 +118,6 @@ func Entry(text string, mode string,
 	class entries.Classifier,
 	extract documents.MetaExtractor,
 	entryParser entries.Parser,
-	searcher search.Searcher,
 	cfg *EntryConfig,
 ) (*EntryAnalysis, error) {
 
@@ -223,114 +259,44 @@ func Entry(text string, mode string,
 		return EA, nil
 	}
 
-	url, urlError := entryParser.ParseURL(text)
-	if urlError != nil {
-		log.Printf("extract URL error: %v", urlError)
-	} else if url != "" {
-		fmt.Println("Detected URL:", url)
-	}
-
-	website, err := entryParser.ParseWebsite(text)
-	if err != nil {
-		msg := fmt.Sprintf("ParseWebsite error: %v", err)
-		log.Println(msg)
+	// otherwise, let's try to treat this as a generic online resource
+	if online, err := entryParser.ParseOnline(text); err != nil {
+		EA.Online.Error = fmt.Errorf("ParseOnline error: %v", err)
+	} else if _, err := url.Parse(online.URL); err != nil {
+		EA.Online.Error = fmt.Errorf("ParseOnline provided a URL that did not parse: %v", err)
 	} else {
-		fmt.Println("Website:")
-		fmt.Println("  URL:    ", website.URL)
-		fmt.Println("  Title:  ", website.Title)
-		fmt.Println("  Authors:", strings.Join(website.Authors, ", "))
-	}
 
-	// try direct URL access
-	if website != nil && website.URL != "" {
-		fmt.Println("direct URL access...")
-		exists, comment, err := CompareURL(url, text, comp, extract)
-		if err != nil {
-			EA.URL.Error = err
-			return EA, nil
-		}
-		EA.Exists = exists
-		EA.URL.Comment = comment
-		EA.URL.Exists = exists
-		EA.URL.Status = SearchStatusDone
+		fmt.Println("Online:")
+		fmt.Println("  URL:    ", online.URL)
+		fmt.Println("  Title:  ", online.Title)
+		fmt.Println("  Authors:", strings.Join(online.Authors, ", "))
 
-		if EA.Exists {
-			return EA, nil
-		}
-	}
-
-	// try web search
-	if website != nil && searcher != nil {
-		exists, comment, err := searcher.SearchWebsite(website)
-		if err != nil {
-			EA.Web.Error = err
+		if body, contentType, err := retrieveUrl(online.URL); err != nil {
+			EA.Online.Error = fmt.Errorf("retrieve url error: %w", err)
 		} else {
-			EA.Exists = exists
-			EA.Web.Status = SearchStatusDone
-			EA.Web.Comment = comment
-			EA.Web.Exists = exists
+			log.Println("retrieved URL content type:", contentType)
+
+			switch contentType {
+			case "application/pdf":
+				if meta, err := extract.PDFMetadata(body); err != nil {
+					EA.Online.Error = fmt.Errorf("extract.PDFMetadata error: %w", err)
+				} else {
+					EA.Online.Metadata = meta
+					EA.Online.Status = SearchStatusDone
+				}
+
+			case "text/html":
+				if meta, err := extract.HTMLMetadata(body); err != nil {
+					EA.Online.Error = fmt.Errorf("extract.HTMLMetadata error: %w", err)
+				} else {
+					EA.Online.Metadata = meta
+					EA.Online.Status = SearchStatusDone
+				}
+
+			}
 		}
 	}
 
-	software, err := entryParser.ParseSoftware(text)
-	if err != nil {
-		log.Printf("ParseSoftware error: %v", err)
-	}
-
-	// try direct URL access
-	if software != nil && software.HomepageUrl != "" {
-		fmt.Println("direct URL access...")
-		exists, comment, err := CompareURL(software.HomepageUrl, text, comp, extract)
-		if err != nil {
-			EA.URL.Error = err
-			return EA, nil
-		}
-		EA.Exists = exists
-		EA.URL.Comment = comment
-		EA.URL.Exists = exists
-		EA.URL.Status = SearchStatusDone
-
-		if EA.Exists {
-			return EA, nil
-		}
-	}
-
-	if software != nil && searcher != nil {
-		exists, comment, err := searcher.SearchSoftware(software)
-		if err != nil {
-			EA.Web.Error = err
-		} else {
-			EA.Exists = exists
-			EA.Web.Status = SearchStatusDone
-			EA.Web.Comment = comment
-			EA.Web.Exists = exists
-		}
-	} else {
-		EA.Web.Status = SearchStatusNotAttempted
-		EA.Web.Comment = "Search capability not available"
-	}
-
-	if work, comment, err := CrossrefQueryBibliographic(text); err != nil {
-		EA.Crossref.Error = err
-	} else if work == nil {
-		log.Printf("crossref.org query returned no record: %s", comment)
-	} else {
-		EA.Crossref.Work = work
-		EA.Crossref.Status = SearchStatusDone
-		EA.Crossref.Comment = comment
-	}
-
-	if searcher != nil {
-		exists, comment, err := searcher.SearchEntry(text)
-		if err != nil {
-			EA.Web.Error = err
-		} else {
-			EA.Exists = exists
-			EA.Web.Status = SearchStatusDone
-			EA.Web.Comment = comment
-			EA.Web.Exists = exists
-		}
-	}
 	return EA, nil
 }
 
@@ -341,7 +307,6 @@ func EntryFromBase64(encoded string, id int, mode string,
 	docExtract documents.EntryFromRawExtractor,
 	docMeta documents.MetaExtractor,
 	entryParser entries.Parser,
-	searcher search.Searcher,
 	cfg *EntryConfig,
 ) (*EntryAnalysis, error) {
 
@@ -358,7 +323,7 @@ func EntryFromBase64(encoded string, id int, mode string,
 	}
 	fmt.Println(text)
 
-	return Entry(text, mode, comp, class, docMeta, entryParser, searcher, cfg)
+	return Entry(text, mode, comp, class, docMeta, entryParser, cfg)
 }
 
 // analyze entry `id` from document text `text`
@@ -368,7 +333,6 @@ func EntryFromText(text string, id int, mode string,
 	docExtract documents.EntryFromTextExtractor,
 	docMeta documents.MetaExtractor,
 	entryParser entries.Parser,
-	searcher search.Searcher,
 	cfg *EntryConfig,
 ) (*EntryAnalysis, error) {
 
@@ -385,5 +349,5 @@ func EntryFromText(text string, id int, mode string,
 	}
 	fmt.Println(text)
 
-	return Entry(text, mode, comp, class, docMeta, entryParser, searcher, cfg)
+	return Entry(text, mode, comp, class, docMeta, entryParser, cfg)
 }
