@@ -52,7 +52,7 @@ func newFromTextRequest(text string) *openai.ChatRequest {
 - Publication Date (string, prefering YYYY-MM-DD, but YYYY-MM or YYYY okay)
 
 Use the following guidelines:
-- Prefer user-visible data to embedded metadata
+- Prefer user-visible data to embedded metadata.
 - The user wants data about the document itself: don't provide information from a bibliography or external references.
 - Provide empty values when information is not present.
 - Produce JSON.
@@ -83,6 +83,7 @@ func newFromHtmlRequest(html string) *openai.ChatRequest {
 
 Use the following guidelines:
 - Wherever user-visible values contradict hidden values (e.g. html meta tags), provide the user-visible values.
+- The user wants the web page title, which may be different than the title of the whole website.
 - The user wants info about the document itself: don't provide information about external links or references.
 - Provide empty values when the requested information cannot be determined.
 - Produce JSON.
