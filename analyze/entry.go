@@ -34,18 +34,32 @@ type Metadata struct {
 
 type DOIOrgResult struct {
 	Status string
-	DOI    string
+	ID     string
 	Found  bool
+	Error  error
+}
+
+type OSTIResult struct {
+	Status string
+	ID     string
+	Record *osti.Record
+	Error  error
+}
+
+type ArxivResult struct {
+	Status string
+	ID     string
+	Entry  *arxiv.Entry
 	Error  error
 }
 
 type EntryAnalysis struct {
 	Exists bool // overall result
 
-	Arxiv    Metadata
+	Arxiv    ArxivResult
 	Crossref Metadata
 	DOIOrg   DOIOrgResult
-	OSTI     Metadata
+	OSTI     OSTIResult
 	URL      Search
 	Web      Search
 	Elsevier Metadata
@@ -88,66 +102,57 @@ func Entry(text string, mode string,
 	}
 
 	// check DOI if present
+	// The existence or not of the DOI is not very useful alone, so continue on
 	if doi, err := entryParser.ParseDOI(text); err != nil {
 		EA.DOIOrg.Error = fmt.Errorf("ParseDOI error: %w", err)
 	} else if doi == "" {
 		EA.DOIOrg.Error = fmt.Errorf("ParseDOI extracted empty doi")
 	} else {
 		log.Println("Detected DOI", doi)
-		EA.DOIOrg.DOI = doi
+		EA.DOIOrg.ID = doi
 		if found, err := CheckDOI(doi); err != nil {
 			EA.DOIOrg.Error = fmt.Errorf("CheckDOI error: %w", err)
 		} else {
 			log.Println("DOI found:", found)
 			EA.DOIOrg.Found = found
+			EA.DOIOrg.Status = SearchStatusDone
 		}
 	}
 
 	// Check OSTI if present
-	osti, err := entryParser.ParseOSTI(text)
-	if err != nil {
+	// Finding the ID should provide enough info to evaluate the entry
+	if osti, err := entryParser.ParseOSTI(text); err != nil {
 		log.Printf("OSTI extract error: %v", err)
 		EA.OSTI.Error = fmt.Errorf("ParseOSTI error: %w", err)
-	} else if osti != "" {
-		fmt.Println("Detected OSTI:", osti)
-		rec, err := GetOSTIRecord(osti, text)
-		if err != nil {
-			EA.OSTI.Error = fmt.Errorf("OSTI check error: %w", err)
+	} else if osti == "" {
+		EA.DOIOrg.Error = fmt.Errorf("ParseOSTI extracted empty OSTI ID")
+	} else {
+		fmt.Println("Detected OSTI", osti)
+		EA.OSTI.ID = osti
+		if rec, err := GetOSTIRecord(osti, text); err != nil {
+			EA.OSTI.Error = fmt.Errorf("GetOSTIRecord error: %w", err)
 		} else {
-			ostiExists := rec != nil
-			EA.Exists = ostiExists
+			EA.OSTI.Record = rec
 			EA.OSTI.Status = SearchStatusDone
-			EA.OSTI.Found = ostiExists
-			if ostiExists {
-				EA.OSTI.Result = rec.ToString()
-			} else {
-				EA.OSTI.Result = "No OSTI record for " + osti
-			}
-
 			return EA, nil
 		}
 	}
 
 	// Check arXiv if present
-	arxiv, err := entryParser.ParseArxiv(text)
-	if err != nil {
-		log.Printf("arXiv parse error: %v", err)
-		EA.Arxiv.Error = err
-	} else if arxiv != "" {
-		fmt.Println("Detected arXiv:", arxiv)
-		rec, err := GetArxivMetadata(arxiv, text)
-		if err != nil {
+	// Finding the ID should provide enough info to evaluate the entry
+	if id, err := entryParser.ParseArxiv(text); err != nil {
+		log.Printf("ParseArxiv error: %v", err)
+		EA.Arxiv.Error = fmt.Errorf("ParseArxiv error: %w", err)
+	} else if id == "" {
+		EA.Arxiv.Error = fmt.Errorf("ParseArxiv extracted empty Arxiv ID")
+	} else if id != "" {
+		fmt.Println("Detected arXiv", id)
+		if entry, err := GetArxivMetadata(id, text); err != nil {
 			EA.Arxiv.Error = fmt.Errorf("arxiv check error: %w", err)
 		} else {
-			arxivExists := rec != nil
-			EA.Exists = arxivExists
+			EA.Arxiv.Entry = entry
+			EA.Arxiv.ID = id
 			EA.Arxiv.Status = SearchStatusDone
-			EA.Arxiv.Found = arxivExists
-			if arxivExists {
-				EA.Arxiv.Result = rec.ToString()
-			} else {
-				EA.Arxiv.Result = "No arxiv paper for " + arxiv
-			}
 			return EA, nil
 		}
 	}

@@ -12,9 +12,9 @@ func Print(ea *EntryAnalysis) {
 	reset := "\033[0m"
 
 	if ea.Arxiv.Status == SearchStatusDone {
-		if ea.Arxiv.Found {
+		if ea.Arxiv.Entry != nil {
 			fmt.Println(green + "Arxiv: compare retrieved metadata:" + reset)
-			fmt.Println(green + ea.Arxiv.Result + reset)
+			fmt.Println(green + ea.Arxiv.Entry.ToString() + reset)
 		} else {
 			fmt.Println(red + "Arxiv: ID NOT FOUND" + reset)
 		}
@@ -45,9 +45,9 @@ func Print(ea *EntryAnalysis) {
 	}
 
 	if ea.OSTI.Status == SearchStatusDone {
-		if ea.OSTI.Found {
+		if ea.OSTI.Record != nil {
 			fmt.Println(green + "OSTI: compare retrieved metadata:" + reset)
-			fmt.Println(green + ea.OSTI.Result + reset)
+			fmt.Println(green + ea.OSTI.Record.ToString() + reset)
 		} else {
 			fmt.Println(red + "OSTI: NOT FOUND" + reset)
 		}
