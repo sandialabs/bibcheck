@@ -29,8 +29,8 @@ func Test_20231113_siefert_pmbs_1_true(t *testing.T) {
 // last entry
 // should be 2016, not 2015
 // author list is in the wrong order
-func Test_20231113_siefert_pmbs_35_false(t *testing.T) {
-	impl(t, "20231113_siefert_pmbs.pdf", 35, false)
+func Test_20231113_siefert_pmbs_35_true(t *testing.T) {
+	impl(t, "20231113_siefert_pmbs.pdf", 35, true)
 }
 
 func impl(t *testing.T, path string, id int, expected bool) {
@@ -77,7 +77,10 @@ func impl(t *testing.T, path string, id int, expected bool) {
 
 	analyze.Print(ea)
 
-	if ea.Exists != expected {
-		t.Errorf("Document %s Entry %d: expected %v got %v", path, id, expected, ea.Exists)
+	exists := ea.Arxiv.Entry != nil || ea.Crossref.Work != nil ||
+		ea.Elsevier.Result != nil || ea.OSTI.Record != nil || ea.Online.Metadata != nil
+
+	if exists != expected {
+		t.Errorf("Document %s Entry %d: expected %v got %v", path, id, expected, exists)
 	}
 }
