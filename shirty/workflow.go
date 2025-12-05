@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 package shirty
 
-import "github.com/sandialabs/bibcheck/openai"
+import (
+	"time"
+
+	"github.com/sandialabs/bibcheck/openai"
+)
 
 type Workflow struct {
 	apiKey    string
@@ -19,6 +23,7 @@ func NewWorkflow(apiKey string, options ...WorkflowOpt) *Workflow {
 		oaiClient: openai.NewClient(
 			apiKey,
 			openai.WithBaseUrl("https://shirty.sandia.gov/api/v1"),
+			openai.WithTimeout(60*time.Second),
 		),
 	}
 	for _, o := range options {
