@@ -167,24 +167,20 @@ go test -v ./... -args --openrouter-api-key="sk-or-v1-..."
 
 ## Roadmap
 
-* Improve metadata printouts
-* Special handling for citations of books
-  * crossref is not good at these
 * If a URL is available, try that first, e.g. for 
 ```
 [3] C. Bormann, M. Ersue, and A. Keranen, "Terminology for Constrained-Node Networks," RFC 7228, Internet Engineering Task Force, May 2014. [Online]. Available: https://tools.ietf.org/html/rfc7228
 ```
-
 * offer a google scholar link when we can't find it, e.g.
 ```
 https://scholar.google.com/scholar?hl=en&as_sdt=0%2C32&q=Quantum+information&btnG=
 ```
-
 * offer a DOI URL when the DOI is found
 * Show selected file in upload GUI
 * extract alphanumeric bibliography entry
-  * structured response asking for all bibliography IDs
-* dev.elsevier.com
+    * structured response asking for all bibliography IDs
+* try other shirty LLMs
+    * `openai/gpt-oss-120b`
 
 ## Licensing
 
