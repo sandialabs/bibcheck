@@ -32,12 +32,19 @@ type Metadata struct {
 	Error  error
 }
 
+type DOIOrgResult struct {
+	Status string
+	DOI    string
+	Found  bool
+	Error  error
+}
+
 type EntryAnalysis struct {
 	Exists bool // overall result
 
 	Arxiv    Metadata
 	Crossref Metadata
-	DOIOrg   Metadata
+	DOIOrg   DOIOrgResult
 	OSTI     Metadata
 	URL      Search
 	Web      Search
@@ -76,51 +83,23 @@ func Entry(text string, mode string,
 			} else {
 				EA.Crossref.Result = result.Comment
 			}
-
 		}
 		return EA, nil
 	}
 
-	// extract records
-
-	var url string
-	var urlError error
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		url, urlError = entryParser.ParseURL(text)
-	}()
-	wg.Wait()
-
-	if urlError != nil {
-		log.Printf("extract URL error: %v", urlError)
-	} else if url != "" {
-		fmt.Println("Detected URL:", url)
-	}
-
 	// check DOI if present
-	doi, err := entryParser.ParseDOI(text)
-	if err != nil {
-		log.Printf("DOI extract error: %v", err)
+	if doi, err := entryParser.ParseDOI(text); err != nil {
 		EA.DOIOrg.Error = fmt.Errorf("ParseDOI error: %w", err)
-	} else if doi != "" {
+	} else if doi == "" {
+		EA.DOIOrg.Error = fmt.Errorf("ParseDOI extracted empty doi")
+	} else {
 		log.Println("Detected DOI", doi)
-		doiExists, err := CheckDOI(doi)
-		if err != nil {
-			EA.DOIOrg.Error = fmt.Errorf("doi.org check error: %w", err)
+		EA.DOIOrg.DOI = doi
+		if found, err := CheckDOI(doi); err != nil {
+			EA.DOIOrg.Error = fmt.Errorf("CheckDOI error: %w", err)
 		} else {
-			EA.Exists = false
-			EA.DOIOrg.Status = SearchStatusDone
-			EA.DOIOrg.Found = doiExists
-			if doiExists {
-				EA.DOIOrg.Result = "doi.org entry found"
-			}
-			if !doiExists {
-				EA.DOIOrg.Result = "no doi.org entry for " + doi
-				return EA, nil
-			}
+			log.Println("DOI found:", found)
+			EA.DOIOrg.Found = found
 		}
 	}
 
@@ -171,6 +150,16 @@ func Entry(text string, mode string,
 			}
 			return EA, nil
 		}
+	}
+
+	// extract records
+	var wg sync.WaitGroup
+
+	url, urlError := entryParser.ParseURL(text)
+	if urlError != nil {
+		log.Printf("extract URL error: %v", urlError)
+	} else if url != "" {
+		fmt.Println("Detected URL:", url)
 	}
 
 	log.Println("Extracting metadata for Elsevier search...")
