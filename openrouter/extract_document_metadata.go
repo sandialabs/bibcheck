@@ -29,11 +29,11 @@ func NewExtractDocumentMetadataRF() *ResponseFormat {
 							"type": "string",
 						},
 					},
-					"contributing_org": map[string]string{
+					"publication_date": map[string]string{
 						"type": "string",
 					},
 				},
-				"required":             []string{"title", "authors", "contributing_org"},
+				"required":             []string{"title", "authors", "publication_date"},
 				"additionalProperties": false,
 			},
 		},
@@ -45,9 +45,9 @@ func encodedPdfRequest(model, encoded string) *ChatRequest {
 		Model: model,
 		Messages: []Message{
 			systemString(`Extract the following from the provided document:
-- Title
-- Authors
-- Contributing Organization
+- Title (string)
+- Authors (array of string)
+- Publication Date (string, prefering YYYY-MM-DD, but YYYY-MM or YYYY okay)
 
 Use the following guidelines:
 - Prefer user-visible data to embedded metadata
@@ -70,9 +70,9 @@ func htmlRequest(model, html string) *ChatRequest {
 		Model: model,
 		Messages: []Message{
 			systemString(`Extract the following from the provided website HTML:
-- Title
-- Authors
-- Contributing Organization
+- Title (string)
+- Authors (array of string)
+- Publication Date (string, prefering YYYY-MM-DD, but YYYY-MM or YYYY okay)
 
 Use the following guidelines:
 - Prefer user-visible data to embedded metadata

@@ -5,6 +5,7 @@ package shirty
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/openai"
@@ -28,11 +29,11 @@ func NewExtractDocumentMetadataRF() *openai.ResponseFormat {
 							"type": "string",
 						},
 					},
-					"contributing_org": map[string]string{
+					"publication_date": map[string]string{
 						"type": "string",
 					},
 				},
-				"required":             []string{"title", "authors", "contributing_org"},
+				"required":             []string{"title", "authors", "publication_date"},
 				"additionalProperties": false,
 			},
 		},
@@ -41,13 +42,14 @@ func NewExtractDocumentMetadataRF() *openai.ResponseFormat {
 
 func newFromTextRequest(text string) *openai.ChatRequest {
 	model := "meta-llama/Llama-3.3-70B-Instruct"
+
 	return &openai.ChatRequest{
 		Model: model,
 		Messages: []openai.Message{
 			openai.MakeSystemMessage(`Extract the following from the provided document:
-- Title
-- Authors
-- Contributing Organization
+- Title (string)
+- Authors (array of string)
+- Publication Date (string, prefering YYYY-MM-DD, but YYYY-MM or YYYY okay)
 
 Use the following guidelines:
 - Prefer user-visible data to embedded metadata
@@ -63,13 +65,21 @@ Use the following guidelines:
 
 func newFromHtmlRequest(html string) *openai.ChatRequest {
 	model := "meta-llama/Llama-3.3-70B-Instruct"
+
+	// model has a limit of 128k tokens
+	// in one example, a string of 1158716 symbols -> 353591 tokens
+	if len(html) > 300_000 {
+		log.Printf("Provided more than 300k HTML characters (%d) but context limit is 128k tokens. Truncating to first 225k and last 75k html characters", len(html))
+		html = html[:225_000] + html[len(html)-75_000:]
+	}
+
 	return &openai.ChatRequest{
 		Model: model,
 		Messages: []openai.Message{
 			openai.MakeSystemMessage(`Extract the following from the provided website HTML:
-- Title
-- Authors
-- Contributing Organization
+- Title (string)
+- Authors (array of string)
+- Publication Date (string, prefering YYYY-MM-DD, but YYYY-MM or YYYY okay)
 
 Use the following guidelines:
 - Prefer user-visible data to embedded metadata

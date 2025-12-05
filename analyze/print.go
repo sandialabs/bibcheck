@@ -55,16 +55,15 @@ func Print(ea *EntryAnalysis) {
 		fmt.Println(yellow + fmt.Sprintf("OSTI: search error: %v", ea.OSTI.Error) + reset)
 	}
 
-	if ea.URL.Status == SearchStatusDone {
-		if ea.URL.Exists {
-			fmt.Println(green + "URL: ✓ LOOKS OKAY" + reset)
-			fmt.Println(green + "     " + ea.URL.Comment + reset)
+	if ea.Online.Status == SearchStatusDone {
+		if ea.Online.Metadata != nil {
+			fmt.Println(green + "Online: ✓ LOOKS OKAY" + reset)
+			fmt.Println(green + "     " + ea.Online.Metadata.ToString() + reset)
 		} else {
-			fmt.Println(red + "URL: NO MATCH" + reset)
-			fmt.Println(red + "     " + ea.URL.Comment + reset)
+			fmt.Println(red + "Online: NOT FOUND" + reset)
 		}
-	} else if ea.URL.Error != nil {
-		fmt.Println(yellow + fmt.Sprintf("Web: search error: %v", ea.URL.Error) + reset)
+	} else if ea.Online.Error != nil {
+		fmt.Println(yellow + fmt.Sprintf("Online: search error: %v", ea.Online.Error) + reset)
 	}
 
 	if ea.Web.Status == SearchStatusDone {

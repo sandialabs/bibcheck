@@ -31,7 +31,7 @@ through Hierarchical Communicators. Parallel Comput. 76 (2018),
 70–90. https://doi.org/10.1016/j.parco.2018.05.006`
 		expected := "10.1016/j.parco.2018.05.006"
 
-		if EA, err := Entry(text, "", w, w, w, w, nil, &EntryConfig{
+		if EA, err := Entry(text, "", w, w, w, w, &EntryConfig{
 			ElsevierClient: elsevierClientFromEnv(),
 		}); err != nil {
 			t.Fatalf("Entry error: %v", err)
@@ -56,7 +56,7 @@ Kelley, Christian R Trott, Jeremiah Wilke, and Ichitaro Yamazaki. 2021. Kokkos k
 sparse/dense linear algebra and graph kernels. arXiv preprint arXiv:2103.11991 -, - (2021), 1–12`
 		expected := "https://arxiv.org/abs/2103.11991"
 
-		if EA, err := Entry(text, "", w, w, w, w, nil, &EntryConfig{
+		if EA, err := Entry(text, "", w, w, w, w, &EntryConfig{
 			ElsevierClient: elsevierClientFromEnv(),
 		}); err != nil {
 			t.Fatalf("Entry error: %v", err)
@@ -80,7 +80,7 @@ Mercier. 2018. Hardware Topology Management in MPI Applications
 through Hierarchical Communicators. Parallel Comput. 76 (2018),
 70–90. https://doi.org/10.1016/j.parco.2018.05.006`
 
-		if EA, err := Entry(text, "", w, w, w, w, nil, &EntryConfig{
+		if EA, err := Entry(text, "", w, w, w, w, &EntryConfig{
 			ElsevierClient: elsevierClientFromEnv(),
 		}); err != nil {
 			t.Fatalf("Entry error: %v", err)
@@ -111,7 +111,7 @@ Swarm and Evolutionary Computation,
 Volume 100,
 2026,`
 
-	EA, err := Entry(text, "", w, w, w, w, nil, &EntryConfig{
+	EA, err := Entry(text, "", w, w, w, w, &EntryConfig{
 		ElsevierClient: elsevierClientFromEnv(),
 	})
 	if err != nil {
@@ -155,7 +155,7 @@ Swarm and Evolutionary Computation,
 Volume 100,
 2026,`
 
-	EA, err := Entry(text, "", w, w, w, w, nil, nil)
+	EA, err := Entry(text, "", w, w, w, w, nil)
 	if err != nil {
 		t.Fatalf("Entry error: %v", err)
 	}
@@ -181,4 +181,44 @@ Volume 100,
 	}
 
 	fmt.Println(EA.Crossref.Work)
+}
+
+func Test_Online_1(t *testing.T) {
+
+	if w := shirtyWorkflowFromEnv(); w != nil {
+		text := `2023. Frontier User Guide. https://docs.olcf.ornl.gov/systems/frontier_
+user_guide.html`
+
+		EA, err := Entry(text, "", w, w, w, w, nil)
+		if err != nil {
+			t.Fatalf("Entry error: %v", err)
+		}
+
+		if EA.Arxiv.Entry != nil {
+			t.Fatalf("made up an Arxiv entry")
+		}
+		if EA.DOIOrg.ID != "" {
+			t.Fatalf("made up a DOI")
+		}
+		if EA.OSTI.Record != nil {
+			t.Fatalf("made up an OSTI ID")
+		}
+		if EA.Crossref.Work != nil {
+			t.Fatalf("extraneous crossref result")
+		}
+		if EA.Elsevier.Result != nil {
+			t.Fatalf("extraneous elsevier result")
+		}
+
+		if EA.Online.Error != nil {
+			t.Fatalf("online error: %v", EA.Online.Error)
+		}
+		if EA.Online.Metadata.Title != "Frontier User Guide" {
+			t.Fatalf("online retrieved wrong title")
+		}
+
+	} else {
+		t.Skip("no SHIRTY_API_KEY not provided")
+	}
+
 }
