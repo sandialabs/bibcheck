@@ -109,11 +109,11 @@ func doAnalyze(shirtyApiKey string, doc *Document) {
 			ent.AnalysisStatus = "error"
 		} else {
 			ent.AnalysisStatus = "completed"
-			if ea.Exists {
-				ent.AnalysisFound = "found"
-			} else {
-				ent.AnalysisFound = "not-found"
-			}
+			// if ea.Exists {
+			// 	ent.AnalysisFound = "found"
+			// } else {
+			// 	ent.AnalysisFound = "not-found"
+			// }
 
 			if ea.Arxiv.Status == analyze.SearchStatusDone && ea.Arxiv.Entry != nil {
 				ent.Analysis += fmt.Sprintf("arxiv: %s\n", ea.Arxiv.Entry.ToString())
