@@ -23,12 +23,12 @@ func Print(ea *EntryAnalysis) {
 	}
 
 	if ea.Crossref.Status == SearchStatusDone {
-		if ea.Crossref.Found {
+		if ea.Crossref.Work != nil {
 			fmt.Println(green + "Crossref: compare retrieved metadata" + reset)
-			fmt.Println(green + ea.Crossref.Result + reset)
+			fmt.Println(green + ea.Crossref.Work.ToString() + reset)
 		} else {
 			fmt.Println(red + "Crossref: NO SEARCH RESULTS" + reset)
-			fmt.Println(red + "          " + ea.Crossref.Result + reset)
+			fmt.Println(red + "          " + ea.Crossref.Comment + reset)
 		}
 	} else if ea.Crossref.Error != nil {
 		fmt.Println(yellow + fmt.Sprintf("Crossref: search error: %v", ea.Crossref.Error) + reset)
