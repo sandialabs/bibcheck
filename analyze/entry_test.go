@@ -128,7 +128,7 @@ Volume 100,
 		t.Fatalf("made up an OSTI ID")
 	}
 	if EA.Elsevier.Error != nil {
-		t.Fatalf("Elseiver error: %v", EA.Elsevier.Error)
+		t.Fatalf("Elsevier error: %v", EA.Elsevier.Error)
 	}
 	if EA.Elsevier.Result == nil {
 		t.Fatalf("Elsevier search failed")
@@ -139,4 +139,46 @@ Volume 100,
 	}
 
 	fmt.Println(EA.Elsevier.Result)
+}
+
+func Test_Crossref_1(t *testing.T) {
+
+	w := shirtyWorkflowFromEnv()
+
+	if w == nil {
+		t.Skip("nil shirty workflow")
+	}
+
+	text := `Sergio Sarmiento-Rosales, Víctor Adrían Sosa Hernández, Raúl Monroy,
+Evolutionary Neural Architecture Search for Super-Resolution: Benchmarking SynFlow and model-based predictors,
+Swarm and Evolutionary Computation,
+Volume 100,
+2026,`
+
+	EA, err := Entry(text, "", w, w, w, w, nil, nil)
+	if err != nil {
+		t.Fatalf("Entry error: %v", err)
+	}
+
+	if EA.Arxiv.Entry != nil {
+		t.Fatalf("made up an Arxiv entry")
+	}
+	if EA.DOIOrg.ID != "" {
+		t.Fatalf("made up a DOI")
+	}
+	if EA.OSTI.Record != nil {
+		t.Fatalf("made up an OSTI ID")
+	}
+	if EA.Crossref.Error != nil {
+		t.Fatalf("Crossref error: %v", EA.Crossref.Error)
+	}
+	if EA.Crossref.Work == nil {
+		t.Fatalf("Crossref search failed")
+	}
+
+	if EA.Crossref.Work.DOI != "10.1016/j.swevo.2025.102236" {
+		t.Fatalf("Crossref search returned wrong result")
+	}
+
+	fmt.Println(EA.Crossref.Work)
 }

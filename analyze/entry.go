@@ -25,13 +25,6 @@ type Search struct {
 	Error   error
 }
 
-type Metadata struct {
-	Status string
-	Found  bool
-	Result string
-	Error  error
-}
-
 type DOIOrgResult struct {
 	Status string
 	ID     string
@@ -59,11 +52,18 @@ type ElsevierResult struct {
 	Error  error
 }
 
+type CrossrefResult struct {
+	Status  string
+	Work    *crossref.CrossrefWork
+	Comment string
+	Error   error
+}
+
 type EntryAnalysis struct {
 	Exists bool // overall result
 
 	Arxiv    ArxivResult
-	Crossref Metadata
+	Crossref CrossrefResult
 	DOIOrg   DOIOrgResult
 	Elsevier ElsevierResult
 	OSTI     OSTIResult
@@ -86,26 +86,6 @@ func Entry(text string, mode string,
 ) (*EntryAnalysis, error) {
 
 	EA := &EntryAnalysis{}
-
-	if mode == "crossref" {
-		result, err := CrossrefBibliography(text)
-		if err != nil {
-			EA.Crossref.Error = err
-		} else {
-			crossrefExists := (result.Entry != nil)
-			EA.Exists = crossrefExists
-
-			EA.Crossref.Status = SearchStatusDone
-			EA.Crossref.Found = crossrefExists
-
-			if crossrefExists {
-				EA.Crossref.Result = result.Entry.ToString()
-			} else {
-				EA.Crossref.Result = result.Comment
-			}
-		}
-		return EA, nil
-	}
 
 	// check DOI if present
 	// The existence or not of the DOI is not very useful alone, so continue on
@@ -227,6 +207,22 @@ func Entry(text string, mode string,
 		}
 	}
 
+	// crossref search
+	if work, comment, err := CrossrefQueryBibliographic(text); err != nil {
+		EA.Crossref.Error = err
+	} else if work == nil {
+		log.Printf("crossref.org query returned no record: %s", comment)
+	} else {
+		EA.Crossref.Work = work
+		EA.Crossref.Status = SearchStatusDone
+		EA.Crossref.Comment = comment
+	}
+
+	// if we have an elsevier or crossref result we're satisfied
+	if EA.Crossref.Work != nil || EA.Elsevier.Result != nil {
+		return EA, nil
+	}
+
 	url, urlError := entryParser.ParseURL(text)
 	if urlError != nil {
 		log.Printf("extract URL error: %v", urlError)
@@ -314,27 +310,17 @@ func Entry(text string, mode string,
 		EA.Web.Comment = "Search capability not available"
 	}
 
-	result, err := CrossrefBibliography(text)
-	if err != nil {
+	if work, comment, err := CrossrefQueryBibliographic(text); err != nil {
 		EA.Crossref.Error = err
+	} else if work == nil {
+		log.Printf("crossref.org query returned no record: %s", comment)
 	} else {
-		crossrefExists := result.Entry != nil
-		EA.Exists = crossrefExists
+		EA.Crossref.Work = work
 		EA.Crossref.Status = SearchStatusDone
-		EA.Crossref.Found = crossrefExists
-
-		if crossrefExists {
-			EA.Crossref.Result = result.Entry.ToString()
-		} else {
-			EA.Crossref.Result = result.Comment
-		}
-
-		if crossrefExists {
-			return EA, nil
-		}
+		EA.Crossref.Comment = comment
 	}
 
-	if result != nil && searcher != nil {
+	if searcher != nil {
 		exists, comment, err := searcher.SearchEntry(text)
 		if err != nil {
 			EA.Web.Error = err
