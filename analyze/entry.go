@@ -70,7 +70,7 @@ type OnlineResult struct {
 }
 
 type EntryAnalysis struct {
-	Exists bool // overall result
+	Text string
 
 	Arxiv    ArxivResult
 	Crossref CrossrefResult
@@ -96,6 +96,12 @@ func retrieveUrl(url string) ([]byte, string, error) {
 		return nil, "", fmt.Errorf("http.Client.Get error: %w", err)
 	}
 	defer resp.Body.Close()
+
+	// Check for HTTP error status codes
+	if resp.StatusCode >= 400 {
+		return nil, "", fmt.Errorf("HTTP error: %d %s", resp.StatusCode, resp.Status)
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, "", fmt.Errorf("read body error: %w", err)
@@ -121,15 +127,15 @@ func Entry(text string, mode string,
 	cfg *EntryConfig,
 ) (*EntryAnalysis, error) {
 
-	EA := &EntryAnalysis{}
+	EA := &EntryAnalysis{
+		Text: text,
+	}
 
 	// check DOI if present
 	// The existence or not of the DOI is not very useful alone, so continue on
 	if doi, err := entryParser.ParseDOI(text); err != nil {
 		EA.DOIOrg.Error = fmt.Errorf("ParseDOI error: %w", err)
-	} else if doi == "" {
-		EA.DOIOrg.Error = fmt.Errorf("ParseDOI extracted empty doi")
-	} else {
+	} else if doi != "" {
 		log.Println("Detected DOI", doi)
 		EA.DOIOrg.ID = doi
 		if found, err := CheckDOI(doi); err != nil {
@@ -146,9 +152,7 @@ func Entry(text string, mode string,
 	if osti, err := entryParser.ParseOSTI(text); err != nil {
 		log.Printf("OSTI extract error: %v", err)
 		EA.OSTI.Error = fmt.Errorf("ParseOSTI error: %w", err)
-	} else if osti == "" {
-		EA.DOIOrg.Error = fmt.Errorf("ParseOSTI extracted empty OSTI ID")
-	} else {
+	} else if osti != "" {
 		fmt.Println("Detected OSTI", osti)
 		EA.OSTI.ID = osti
 		if rec, err := GetOSTIRecord(osti, text); err != nil {
@@ -165,8 +169,6 @@ func Entry(text string, mode string,
 	if id, err := entryParser.ParseArxiv(text); err != nil {
 		log.Printf("ParseArxiv error: %v", err)
 		EA.Arxiv.Error = fmt.Errorf("ParseArxiv error: %w", err)
-	} else if id == "" {
-		EA.Arxiv.Error = fmt.Errorf("ParseArxiv extracted empty Arxiv ID")
 	} else if id != "" {
 		fmt.Println("Detected arXiv", id)
 		if entry, err := GetArxivMetadata(id, text); err != nil {
@@ -276,16 +278,14 @@ func Entry(text string, mode string,
 		} else {
 			log.Println("retrieved URL content type:", contentType)
 
-			switch contentType {
-			case "application/pdf":
+			if strings.Contains(contentType, "application/pdf") {
 				if meta, err := extract.PDFMetadata(body); err != nil {
 					EA.Online.Error = fmt.Errorf("extract.PDFMetadata error: %w", err)
 				} else {
 					EA.Online.Metadata = meta
 					EA.Online.Status = SearchStatusDone
 				}
-
-			case "text/html":
+			} else if strings.Contains(contentType, "text/html") {
 				if meta, err := extract.HTMLMetadata(body); err != nil {
 					EA.Online.Error = fmt.Errorf("extract.HTMLMetadata error: %w", err)
 				} else {
@@ -293,7 +293,10 @@ func Entry(text string, mode string,
 					EA.Online.Status = SearchStatusDone
 				}
 
+			} else {
+				EA.Online.Error = fmt.Errorf("unexpected content type: %s", contentType)
 			}
+
 		}
 	}
 
