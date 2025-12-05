@@ -190,8 +190,23 @@ https://scholar.google.com/scholar?hl=en&as_sdt=0%2C32&q=Quantum+information&btn
 
 To list third-party licenses:
 
+save the following as `template.md`
+```md
+{{ range . }}
+## {{ .Name }}
+
+* Name: {{ .Name }}
+* Version: {{ .Version }}
+* License: [{{ .LicenseName }}]({{ .LicenseURL }})
+
+```
+{{ .LicenseText }}
+```
+{{ end }}
+```
+
 ```bash
 go install github.com/google/go-licenses/v2@latest
 
-go-licenses report ./...
+go-licenses report ./... --template template.md
 ```
