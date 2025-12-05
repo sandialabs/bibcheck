@@ -266,8 +266,7 @@ func Entry(text string, mode string,
 		EA.Online.Error = fmt.Errorf("ParseOnline error: %v", err)
 	} else if _, err := url.Parse(online.URL); err != nil {
 		EA.Online.Error = fmt.Errorf("ParseOnline provided a URL that did not parse: %v", err)
-	} else {
-
+	} else if online.URL != "" {
 		fmt.Println("Online:")
 		fmt.Println("  URL:    ", online.URL)
 		fmt.Println("  Title:  ", online.Title)
