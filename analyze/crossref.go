@@ -4,12 +4,13 @@ package analyze
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/sandialabs/bibcheck/crossref"
 )
 
 const (
-	CrossrefMatchThreshold float64 = 85 // determined empirically
+	CrossrefMatchThreshold float64 = 86 // determined empirically
 )
 
 // CrossrefQueryBibliographic
@@ -28,6 +29,7 @@ func CrossrefQueryBibliographic(entry string) (*crossref.CrossrefWork, string, e
 
 	best := &crossrefResp.Message.Items[0]
 
+	log.Println("crossref.org best score:", best.Score)
 	if best.Score < CrossrefMatchThreshold {
 		return nil, fmt.Sprintf("best match score %f was less than threshold %f", best.Score, CrossrefMatchThreshold), nil
 	}
