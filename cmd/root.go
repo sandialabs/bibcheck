@@ -130,6 +130,10 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 			ElsevierClient: elsevierClient,
 		}
 
+		t := table.NewWriter()
+		t.SetOutputMirror(os.Stdout)
+		t.AppendHeader(table.Row{"ORIG", "onl.", "Xref", "Els.", "Arxiv", "doi", "OSTI"})
+
 		for i := entryStart; i < entryStart+entryCount; i++ {
 			var ea *analyze.EntryAnalysis
 			if docRawExtract != nil {
@@ -145,8 +149,66 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 				continue
 			}
 			analyze.Print(ea)
+
+			// add original entry to row
+			WrapSoftLimit := 40
+			row := []any{
+				text.WrapSoft(ea.Text, WrapSoftLimit),
+			}
+
+			red := func(err error) string {
+				return text.WrapSoft(
+					text.FgRed.Sprintf("%v", err),
+					WrapSoftLimit,
+				)
+			}
+
+			if ea.Online.Metadata != nil {
+				row = append(row, text.WrapSoft(ea.Online.Metadata.ToString(), WrapSoftLimit))
+			} else if ea.Online.Error != nil {
+				row = append(row, red(ea.Online.Error))
+			} else {
+				row = append(row, "")
+			}
+			if ea.Crossref.Work != nil {
+				row = append(row, text.WrapSoft(ea.Crossref.Work.ToString(), WrapSoftLimit))
+			} else if ea.Crossref.Error != nil {
+				row = append(row, red(ea.Crossref.Error))
+			} else {
+				row = append(row, "")
+			}
+			if ea.Elsevier.Result != nil {
+				row = append(row, text.WrapSoft(ea.Elsevier.Result.ToString(), WrapSoftLimit))
+			} else if ea.Elsevier.Error != nil {
+				row = append(row, red(ea.Elsevier.Error))
+			} else {
+				row = append(row, "")
+			}
+			if ea.Arxiv.Entry != nil {
+				row = append(row, text.WrapSoft(ea.Arxiv.Entry.ToString(), WrapSoftLimit))
+			} else if ea.Arxiv.Error != nil {
+				row = append(row, red(ea.Arxiv.Error))
+			} else {
+				row = append(row, "")
+			}
+			if ea.DOIOrg.Found {
+				row = append(row, text.WrapSoft("exists", WrapSoftLimit))
+			} else if ea.DOIOrg.Error != nil {
+				row = append(row, red(ea.DOIOrg.Error))
+			} else {
+				row = append(row, "")
+			}
+			if ea.OSTI.Record != nil {
+				row = append(row, text.WrapSoft(ea.OSTI.Record.ToString(), WrapSoftLimit))
+			} else if ea.OSTI.Error != nil {
+				row = append(row, red(ea.OSTI.Error))
+			} else {
+				row = append(row, "")
+			}
+			t.AppendRow(row)
 		}
 
+		t.Render()
 	},
 }
 
