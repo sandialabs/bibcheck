@@ -85,7 +85,7 @@ func (c *Client) Chat(req *ChatRequest) (*ChatResponse, error) {
 	// Make the request
 	resp, err := client.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
+		return nil, fmt.Errorf("http.Client.Do error: %w", err)
 	}
 	defer resp.Body.Close()
 
