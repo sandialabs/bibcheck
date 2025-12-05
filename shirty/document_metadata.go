@@ -76,15 +76,15 @@ func newFromHtmlRequest(html string) *openai.ChatRequest {
 	return &openai.ChatRequest{
 		Model: model,
 		Messages: []openai.Message{
-			openai.MakeSystemMessage(`Extract the following from the provided website HTML:
+			openai.MakeSystemMessage(`Determine the following from the provided website HTML:
 - Title (string)
 - Authors (array of string)
-- Publication Date (string, prefering YYYY-MM-DD, but YYYY-MM or YYYY okay)
+- Publication/Update Date (string, prefering YYYY-MM-DD, but YYYY-MM or YYYY okay)
 
 Use the following guidelines:
-- Prefer user-visible data to embedded metadata
-- The user wants data about the document itself: don't provide information external links or references.
-- Provide empty values when information is not present.
+- Wherever user-visible values contradict hidden values (e.g. html meta tags), provide the user-visible values.
+- The user wants info about the document itself: don't provide information about external links or references.
+- Provide empty values when the requested information cannot be determined.
 - Produce JSON.
 `),
 			openai.MakeUserMessage(html),
