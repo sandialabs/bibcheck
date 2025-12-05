@@ -52,7 +52,7 @@ func impl(t *testing.T, path string, id int, expected bool) {
 		}
 
 		ea, err = analyze.EntryFromText(tResp.Text, id, "auto",
-			client, client, client, client, client, nil, nil)
+			client, client, client, client, client, nil)
 
 	} else if apiKey, ok := os.LookupEnv("OPENROUTER_API_KEY"); ok {
 
@@ -65,7 +65,7 @@ func impl(t *testing.T, path string, id int, expected bool) {
 		}
 
 		ea, err = analyze.EntryFromBase64(encoded, id, "auto",
-			client, client, client, client, client, client, nil)
+			client, client, client, client, client, nil)
 
 	} else {
 		t.Skip("provide either SHIRTY_API_KEY or OPENROUTER_API_KEY")
