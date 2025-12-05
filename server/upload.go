@@ -125,7 +125,7 @@ func doAnalyze(shirtyApiKey string, doc *Document) {
 				ent.Analysis += fmt.Sprintf("crossref: %s\n", ea.Crossref.Work.ToString())
 			}
 			if ea.DOIOrg.Status == analyze.SearchStatusDone && ea.DOIOrg.Found {
-				ent.Analysis += fmt.Sprintf("doi.org: %s\n", "found")
+				ent.Analysis += fmt.Sprintf("doi.org: %s\n", "exists")
 			}
 			if ea.Online.Status == analyze.SearchStatusDone && ea.Online.Metadata != nil {
 				ent.Analysis += fmt.Sprintf("URL: %s\n", ea.Online.Metadata.ToString())
