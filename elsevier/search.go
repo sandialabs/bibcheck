@@ -17,24 +17,29 @@ type SearchQuery struct {
 
 // SearchResponse represents the top-level API response
 type SearchResponse struct {
-	ResultsFound int            `json:"resultsFound"`
-	Results      []SearchResult `json:"results"`
-	Message      string         `json:"message"`
+	ResultsFound int             `json:"resultsFound"`
+	Results      []*SearchResult `json:"results"`
+	Message      string          `json:"message"`
+}
+
+type ResponseAuthor struct {
+	Order int
+	Name  string
 }
 
 // SearchResult represents a single search result item
 type SearchResult struct {
-	Authors         []string `json:"authors"`
-	DOI             string   `json:"doi"`
-	LoadDate        string   `json:"loadDate"`
-	OpenAccess      bool     `json:"openAccess"`
-	Pages           Pages    `json:"pages"`
-	PII             string   `json:"pii"`
-	PublicationDate string   `json:"publicationDate"`
-	SourceTitle     string   `json:"sourceTitle"`
-	Title           string   `json:"title"`
-	URI             string   `json:"uri"`
-	VolumeIssue     string   `json:"volumeIssue"`
+	Authors         []ResponseAuthor `json:"authors"`
+	DOI             string           `json:"doi"`
+	LoadDate        string           `json:"loadDate"`
+	OpenAccess      bool             `json:"openAccess"`
+	Pages           Pages            `json:"pages"`
+	PII             string           `json:"pii"`
+	PublicationDate string           `json:"publicationDate"`
+	SourceTitle     string           `json:"sourceTitle"`
+	Title           string           `json:"title"`
+	URI             string           `json:"uri"`
+	VolumeIssue     string           `json:"volumeIssue"`
 }
 
 // Pages represents page information for a result
@@ -48,7 +53,11 @@ func (sr *SearchResult) ToString() string {
 	s := ""
 
 	if len(sr.Authors) > 0 {
-		s += strings.Join(sr.Authors, ", ") + "."
+		names := []string{}
+		for _, author := range sr.Authors {
+			names = append(names, author.Name)
+		}
+		s += strings.Join(names, ", ") + "."
 	}
 
 	if sr.Title != "" {
@@ -80,6 +89,16 @@ func (sr *SearchResult) ToString() string {
 // query: https://dev.elsevier.com/sd_article_meta_tips.html
 func (c *Client) Search(query *SearchQuery) (*SearchResponse, error) {
 	endpoint := fmt.Sprintf("%s/content/search/sciencedirect", c.baseUrl)
+
+	// authors field limited to 250 characters. Trim to 2
+	for {
+		lastAnd := strings.LastIndex(query.Authors, " AND")
+		if lastAnd >= 250 {
+			query.Authors = query.Authors[:lastAnd]
+			continue
+		}
+		break
+	}
 
 	// Build query parameters
 	queryParams := url.Values{}
