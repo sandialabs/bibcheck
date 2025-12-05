@@ -53,16 +53,22 @@ type ArxivResult struct {
 	Error  error
 }
 
+type ElsevierResult struct {
+	Status string
+	Result *elsevier.SearchResult
+	Error  error
+}
+
 type EntryAnalysis struct {
 	Exists bool // overall result
 
 	Arxiv    ArxivResult
 	Crossref Metadata
 	DOIOrg   DOIOrgResult
+	Elsevier ElsevierResult
 	OSTI     OSTIResult
 	URL      Search
 	Web      Search
-	Elsevier Metadata
 }
 
 type EntryConfig struct {
@@ -157,37 +163,36 @@ func Entry(text string, mode string,
 		}
 	}
 
-	// extract records
-	var wg sync.WaitGroup
-
-	url, urlError := entryParser.ParseURL(text)
-	if urlError != nil {
-		log.Printf("extract URL error: %v", urlError)
-	} else if url != "" {
-		fmt.Println("Detected URL:", url)
-	}
-
-	log.Println("Extracting metadata for Elsevier search...")
-	var authorsErr, titleErr, pubErr error
-	var authors *entries.Authors
-	var title, pub string
-	wg.Add(3)
-	go func() {
-		defer wg.Done()
-		authors, authorsErr = entryParser.ParseAuthors(text)
-	}()
-	go func() {
-		defer wg.Done()
-		title, titleErr = entryParser.ParseTitle(text)
-	}()
-	go func() {
-		defer wg.Done()
-		pub, pubErr = entryParser.ParsePub(text)
-	}()
-	wg.Wait()
+	// if we got here, this wasn't OSTI or arxiv
+	// pursue some general lookup strategies:
+	// * elsevier
+	// * crossref
 
 	// Elsevier search
 	if cfg != nil && cfg.ElsevierClient != nil {
+
+		log.Println("Extracting metadata for Elsevier search...")
+		var wg sync.WaitGroup
+		var authorsErr, titleErr, pubErr error
+		var authors *entries.Authors
+		var title, pub string
+		wg.Add(3)
+		go func() {
+			defer wg.Done()
+			authors, authorsErr = entryParser.ParseAuthors(text)
+			log.Printf("authors: %v", authors.Authors)
+		}()
+		go func() {
+			defer wg.Done()
+			title, titleErr = entryParser.ParseTitle(text)
+			log.Printf("title: %v", title)
+		}()
+		go func() {
+			defer wg.Done()
+			pub, pubErr = entryParser.ParsePub(text)
+			log.Printf("pub: %v", pub)
+		}()
+		wg.Wait()
 
 		if authorsErr != nil {
 			log.Printf("ParseAuthors error: %v\n", authorsErr)
@@ -200,7 +205,7 @@ func Entry(text string, mode string,
 			EA.Elsevier.Error = fmt.Errorf("ParsePub error: %w", pubErr)
 		} else if len(authors.Authors) > 0 && title != "" && pub != "" {
 			resp, err := cfg.ElsevierClient.Search(&elsevier.SearchQuery{
-				Title:   "title",
+				Title:   title,
 				Authors: strings.Join(authors.Authors, " AND "),
 				Pub:     pub,
 			})
@@ -209,19 +214,24 @@ func Entry(text string, mode string,
 				log.Printf("elsevier.Search error: %v", err)
 				EA.Elsevier.Error = fmt.Errorf("elsevier.Search error: %w", err)
 			} else if len(resp.Results) < 1 {
+				EA.Elsevier.Status = SearchStatusDone
 				log.Printf("elsevier.Search returned no results")
-				EA.Elsevier.Found = false
-				EA.Elsevier.Result = "no matching results from Elsevier"
 			} else {
+				EA.Elsevier.Status = SearchStatusDone
 				best := resp.Results[0]
-				EA.Elsevier.Found = true
-				EA.Elsevier.Result = best.ToString()
+				EA.Elsevier.Result = best
 			}
-
 		} else {
 			log.Println("unable to parse sufficient metadata for Elsevier search")
-			EA.Elsevier.Result = "unable to parse sufficient metadata for Elsevier search"
+			EA.Elsevier.Error = fmt.Errorf("unable to parse sufficient metadata for elsevier search")
 		}
+	}
+
+	url, urlError := entryParser.ParseURL(text)
+	if urlError != nil {
+		log.Printf("extract URL error: %v", urlError)
+	} else if url != "" {
+		fmt.Println("Detected URL:", url)
 	}
 
 	website, err := entryParser.ParseWebsite(text)
