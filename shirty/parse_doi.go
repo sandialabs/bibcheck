@@ -32,17 +32,22 @@ func NewExtractDOIRF() *openai.ResponseFormat {
 func (w *Workflow) ParseDOI(text string) (string, error) {
 	model := "meta-llama/Llama-3.3-70B-Instruct"
 
+	temp := new(float64)
+	*temp = 0
+
 	req := &openai.ChatRequest{
 		Model: model,
 		Messages: []openai.Message{
-			openai.MakeSystemMessage(`Check if the bibliography entry contains a DOI.
-If so, provide the DOI.
-Otherwise, provide an empty string.
-Produce JSON.
+			openai.MakeSystemMessage(`Extract the DOI from the bibliography entry.
+- If there is no DOI, provide an empty string
+- osti.gov URLs are not DOIs
+- arxiv IDs are not DOIs
+- produce JSON
 `),
 			openai.MakeUserMessage(text),
 		},
 		ResponseFormat: NewExtractDOIRF(),
+		Temperature:    temp,
 	}
 
 	resp, err := w.oaiClient.Chat(req)
