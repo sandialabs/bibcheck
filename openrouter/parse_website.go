@@ -9,7 +9,7 @@ import (
 	"github.com/sandialabs/bibcheck/entries"
 )
 
-func NewParseWebsiteRF() *ResponseFormat {
+func NewParseOnlineRF() *ResponseFormat {
 	return &ResponseFormat{
 		Type: "json_schema",
 		JSONSchema: map[string]any{
@@ -38,19 +38,19 @@ func NewParseWebsiteRF() *ResponseFormat {
 	}
 }
 
-func (c *Client) ParseWebsite(text string) (*entries.Website, error) {
+func (c *Client) ParseOnline(text string) (*entries.Online, error) {
 	baseURL := "https://openrouter.ai/api/v1"
 	model := "google/gemini-2.5-flash"
 
 	req := ChatRequest{
 		Model: model,
 		Messages: []Message{
-			systemString(`Extract the title, authors, and URL of the website from this bibliography entry.
+			systemString(`Extract the title, authors, and URL of the online resource from this bibliography entry.
 If not provided, leave empty.
 Produce JSON.`),
 			userString(text),
 		},
-		ResponseFormat: NewParseWebsiteRF(),
+		ResponseFormat: NewParseOnlineRF(),
 		Provider: Provider{
 			RequireParameters: true,
 			Sort:              "price",
@@ -71,7 +71,7 @@ Produce JSON.`),
 	content := resp.Choices[0].Message.Content
 
 	if cstring, ok := content.(string); ok {
-		w := entries.Website{}
+		w := entries.Online{}
 		if err := json.Unmarshal([]byte(cstring), &w); err != nil {
 			return nil, fmt.Errorf("couldn't unmarshal structured JSON response: %w", err)
 		}

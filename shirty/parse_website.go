@@ -10,7 +10,7 @@ import (
 	"github.com/sandialabs/bibcheck/openai"
 )
 
-func NewParseWebsiteRF() *openai.ResponseFormat {
+func NewParseOnlineRF() *openai.ResponseFormat {
 	return &openai.ResponseFormat{
 		Type: "json_schema",
 		JSONSchema: map[string]any{
@@ -39,21 +39,20 @@ func NewParseWebsiteRF() *openai.ResponseFormat {
 	}
 }
 
-func (w *Workflow) ParseWebsite(text string) (*entries.Website, error) {
+func (w *Workflow) ParseOnline(text string) (*entries.Online, error) {
 	model := "meta-llama/Llama-3.3-70B-Instruct"
 
 	req := &openai.ChatRequest{
 		Model: model,
 		Messages: []openai.Message{
-			openai.MakeSystemMessage(`Extract the title, authors, and URL of the website from this bibliography entry.
+			openai.MakeSystemMessage(`Extract the title, authors, and URL of the online resource from this bibliography entry.
 - Produce JSON
-- If the bibliography entry does not have a URL, produce an empty string for all values
-- If the bibliography entry is not a website, produce an empty string for all values
+- If the bibliography entry does not appear to be an online resource (e.g., no URL), produce an empty string for all values
 - If the title or authors are missing, produce an empty string for the corresponding value
 `),
 			openai.MakeUserMessage(text),
 		},
-		ResponseFormat: NewParseWebsiteRF(),
+		ResponseFormat: NewParseOnlineRF(),
 	}
 
 	resp, err := w.oaiClient.Chat(req)
@@ -65,10 +64,10 @@ func (w *Workflow) ParseWebsite(text string) (*entries.Website, error) {
 		return nil, fmt.Errorf("expected one choice in response")
 	}
 
-	web := entries.Website{}
-	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &web); err != nil {
+	online := entries.Online{}
+	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &online); err != nil {
 		return nil, fmt.Errorf("couldn't unmarshal structured JSON response: %w", err)
 	}
 
-	return &web, nil
+	return &online, nil
 }

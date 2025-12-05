@@ -85,9 +85,7 @@ func CompareURL(url, rawEntry string,
 	if len(meta.Authors) > 0 {
 		pdfMetaFields = append(pdfMetaFields, "Authors: "+strings.Join(meta.Authors, ", "))
 	}
-	if meta.ContributingOrg != "" {
-		pdfMetaFields = append(pdfMetaFields, "Contributing Organization: "+meta.ContributingOrg)
-	}
+
 	metaText := strings.Join(pdfMetaFields, "\n")
 
 	// compare metadata to entry
