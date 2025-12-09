@@ -103,7 +103,7 @@ func doAnalyze(shirtyApiKey string, doc *Document) {
 		ent.AnalysisStatus = "active"
 		doc.mu.Unlock()
 
-		ea, err := analyze.Entry(ent.Text, "auto", client, client, client, client, nil)
+		ea, err := analyze.Entry(ent.Text, "auto", client, client, client, nil)
 		doc.mu.Lock()
 		if err != nil {
 			ent.AnalysisStatus = "error"
