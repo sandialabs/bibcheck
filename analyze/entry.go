@@ -120,7 +120,6 @@ func retrieveUrl(url string) ([]byte, string, error) {
 
 // analyze bib entry `text`
 func Entry(text string, mode string,
-	comp entries.Comparer,
 	class entries.Classifier,
 	extract documents.MetaExtractor,
 	entryParser entries.Parser,
@@ -304,7 +303,6 @@ func Entry(text string, mode string,
 
 // analyze entry `id` from base-64 encoded pdf file `encoded`
 func EntryFromBase64(encoded string, id int, mode string,
-	comp entries.Comparer,
 	class entries.Classifier,
 	docExtract documents.EntryFromRawExtractor,
 	docMeta documents.MetaExtractor,
@@ -325,12 +323,11 @@ func EntryFromBase64(encoded string, id int, mode string,
 	}
 	fmt.Println(text)
 
-	return Entry(text, mode, comp, class, docMeta, entryParser, cfg)
+	return Entry(text, mode, class, docMeta, entryParser, cfg)
 }
 
 // analyze entry `id` from document text `text`
 func EntryFromText(text string, id int, mode string,
-	comp entries.Comparer,
 	class entries.Classifier,
 	docExtract documents.EntryFromTextExtractor,
 	docMeta documents.MetaExtractor,
@@ -351,5 +348,5 @@ func EntryFromText(text string, id int, mode string,
 	}
 	fmt.Println(text)
 
-	return Entry(text, mode, comp, class, docMeta, entryParser, cfg)
+	return Entry(text, mode, class, docMeta, entryParser, cfg)
 }

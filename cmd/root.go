@@ -92,7 +92,6 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 			}
 		}
 
-		var comp entries.Comparer
 		var class entries.Classifier
 		var entryParser entries.Parser
 		var docRawExtract documents.EntryFromRawExtractor
@@ -101,7 +100,6 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 
 		// default to using openrouter, if available
 		if openrouterClient != nil {
-			comp = openrouterClient
 			class = openrouterClient
 			entryParser = openrouterClient
 			docRawExtract = openrouterClient
@@ -110,7 +108,6 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 
 		// use shirty where possible
 		if shirtyProvider != nil {
-			comp = shirtyProvider
 			class = shirtyProvider
 			entryParser = shirtyProvider
 			docTextExtract = shirtyProvider
@@ -137,9 +134,9 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 		for i := entryStart; i < entryStart+entryCount; i++ {
 			var ea *analyze.EntryAnalysis
 			if docRawExtract != nil {
-				ea, err = analyze.EntryFromBase64(pdfEncoded, i, pipeline, comp, class, docRawExtract, docMeta, entryParser, cfg)
+				ea, err = analyze.EntryFromBase64(pdfEncoded, i, pipeline, class, docRawExtract, docMeta, entryParser, cfg)
 			} else if docTextExtract != nil {
-				ea, err = analyze.EntryFromText(pdfText, i, pipeline, comp, class, docTextExtract, docMeta, entryParser, cfg)
+				ea, err = analyze.EntryFromText(pdfText, i, pipeline, class, docTextExtract, docMeta, entryParser, cfg)
 			} else {
 				log.Fatalf("requires something that can extract a bib entry from a pdf")
 			}
