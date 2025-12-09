@@ -167,6 +167,7 @@ go test -v ./... -args --openrouter-api-key="sk-or-v1-..."
 
 ## Roadmap
 
+* OpenAlex
 * If a URL is available, try that first, e.g. for 
 ```
 [3] C. Bormann, M. Ersue, and A. Keranen, "Terminology for Constrained-Node Networks," RFC 7228, Internet Engineering Task Force, May 2014. [Online]. Available: https://tools.ietf.org/html/rfc7228
