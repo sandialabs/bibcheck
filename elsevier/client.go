@@ -18,7 +18,7 @@ func NewClient(apiKey string, options ...ClientOpt) *Client {
 	c := &Client{
 		apiKey:  apiKey,
 		baseUrl: "https://api.elsevier.com",
-		timeout: 30 * time.Second,
+		timeout: 10 * time.Second,
 	}
 	for _, o := range options {
 		o(c)
