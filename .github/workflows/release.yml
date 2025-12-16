@@ -46,7 +46,6 @@ jobs:
       - name: Upload Release Asset
         uses: svenstaro/upload-release-action@v2
         with:
-          repo_token: ${{ secrets.RELEASE_TOKEN }}
           file: bibcheck-${{ matrix.goos }}-${{ matrix.goarch }}
           asset_name: bibcheck-${{ matrix.goos }}-${{ matrix.goarch }}
           tag: ${{ github.ref }}
