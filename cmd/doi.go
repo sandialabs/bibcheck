@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/sandialabs/bibcheck/analyze"
+	"github.com/sandialabs/bibcheck/lookup"
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +17,7 @@ var doiCmd = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 
-		exists, err := analyze.CheckDOI(args[0])
+		exists, err := lookup.CheckDOI(args[0])
 		if err != nil {
 			log.Fatalf("retrieve DOI error: %v", err)
 		}
