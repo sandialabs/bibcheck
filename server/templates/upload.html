@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Bibliography Analyzer</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>PDF Bibliography Analyzer</h1>
+        <div class="upload-box">
+            <form action="/upload" method="post" enctype="multipart/form-data">
+                <div class="file-input-wrapper">
+                    <input type="file" name="pdf" id="pdf" accept=".pdf" required>
+                    <label for="pdf">Choose PDF file</label>
+                </div>
+                <button type="submit">Upload and Analyze</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

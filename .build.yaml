@@ -1,0 +1,61 @@
+image: debian/bookworm
+
+packages:
+  - curl
+  - xxd
+  - zip
+
+secrets:
+  - 79522031-7dc6-4b84-9c80-580794529fc6
+
+tasks:
+  - print-env: |
+      echo "$JOB_ID"
+      echo "$JOB_URL"
+      echo "$BUILD_SUBMITTER"
+      echo "$BUILD_REASON"
+      echo "$GIT_REF"
+  - set-git-sha: |
+      GIT_SHA=$(cd bibliography-checker && git rev-parse HEAD)
+      echo "GIT_SHA=$GIT_SHA" >> .buildenv
+  - set-build-date: |
+      BUILD_DATE=$(date +%Y-%m-%d)
+      echo "BUILD_DATE=$BUILD_DATE" >> .buildenv
+  - go-install: |
+      curl -L https://go.dev/dl/go1.24.3.linux-amd64.tar.gz -o go1.24.3.linux-amd64.tar.gz
+      rm -rf /usr/local/go 
+      sudo tar -C /usr/local -xzf go1.24.3.linux-amd64.tar.gz
+      echo 'PATH=/usr/local/go/bin:$PATH' >> .buildenv
+  - go-version: |
+      go version
+  - build-freebsd-amd64: |
+      cd bibliography-checker
+      GOOS=freebsd GOARCH=amd64 go build -v -ldflags "-X version.gitSha=$GIT_SHA -X version.buildDate=$BUILD_DATE" -o freebsd-amd64/bibliography-checker main.go
+  - build-linux-amd64: |
+      cd bibliography-checker
+      GOOS=linux GOARCH=amd64 go build -v -ldflags "-X version.gitSha=$GIT_SHA -X version.buildDate=$BUILD_DATE" -o linux-amd64/bibliography-checker main.go
+  - build-darwin-arm64: |
+      cd bibliography-checker
+      GOOS=darwin GOARCH=arm64 go build -v -ldflags "-X version.gitSha=$GIT_SHA -X version.buildDate=$BUILD_DATE" -o darwin-arm64/bibliography-checker main.go
+  - build-darwin-amd64: |
+      cd bibliography-checker
+      GOOS=darwin GOARCH=amd64 go build -v -ldflags "-X version.gitSha=$GIT_SHA -X version.buildDate=$BUILD_DATE" -o darwin-amd64/bibliography-checker main.go
+  - deploy-binaries: |
+      if [ "$GIT_REF" != "refs/heads/master" ]; then exit 0; fi
+      mkdir deploy && cd deploy
+      git init --initial-branch=master
+      git remote add origin 'git@git.sr.ht:~cwpearson/bibliography-checker-binaries'
+      cp -r ../bibliography-checker/freebsd-amd64 .
+      cp -r ../bibliography-checker/linux-amd64 .
+      cp -r ../bibliography-checker/darwin-arm64 .
+      cp -r ../bibliography-checker/darwin-amd64 .
+      cp ../bibliography-checker/LICENSE .
+      echo "$GIT_SHA" > sha.txt
+      git add *
+      git commit -m "$GIT_SHA"
+      GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no' git push -f -u origin master
+
+triggers:
+  - action: email
+    condition: failure
+    to: Carl Pearson <srht@carlpearson.net>
