@@ -3,6 +3,7 @@
 package shirty
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/sandialabs/bibcheck/openai"
@@ -37,4 +38,15 @@ func WithBaseUrl(baseUrl string) WorkflowOpt {
 		w.baseUrl = baseUrl
 		openai.WithBaseUrl(baseUrl)(w.oaiClient)
 	}
+}
+
+func (w *Workflow) ChatGetChoiceZero(req *openai.ChatRequest) ([]byte, error) {
+	resp, err := w.oaiClient.Chat(req)
+	if err != nil {
+		return nil, fmt.Errorf("openai error: %w", err)
+	}
+	if len(resp.Choices) != 1 {
+		return nil, fmt.Errorf("expected 1 choice in openai response")
+	}
+	return []byte(resp.Choices[0].Message.Content), nil
 }
