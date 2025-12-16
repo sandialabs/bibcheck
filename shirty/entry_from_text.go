@@ -26,7 +26,7 @@ var (
 - Extract the entire, complete requested entry, and nothing else
     - But, do not include the entry number/ID, e.g [33], 33., [foo1996], etc.
 - Provide the extracted entry as a single line
-- The provided text may be mangled due to automated extraction from a source document, try to accomodate
+- Correct any errors due to mangling the source format, but NEVER add missing information.
 - Preserve any other errors or incompleteness in the entry
 - Produce JSON
 `
