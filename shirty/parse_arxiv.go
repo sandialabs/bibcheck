@@ -18,11 +18,11 @@ func NewExtractArxivRF() *openai.ResponseFormat {
 			"schema": map[string]any{
 				"type": "object",
 				"properties": map[string]any{
-					"arxiv": map[string]string{
+					"arxiv_url": map[string]string{
 						"type": "string",
 					},
 				},
-				"required":             []string{"arxiv"},
+				"required":             []string{"arxiv_url"},
 				"additionalProperties": false,
 			},
 		},
@@ -35,10 +35,11 @@ func (w *Workflow) ParseArxiv(text string) (string, error) {
 	req := &openai.ChatRequest{
 		Model: model,
 		Messages: []openai.Message{
-			openai.MakeSystemMessage(`Check if the bibliography entry contains an arxiv.org URL.
-If so, provide the arxiv URL.
-Otherwise, provide an empty string.
-Produce JSON.
+			openai.MakeSystemMessage(`Extract an arxiv.org URL from the provided bibliography entry.
+- Produce JSON
+- The URL might be provided directly in the entry
+- The arxiv ID may be formatted another way, e.g. "arXiv:XXXX.YYYY" -> https://arxiv.org/abs/XXXX.YYYY
+- If no such URL exists, provide an empty string.
 `),
 			openai.MakeUserMessage(text),
 		},
@@ -57,11 +58,11 @@ Produce JSON.
 	}
 
 	s := struct {
-		Arxiv string `json:"arxiv"`
+		URL string `json:"arxiv_url"`
 	}{}
 	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &s); err != nil {
 		return "", fmt.Errorf("couldn't unmarshal structured JSON response: %w", err)
 	}
 
-	return s.Arxiv, nil
+	return s.URL, nil
 }

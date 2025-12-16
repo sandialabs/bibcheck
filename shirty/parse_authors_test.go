@@ -6,11 +6,13 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/sandialabs/bibcheck/entries"
 )
 
 func Test_ParseAuthors_1(t *testing.T) {
 	parse_authors_impl(t,
-		"2017. NVIDIA Tesla V100 GPU Architecture. https://images.nvidia.com/ content/volta-architecture/pdf/volta-architecture-whitepaper.pdf", ParsedAuthors{
+		"2017. NVIDIA Tesla V100 GPU Architecture. https://images.nvidia.com/ content/volta-architecture/pdf/volta-architecture-whitepaper.pdf", entries.Authors{
 			Authors:    []string{},
 			Incomplete: false,
 		})
@@ -18,7 +20,7 @@ func Test_ParseAuthors_1(t *testing.T) {
 
 func Test_ParseAuthors_2(t *testing.T) {
 	parse_authors_impl(t, "David H Bailey, Eric Barszcz, John T Barton, David S Browning, Robert L Carter, Leonardo Dagum, Rod A Fatoohi, Paul O Frederickson, Thomas A Lasinski, Rob S Schreiber, et al . 1991. The NAS Parallel Benchmarks—Summary and Preliminary Results. In Proceedings of the 1991 ACM/IEEE Conference on Supercomputing. 158–165.",
-		ParsedAuthors{Authors: []string{
+		entries.Authors{Authors: []string{
 			"David H Bailey",
 			"Eric Barszcz",
 			"John T Barton",
@@ -37,7 +39,7 @@ func Test_ParseAuthors_2(t *testing.T) {
 
 func Test_ParseAuthors_3(t *testing.T) {
 	parse_authors_impl(t, "Christian Bell, Dan Bonachea, Yannick Cote, Jason Duell, Paul Hargrove, Parry Husbands, Costin Iancu, Michael Welcome, and Katherine, Yelick. 2003. An Evaluation of Current High-Performance Networks. In Proceedings International Parallel and Distributed Processing Symposium. IEEE",
-		ParsedAuthors{Authors: []string{
+		entries.Authors{Authors: []string{
 			"Christian Bell",
 			"Dan Bonachea",
 			"Yannick Cote",
@@ -74,7 +76,7 @@ func Test_ParseAuthors_3(t *testing.T) {
 // 	})
 // }
 
-func parse_authors_impl(t *testing.T, entry string, expected ParsedAuthors) {
+func parse_authors_impl(t *testing.T, entry string, expected entries.Authors) {
 
 	apiKey, ok := os.LookupEnv("SHIRTY_API_KEY")
 
@@ -102,7 +104,7 @@ func parse_authors_impl(t *testing.T, entry string, expected ParsedAuthors) {
 	}
 
 	for ei, e := range expected.Authors {
-		if strings.ToLower(e) != strings.ToLower(actual.Authors[ei]) {
+		if !strings.EqualFold(e, actual.Authors[ei]) {
 			t.Errorf("expected %s, got %s", e, actual.Authors[ei])
 		}
 	}

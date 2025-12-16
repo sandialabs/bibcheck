@@ -7,14 +7,17 @@ import (
 	"log"
 	"os"
 
-	"github.com/sandialabs/bibcheck/analyze"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
+	"github.com/spf13/cobra"
+
 	"github.com/sandialabs/bibcheck/documents"
+	"github.com/sandialabs/bibcheck/elsevier"
 	"github.com/sandialabs/bibcheck/entries"
+	"github.com/sandialabs/bibcheck/lookup"
 	"github.com/sandialabs/bibcheck/openrouter"
-	"github.com/sandialabs/bibcheck/search"
 	"github.com/sandialabs/bibcheck/shirty"
 	"github.com/sandialabs/bibcheck/version"
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -49,6 +52,11 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 				shirty.WithBaseUrl(shirtyBaseUrl))
 		}
 
+		var elsevierClient *elsevier.Client
+		if elsevierApiKey != "" {
+			elsevierClient = elsevier.NewClient(elsevierApiKey)
+		}
+
 		// different representations of the file
 		var pdfEncoded string
 		var pdfText string
@@ -61,7 +69,7 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 
 			// Get citation counts
 			if openrouterClient != nil {
-				pdfEncoded, err = analyze.Encode(pdfPath)
+				pdfEncoded, err = lookup.Encode(pdfPath)
 				if err != nil {
 					log.Fatalf("pdf encode error: %v", err)
 				}
@@ -87,27 +95,22 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 			}
 		}
 
-		var comp entries.Comparer
 		var class entries.Classifier
 		var entryParser entries.Parser
 		var docRawExtract documents.EntryFromRawExtractor
 		var docTextExtract documents.EntryFromTextExtractor
 		var docMeta documents.MetaExtractor
-		var searcher search.Searcher
 
 		// default to using openrouter, if available
 		if openrouterClient != nil {
-			comp = openrouterClient
 			class = openrouterClient
 			entryParser = openrouterClient
 			docRawExtract = openrouterClient
 			docMeta = openrouterClient
-			searcher = openrouterClient
 		}
 
 		// use shirty where possible
 		if shirtyProvider != nil {
-			comp = shirtyProvider
 			class = shirtyProvider
 			entryParser = shirtyProvider
 			docTextExtract = shirtyProvider
@@ -123,12 +126,20 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 
 		}
 
+		cfg := &lookup.EntryConfig{
+			ElsevierClient: elsevierClient,
+		}
+
+		t := table.NewWriter()
+		t.SetOutputMirror(os.Stdout)
+		t.AppendHeader(table.Row{"ORIG", "onl.", "Xref", "Els.", "Arxiv", "doi", "OSTI"})
+
 		for i := entryStart; i < entryStart+entryCount; i++ {
-			var ea *analyze.EntryAnalysis
+			var ea *lookup.EntryAnalysis
 			if docRawExtract != nil {
-				ea, err = analyze.EntryFromBase64(pdfEncoded, i, pipeline, comp, class, docRawExtract, docMeta, entryParser, searcher)
+				ea, err = lookup.EntryFromBase64(pdfEncoded, i, pipeline, class, docRawExtract, docMeta, entryParser, cfg)
 			} else if docTextExtract != nil {
-				ea, err = analyze.EntryFromText(pdfText, i, pipeline, comp, class, docTextExtract, docMeta, entryParser, searcher)
+				ea, err = lookup.EntryFromText(pdfText, i, pipeline, class, docTextExtract, docMeta, entryParser, cfg)
 			} else {
 				log.Fatalf("requires something that can extract a bib entry from a pdf")
 			}
@@ -137,9 +148,68 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 				log.Printf("entry analysis error: %v", err)
 				continue
 			}
-			analyze.Print(ea)
+			lookup.Print(ea)
+
+			// add original entry to row
+			WrapSoftLimit := 40
+			row := []any{
+				text.WrapSoft(ea.Text, WrapSoftLimit),
+			}
+
+			red := func(err error) string {
+				return text.WrapSoft(
+					text.FgRed.Sprintf("%v", err),
+					WrapSoftLimit,
+				)
+			}
+
+			if ea.Online.Metadata != nil {
+				row = append(row, text.WrapSoft(ea.Online.Metadata.ToString(), WrapSoftLimit))
+			} else if ea.Online.Error != nil {
+				row = append(row, red(ea.Online.Error))
+			} else {
+				row = append(row, "")
+			}
+			if ea.Crossref.Work != nil {
+				row = append(row, text.WrapSoft(ea.Crossref.Work.ToString(), WrapSoftLimit))
+			} else if ea.Crossref.Error != nil {
+				row = append(row, red(ea.Crossref.Error))
+			} else {
+				row = append(row, "")
+			}
+			if ea.Elsevier.Result != nil {
+				row = append(row, text.WrapSoft(ea.Elsevier.Result.ToString(), WrapSoftLimit))
+			} else if ea.Elsevier.Error != nil {
+				row = append(row, red(ea.Elsevier.Error))
+			} else {
+				row = append(row, "")
+			}
+			if ea.Arxiv.Entry != nil {
+				row = append(row, text.WrapSoft(ea.Arxiv.Entry.ToString(), WrapSoftLimit))
+			} else if ea.Arxiv.Error != nil {
+				row = append(row, red(ea.Arxiv.Error))
+			} else {
+				row = append(row, "")
+			}
+			if ea.DOIOrg.Found {
+				row = append(row, text.WrapSoft("exists", WrapSoftLimit))
+			} else if ea.DOIOrg.Error != nil {
+				row = append(row, red(ea.DOIOrg.Error))
+			} else {
+				row = append(row, "")
+			}
+			if ea.OSTI.Record != nil {
+				row = append(row, text.WrapSoft(ea.OSTI.Record.ToString(), WrapSoftLimit))
+			} else if ea.OSTI.Error != nil {
+				row = append(row, red(ea.OSTI.Error))
+			} else {
+				row = append(row, "")
+			}
+			t.AppendRow(row)
+			t.AppendSeparator()
 		}
 
+		t.Render()
 	},
 }
 

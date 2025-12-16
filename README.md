@@ -122,6 +122,21 @@ Then navigate to http://localhost:8080 in your browser
 * Perplexity really wants to summarize the results.
 * Some papers are easily found on Google Scholar, but Perplexity does not surface them.
 
+## "Search" strategy
+
+* Unique ID lookup
+  * Some references have a unique ID:
+      * OSTI
+      * DOI
+      * ArXiv
+  * We can directly looks these up:
+      * OSTI directly provides metadata in the response
+      * ArXiv directly provides metadata in the response
+      * doi.org does NOT provide metadata, but at least we can confirm the DOI points at _something_
+  * For OSTI and ArXiv, we can parse the bibliography entry, and present it side-by-side with the retrieve metadata for comparison
+* URL lookup: some entries have a URL (e.g. a documentation website, a blog post, a software homepage, etc)
+    * We can retrieve the contents of the URL, extract the metadata, and present it side-by-side with the bibliography entry
+
 ## Roadmap:
 
 * docker/podman build instructions
@@ -152,31 +167,43 @@ go test -v ./... -args --openrouter-api-key="sk-or-v1-..."
 
 ## Roadmap
 
-* Improve metadata printouts
-* Special handling for citations of books
-  * crossref is not good at these
+* OpenAlex
 * If a URL is available, try that first, e.g. for 
 ```
 [3] C. Bormann, M. Ersue, and A. Keranen, "Terminology for Constrained-Node Networks," RFC 7228, Internet Engineering Task Force, May 2014. [Online]. Available: https://tools.ietf.org/html/rfc7228
 ```
-
 * offer a google scholar link when we can't find it, e.g.
 ```
 https://scholar.google.com/scholar?hl=en&as_sdt=0%2C32&q=Quantum+information&btnG=
 ```
-
 * offer a DOI URL when the DOI is found
 * Show selected file in upload GUI
 * extract alphanumeric bibliography entry
-  * structured response asking for all bibliography IDs
-* dev.elsevier.com
+    * structured response asking for all bibliography IDs
+* try other shirty LLMs
+    * `openai/gpt-oss-120b`
 
 ## Licensing
 
 To list third-party licenses:
 
+save the following as `template.md`
+```md
+{{ range . }}
+## {{ .Name }}
+
+* Name: {{ .Name }}
+* Version: {{ .Version }}
+* License: [{{ .LicenseName }}]({{ .LicenseURL }})
+
+```
+{{ .LicenseText }}
+```
+{{ end }}
+```
+
 ```bash
 go install github.com/google/go-licenses/v2@latest
 
-go-licenses report ./...
+go-licenses report ./... --template template.md
 ```

@@ -1,6 +1,6 @@
 // Copyright 2025 National Technology and Engineering Solutions of Sandia
 // SPDX-License-Identifier: BSD-3-Clause
-package analyze
+package lookup
 
 import "fmt"
 
@@ -11,69 +11,62 @@ func Print(ea *EntryAnalysis) {
 	red := "\033[31m"
 	reset := "\033[0m"
 
-	switch ea.Arxiv.Status {
-	case SearchStatusDone:
-		if ea.Arxiv.Found {
+	if ea.Arxiv.Status == SearchStatusDone {
+		if ea.Arxiv.Entry != nil {
 			fmt.Println(green + "Arxiv: compare retrieved metadata:" + reset)
-			fmt.Println(green + ea.Arxiv.Result + reset)
+			fmt.Println(green + ea.Arxiv.Entry.ToString() + reset)
 		} else {
 			fmt.Println(red + "Arxiv: ID NOT FOUND" + reset)
 		}
-	case SearchStatusError:
+	} else if ea.Arxiv.Error != nil {
 		fmt.Println(yellow + fmt.Sprintf("Arxiv: search error: %v", ea.Arxiv.Error) + reset)
 	}
 
-	switch ea.Crossref.Status {
-	case SearchStatusDone:
-		if ea.Crossref.Found {
+	if ea.Crossref.Status == SearchStatusDone {
+		if ea.Crossref.Work != nil {
 			fmt.Println(green + "Crossref: compare retrieved metadata" + reset)
-			fmt.Println(green + ea.Crossref.Result + reset)
+			fmt.Println(green + ea.Crossref.Work.ToString() + reset)
 		} else {
 			fmt.Println(red + "Crossref: NO SEARCH RESULTS" + reset)
-			fmt.Println(red + "          " + ea.Crossref.Result + reset)
+			fmt.Println(red + "          " + ea.Crossref.Comment + reset)
 		}
-	case SearchStatusError:
+	} else if ea.Crossref.Error != nil {
 		fmt.Println(yellow + fmt.Sprintf("Crossref: search error: %v", ea.Crossref.Error) + reset)
 	}
 
-	switch ea.DOIOrg.Status {
-	case SearchStatusDone:
+	if ea.DOIOrg.Status == SearchStatusDone {
 		if ea.DOIOrg.Found {
 			fmt.Println(green + "DOI: EXISTS (content match not verified)" + reset)
 		} else {
 			fmt.Println(red + "DOI: NOT FOUND" + reset)
 		}
-	case SearchStatusError:
+	} else if ea.DOIOrg.Error != nil {
 		fmt.Println(yellow + fmt.Sprintf("DOI:  search error: %v", ea.DOIOrg.Error) + reset)
 	}
 
-	switch ea.OSTI.Status {
-	case SearchStatusDone:
-		if ea.OSTI.Found {
+	if ea.OSTI.Status == SearchStatusDone {
+		if ea.OSTI.Record != nil {
 			fmt.Println(green + "OSTI: compare retrieved metadata:" + reset)
-			fmt.Println(green + ea.OSTI.Result + reset)
+			fmt.Println(green + ea.OSTI.Record.ToString() + reset)
 		} else {
 			fmt.Println(red + "OSTI: NOT FOUND" + reset)
 		}
-	case SearchStatusError:
+	} else if ea.OSTI.Error != nil {
 		fmt.Println(yellow + fmt.Sprintf("OSTI: search error: %v", ea.OSTI.Error) + reset)
 	}
 
-	switch ea.URL.Status {
-	case SearchStatusDone:
-		if ea.URL.Exists {
-			fmt.Println(green + "URL: ✓ LOOKS OKAY" + reset)
-			fmt.Println(green + "     " + ea.URL.Comment + reset)
+	if ea.Online.Status == SearchStatusDone {
+		if ea.Online.Metadata != nil {
+			fmt.Println(green + "Online: ✓ LOOKS OKAY" + reset)
+			fmt.Println(green + "     " + ea.Online.Metadata.ToString() + reset)
 		} else {
-			fmt.Println(red + "URL: NO MATCH" + reset)
-			fmt.Println(red + "     " + ea.URL.Comment + reset)
+			fmt.Println(red + "Online: NOT FOUND" + reset)
 		}
-	case SearchStatusError:
-		fmt.Println(yellow + fmt.Sprintf("Web: search error: %v", ea.URL.Error) + reset)
+	} else if ea.Online.Error != nil {
+		fmt.Println(yellow + fmt.Sprintf("Online: search error: %v", ea.Online.Error) + reset)
 	}
 
-	switch ea.Web.Status {
-	case SearchStatusDone:
+	if ea.Web.Status == SearchStatusDone {
 		if ea.Web.Exists {
 			fmt.Println(green + "Web Search: ✓ LOOKS OKAY" + reset)
 			fmt.Println(green + "            " + ea.Web.Comment + reset)
@@ -81,7 +74,7 @@ func Print(ea *EntryAnalysis) {
 			fmt.Println(red + "Web Search: NOT FOUND" + reset)
 			fmt.Println(red + "            " + ea.Web.Comment + reset)
 		}
-	case SearchStatusError:
+	} else if ea.Web.Error != nil {
 		fmt.Println(yellow + fmt.Sprintf("Web: search error: %v", ea.Web.Error) + reset)
 	}
 

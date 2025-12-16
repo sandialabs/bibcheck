@@ -8,10 +8,15 @@ type Software struct {
 	HomepageUrl string   `json:"homepage_url"`
 }
 
-type Website struct {
+type Online struct {
 	Title   string   `json:"title"`
 	Authors []string `json:"authors"`
 	URL     string   `json:"url"`
+}
+
+type Authors struct {
+	Authors    []string `json:"authors"`
+	Incomplete bool     `json:"has_et_al"`
 }
 
 type Parser interface {
@@ -19,6 +24,9 @@ type Parser interface {
 	ParseArxiv(entry string) (string, error)
 	ParseURL(entry string) (string, error)
 	ParseOSTI(entry string) (string, error)
-	ParseWebsite(entry string) (*Website, error)
-	ParseSoftware(entry string) (*Software, error)
+	ParseOnline(entry string) (*Online, error)
+
+	ParseAuthors(entry string) (*Authors, error)
+	ParseTitle(entry string) (string, error)
+	ParsePub(entry string) (string, error)
 }

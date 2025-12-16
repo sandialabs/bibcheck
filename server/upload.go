@@ -15,7 +15,7 @@ import (
 	"sync"
 
 	"github.com/labstack/echo/v4"
-	"github.com/sandialabs/bibcheck/analyze"
+	"github.com/sandialabs/bibcheck/lookup"
 	"github.com/sandialabs/bibcheck/shirty"
 )
 
@@ -103,40 +103,32 @@ func doAnalyze(shirtyApiKey string, doc *Document) {
 		ent.AnalysisStatus = "active"
 		doc.mu.Unlock()
 
-		ea, err := analyze.Entry(ent.Text, "auto", client, client, client, client, nil)
+		ea, err := lookup.Entry(ent.Text, "auto", client, client, client, nil)
 		doc.mu.Lock()
 		if err != nil {
 			ent.AnalysisStatus = "error"
 		} else {
 			ent.AnalysisStatus = "completed"
-			if ea.Exists {
-				ent.AnalysisFound = "found"
-			} else {
-				ent.AnalysisFound = "not-found"
-			}
+			// if ea.Exists {
+			// 	ent.AnalysisFound = "found"
+			// } else {
+			// 	ent.AnalysisFound = "not-found"
+			// }
 
-			if ea.Arxiv.Status == analyze.SearchStatusDone {
-				if ea.Arxiv.Found {
-					ent.Analysis += fmt.Sprintf("arxiv: %s\n", ea.Arxiv.Result)
-				}
+			if ea.Arxiv.Status == lookup.SearchStatusDone && ea.Arxiv.Entry != nil {
+				ent.Analysis += fmt.Sprintf("arxiv: %s\n", ea.Arxiv.Entry.ToString())
 			}
-			if ea.OSTI.Status == analyze.SearchStatusDone {
-				if ea.OSTI.Found {
-					ent.Analysis += fmt.Sprintf("OSTI: %s\n", ea.OSTI.Result)
-				}
+			if ea.OSTI.Status == lookup.SearchStatusDone && ea.OSTI.Record != nil {
+				ent.Analysis += fmt.Sprintf("OSTI: %s\n", ea.OSTI.Record.ToString())
 			}
-			if ea.Crossref.Status == analyze.SearchStatusDone {
-				ent.Analysis += fmt.Sprintf("crossref: %s\n", ea.Crossref.Result)
+			if ea.Crossref.Status == lookup.SearchStatusDone && ea.Crossref.Work != nil {
+				ent.Analysis += fmt.Sprintf("crossref: %s\n", ea.Crossref.Work.ToString())
 			}
-			if ea.DOIOrg.Status == analyze.SearchStatusDone {
-				if ea.DOIOrg.Found {
-					ent.Analysis += fmt.Sprintf("doi.org: %s\n", ea.DOIOrg.Result)
-				}
+			if ea.DOIOrg.Status == lookup.SearchStatusDone && ea.DOIOrg.Found {
+				ent.Analysis += fmt.Sprintf("doi.org: %s\n", "exists")
 			}
-			if ea.URL.Status == analyze.SearchStatusDone {
-				if ea.URL.Exists {
-					ent.Analysis += fmt.Sprintf("URL: %s\n", ea.URL.Comment)
-				}
+			if ea.Online.Status == lookup.SearchStatusDone && ea.Online.Metadata != nil {
+				ent.Analysis += fmt.Sprintf("URL: %s\n", ea.Online.Metadata.ToString())
 			}
 		}
 		doc.mu.Unlock()
