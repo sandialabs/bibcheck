@@ -1,0 +1,43 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: Cross-platform Builds
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+        - goos: linux
+          goarch: amd64
+        - goos: darwin
+          goarch: arm64
+        - goos: darwin
+          goarch: amd64
+    steps:
+      - name: Set timezone
+        run: sudo timedatectl set-timezone "America/Denver"
+
+      - name: Set BUILD_DATE
+        run: |
+          BUILD_DATE=$(date +%Y-%m-%d)
+          echo "BUILD_DATE=$BUILD_DATE" >> "$GITHUB_ENV"
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+  
+      - uses: actions/checkout@v4
+  
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: go build -v -ldflags "-X version.gitSha=$GIT_SHA -X version.buildDate=$BUILD_DATE" main.go

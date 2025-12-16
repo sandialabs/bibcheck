@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyzing Bibliography</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+    <div class="analyze-container">
+        <div class="pdf-viewer">
+            <canvas id="pdf-canvas"></canvas>
+            <div class="pdf-controls">
+                <button id="prev-page">Previous</button>
+                <span id="page-info">Page 1</span>
+                <button id="next-page">Next</button>
+            </div>
+        </div>
+        <div class="analysis-panel">
+            <h2>Bibliography Analysis</h2>
+            <div id="entries-grid" class="entries-grid">
+                <!-- Entries will be loaded here -->
+            </div>
+        </div>
+    </div>
+    <script>
+        const docID = "{{.DocID}}";
+        const filename = "{{.Filename}}";
+    </script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
