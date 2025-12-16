@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cwpearson/bibliography-checker/elsevier"
-	"github.com/cwpearson/bibliography-checker/shirty"
+	"github.com/sandialabs/bibcheck/elsevier"
+	"github.com/sandialabs/bibcheck/shirty"
 )
 
 func shirtyWorkflowFromEnv() *shirty.Workflow {

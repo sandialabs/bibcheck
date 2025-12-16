@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/sandialabs/bibcheck/entries"
 	"github.com/sandialabs/bibcheck/openai"
 )
 

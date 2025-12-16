@@ -7,14 +7,17 @@ import (
 	"log"
 	"os"
 
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
+	"github.com/spf13/cobra"
+
 	"github.com/sandialabs/bibcheck/analyze"
 	"github.com/sandialabs/bibcheck/documents"
+	"github.com/sandialabs/bibcheck/elsevier"
 	"github.com/sandialabs/bibcheck/entries"
 	"github.com/sandialabs/bibcheck/openrouter"
-	"github.com/sandialabs/bibcheck/search"
 	"github.com/sandialabs/bibcheck/shirty"
 	"github.com/sandialabs/bibcheck/version"
-	"github.com/spf13/cobra"
 )
 
 var (

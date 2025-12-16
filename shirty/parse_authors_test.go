@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cwpearson/bibliography-checker/entries"
+	"github.com/sandialabs/bibcheck/entries"
 )
 
 func Test_ParseAuthors_1(t *testing.T) {

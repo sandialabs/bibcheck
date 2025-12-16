@@ -9,7 +9,7 @@ type Searcher interface {
 
 	// search for existence of website
 	// returns (exists, comment, error)
-	SearchWebsite(website *entries.Website) (bool, string, error)
+	SearchOnline(website *entries.Online) (bool, string, error)
 
 	// search for existence of software
 	// returns (exists, comment, error)

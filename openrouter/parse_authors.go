@@ -5,7 +5,7 @@ package openrouter
 import (
 	"fmt"
 
-	"github.com/cwpearson/bibliography-checker/entries"
+	"github.com/sandialabs/bibcheck/entries"
 )
 
 func (c *Client) ParseAuthors(text string) (*entries.Authors, error) {
