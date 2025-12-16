@@ -9,7 +9,7 @@ import (
 	"github.com/sandialabs/bibcheck/entries"
 )
 
-func (c *Client) SearchWebsite(website *entries.Website) (bool, string, error) {
+func (c *Client) SearchOnline(website *entries.Online) (bool, string, error) {
 	baseURL := "https://openrouter.ai/api/v1"
 	// model := "perplexity/sonar"
 	model := "perplexity/sonar-pro"

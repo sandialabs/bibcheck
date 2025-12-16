@@ -12,9 +12,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sandialabs/bibcheck/arxiv"
+	"github.com/sandialabs/bibcheck/crossref"
 	"github.com/sandialabs/bibcheck/documents"
+	"github.com/sandialabs/bibcheck/elsevier"
 	"github.com/sandialabs/bibcheck/entries"
-	"github.com/sandialabs/bibcheck/search"
+	"github.com/sandialabs/bibcheck/osti"
+	"github.com/sandialabs/bibcheck/shirty"
 )
 
 const (
