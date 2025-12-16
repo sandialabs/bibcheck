@@ -44,7 +44,7 @@ jobs:
         run: go build -v -ldflags "-X version.gitSha=$GIT_SHA -X version.buildDate=$BUILD_DATE" -o "bibcheck-${{ matrix.goos }}-${{ matrix.goarch }}" main.go
 
       - name: Upload Release Asset
-        uses: svenstaro/upload-release-action@v2
+        uses: svenstaro/upload-release-action@6b7fa9f267e90b50a19fef07b3596790bb941741 # v2.11.3
         with:
           file: bibcheck-${{ matrix.goos }}-${{ matrix.goarch }}
           asset_name: bibcheck-${{ matrix.goos }}-${{ matrix.goarch }}
