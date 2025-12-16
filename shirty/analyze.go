@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cwpearson/bibliography-checker/openai"
+	"github.com/sandialabs/bibcheck/openai"
 )
 
 var (
