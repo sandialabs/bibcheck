@@ -41,13 +41,13 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-        run: go build -v -ldflags "-X version.gitSha=$GIT_SHA -X version.buildDate=$BUILD_DATE" -o "bibliography-checker-${{ matrix.goos }}-${{ matrix.goarch }}" main.go
+        run: go build -v -ldflags "-X version.gitSha=$GIT_SHA -X version.buildDate=$BUILD_DATE" -o "bibcheck-${{ matrix.goos }}-${{ matrix.goarch }}" main.go
 
       - name: Upload Release Asset
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.RELEASE_TOKEN }}
-          file: bibliography-checker-${{ matrix.goos }}-${{ matrix.goarch }}
-          asset_name: bibliography-checker-${{ matrix.goos }}-${{ matrix.goarch }}
+          file: bibcheck-${{ matrix.goos }}-${{ matrix.goarch }}
+          asset_name: bibcheck-${{ matrix.goos }}-${{ matrix.goarch }}
           tag: ${{ github.ref }}
           overwrite: true
