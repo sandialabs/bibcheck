@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/sandialabs/bibcheck/analyze"
+	"github.com/sandialabs/bibcheck/lookup"
 	"github.com/sandialabs/bibcheck/openrouter"
 	"github.com/sandialabs/bibcheck/shirty"
 )
@@ -35,7 +35,7 @@ func Test_20231113_siefert_pmbs_35_true(t *testing.T) {
 
 func impl(t *testing.T, path string, id int, expected bool) {
 
-	var ea *analyze.EntryAnalysis
+	var ea *lookup.EntryAnalysis
 	var err error
 
 	if apiKey, ok := os.LookupEnv("SHIRTY_API_KEY"); ok {
@@ -51,7 +51,7 @@ func impl(t *testing.T, path string, id int, expected bool) {
 			t.Errorf("textract error: %v", err)
 		}
 
-		ea, err = analyze.EntryFromText(tResp.Text, id, "auto",
+		ea, err = lookup.EntryFromText(tResp.Text, id, "auto",
 			client, client, client, client, nil)
 
 	} else if apiKey, ok := os.LookupEnv("OPENROUTER_API_KEY"); ok {
@@ -59,12 +59,12 @@ func impl(t *testing.T, path string, id int, expected bool) {
 		client := openrouter.NewClient(apiKey)
 
 		var encoded string
-		encoded, err = analyze.Encode(path)
+		encoded, err = lookup.Encode(path)
 		if err != nil {
 			t.Errorf("encode error: %v", err)
 		}
 
-		ea, err = analyze.EntryFromBase64(encoded, id, "auto",
+		ea, err = lookup.EntryFromBase64(encoded, id, "auto",
 			client, client, client, client, nil)
 
 	} else {
@@ -75,7 +75,7 @@ func impl(t *testing.T, path string, id int, expected bool) {
 		t.Errorf("analyze error: %v", err)
 	}
 
-	analyze.Print(ea)
+	lookup.Print(ea)
 
 	exists := ea.Arxiv.Entry != nil || ea.Crossref.Work != nil ||
 		ea.Elsevier.Result != nil || ea.OSTI.Record != nil || ea.Online.Metadata != nil

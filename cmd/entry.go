@@ -7,7 +7,7 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/sandialabs/bibcheck/analyze"
+	"github.com/sandialabs/bibcheck/lookup"
 	"github.com/sandialabs/bibcheck/openrouter"
 	"github.com/sandialabs/bibcheck/shirty"
 	"github.com/spf13/cobra"
@@ -44,7 +44,7 @@ var entryCmd = &cobra.Command{
 
 		} else if openrouterApiKey != "" && openrouterBaseUrl != "" {
 
-			encoded, err := analyze.Encode(filePath)
+			encoded, err := lookup.Encode(filePath)
 			if err != nil {
 				log.Fatalf("encode error: %v", err)
 			}

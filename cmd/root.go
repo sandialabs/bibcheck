@@ -11,10 +11,10 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 
-	"github.com/sandialabs/bibcheck/analyze"
 	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/elsevier"
 	"github.com/sandialabs/bibcheck/entries"
+	"github.com/sandialabs/bibcheck/lookup"
 	"github.com/sandialabs/bibcheck/openrouter"
 	"github.com/sandialabs/bibcheck/shirty"
 	"github.com/sandialabs/bibcheck/version"
@@ -69,7 +69,7 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 
 			// Get citation counts
 			if openrouterClient != nil {
-				pdfEncoded, err = analyze.Encode(pdfPath)
+				pdfEncoded, err = lookup.Encode(pdfPath)
 				if err != nil {
 					log.Fatalf("pdf encode error: %v", err)
 				}
@@ -126,7 +126,7 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 
 		}
 
-		cfg := &analyze.EntryConfig{
+		cfg := &lookup.EntryConfig{
 			ElsevierClient: elsevierClient,
 		}
 
@@ -135,11 +135,11 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 		t.AppendHeader(table.Row{"ORIG", "onl.", "Xref", "Els.", "Arxiv", "doi", "OSTI"})
 
 		for i := entryStart; i < entryStart+entryCount; i++ {
-			var ea *analyze.EntryAnalysis
+			var ea *lookup.EntryAnalysis
 			if docRawExtract != nil {
-				ea, err = analyze.EntryFromBase64(pdfEncoded, i, pipeline, class, docRawExtract, docMeta, entryParser, cfg)
+				ea, err = lookup.EntryFromBase64(pdfEncoded, i, pipeline, class, docRawExtract, docMeta, entryParser, cfg)
 			} else if docTextExtract != nil {
-				ea, err = analyze.EntryFromText(pdfText, i, pipeline, class, docTextExtract, docMeta, entryParser, cfg)
+				ea, err = lookup.EntryFromText(pdfText, i, pipeline, class, docTextExtract, docMeta, entryParser, cfg)
 			} else {
 				log.Fatalf("requires something that can extract a bib entry from a pdf")
 			}
@@ -148,7 +148,7 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 				log.Printf("entry analysis error: %v", err)
 				continue
 			}
-			analyze.Print(ea)
+			lookup.Print(ea)
 
 			// add original entry to row
 			WrapSoftLimit := 40
