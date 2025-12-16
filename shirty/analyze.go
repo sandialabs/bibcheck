@@ -12,16 +12,16 @@ import (
 
 var (
 	analyze_model_openai_gpt_oss_120B  = "openai/gpt-oss-120b"
-	analyze_prompt_openai_gpt_oss_120B = `Compare the provided bibliography entry with metadata resulting from searching for the cited work. Make a determination about whether the provided bibliography entry matches the results.
+	analyze_prompt_openai_gpt_oss_120B = `Compare the provided bibliography entry with metadata resulting from searching for the cited work. Flag if any search result data is inconsistent with the provided bibliography entry.
 - It's okay if some formatting is different (author name abbreviations, title capitalization, etc)
 - Key metadata needs to be accurate and complete: author list, title, venue, date, etc
-- It's okay if the original or results are missing some metadata fields
+- It's okay if the search results are missing some metadata fields
 - Provide a brief accompanying explanation of the matching determination
 - Produce JSON
 `
 )
 
-// Analyze
+// Analyze returns (mismatch, comment, error)
 func (w *Workflow) Analyze(orig string, others []string) (bool, string, error) {
 	temp := new(float64)
 	*temp = 0.0
@@ -45,14 +45,14 @@ func (w *Workflow) Analyze(orig string, others []string) (bool, string, error) {
 				"schema": map[string]any{
 					"type": "object",
 					"properties": map[string]any{
-						"matches": map[string]string{
+						"possible_mismatch": map[string]string{
 							"type": "boolean",
 						},
 						"comment": map[string]string{
 							"type": "string",
 						},
 					},
-					"required":             []string{"matches", "explanation"},
+					"required":             []string{"possible_mismatch", "comment"},
 					"additionalProperties": false,
 				},
 			},
@@ -69,12 +69,12 @@ func (w *Workflow) Analyze(orig string, others []string) (bool, string, error) {
 	}
 
 	s := struct {
-		Matches bool
-		Comment string
+		PossibleMismatch bool
+		Comment          string
 	}{}
 	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &s); err != nil {
 		return false, "", fmt.Errorf("couldn't unmarshal structured JSON response: %w", err)
 	}
 
-	return s.Matches, s.Comment, nil
+	return s.PossibleMismatch, s.Comment, nil
 }

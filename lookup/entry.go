@@ -73,6 +73,13 @@ type OnlineResult struct {
 	Error    error
 }
 
+type SummarizeResult struct {
+	Status  string
+	Matches bool
+	Comment string
+	Error   error
+}
+
 type EntryAnalysis struct {
 	Text string
 
@@ -83,6 +90,8 @@ type EntryAnalysis struct {
 	OSTI     OSTIResult
 	Online   OnlineResult
 	Web      Search
+
+	Summary SummarizeResult
 }
 
 type EntryConfig struct {
