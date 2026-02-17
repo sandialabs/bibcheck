@@ -75,8 +75,6 @@ func impl(t *testing.T, path string, id int, expected bool) {
 		t.Errorf("analyze error: %v", err)
 	}
 
-	lookup.Print(lr)
-
 	exists := lr.Arxiv.Entry != nil || lr.Crossref.Work != nil ||
 		lr.Elsevier.Result != nil || lr.OSTI.Record != nil || lr.Online.Metadata != nil
 
