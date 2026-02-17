@@ -34,7 +34,7 @@ func NewShirtySummarizer(w *shirty.Workflow) *ShirtySummarizer {
 }
 
 // Analyze returns (mismatch, comment, error)
-func (s *ShirtySummarizer) Summarize(ea *lookup.EntryAnalysis) (bool, string, error) {
+func (s *ShirtySummarizer) Summarize(lr *lookup.Result) (bool, string, error) {
 	temp := new(float64)
 	*temp = 0.0
 
@@ -46,7 +46,7 @@ func (s *ShirtySummarizer) Summarize(ea *lookup.EntryAnalysis) (bool, string, er
 		Messages: []openai.Message{
 			openai.MakeSystemMessage(analyze_prompt_openai_gpt_oss_120B),
 			openai.MakeUserMessage(
-				fmt.Sprintf("ORIGINAL ENTRY TEXT:\n%s", ea.Text) +
+				fmt.Sprintf("ORIGINAL ENTRY TEXT:\n%s", lr.Text) +
 					"\n\nSEARCH RESULT:\n" +
 					strings.Join(others, "\n\nSEARCH RESULT:\n"),
 			),

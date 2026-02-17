@@ -80,7 +80,7 @@ type SummarizeResult struct {
 	Error   error
 }
 
-type EntryAnalysis struct {
+type Result struct {
 	Text string
 
 	Arxiv    ArxivResult
@@ -137,9 +137,9 @@ func Entry(text string, mode string,
 	extract documents.MetaExtractor,
 	entryParser entries.Parser,
 	cfg *EntryConfig,
-) (*EntryAnalysis, error) {
+) (*Result, error) {
 
-	EA := &EntryAnalysis{
+	EA := &Result{
 		Text: text,
 	}
 
@@ -321,7 +321,7 @@ func EntryFromBase64(encoded string, id int, mode string,
 	docMeta documents.MetaExtractor,
 	entryParser entries.Parser,
 	cfg *EntryConfig,
-) (*EntryAnalysis, error) {
+) (*Result, error) {
 
 	if mode == "" {
 		mode = "auto"
@@ -346,7 +346,7 @@ func EntryFromText(text string, id int, mode string,
 	docMeta documents.MetaExtractor,
 	entryParser entries.Parser,
 	cfg *EntryConfig,
-) (*EntryAnalysis, error) {
+) (*Result, error) {
 
 	if mode == "" {
 		mode = "auto"

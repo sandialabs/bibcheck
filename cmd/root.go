@@ -150,11 +150,11 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 		t.AppendHeader(header)
 
 		for i := entryStart; i < entryStart+entryCount; i++ {
-			var ea *lookup.EntryAnalysis
+			var lr *lookup.Result
 			if docRawExtract != nil {
-				ea, err = lookup.EntryFromBase64(pdfEncoded, i, pipeline, class, docRawExtract, docMeta, entryParser, cfg)
+				lr, err = lookup.EntryFromBase64(pdfEncoded, i, pipeline, class, docRawExtract, docMeta, entryParser, cfg)
 			} else if docTextExtract != nil {
-				ea, err = lookup.EntryFromText(pdfText, i, pipeline, class, docTextExtract, docMeta, entryParser, cfg)
+				lr, err = lookup.EntryFromText(pdfText, i, pipeline, class, docTextExtract, docMeta, entryParser, cfg)
 			} else {
 				log.Fatalf("requires something that can extract a bib entry from a pdf")
 			}
@@ -163,12 +163,12 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 				log.Printf("entry analysis error: %v", err)
 				continue
 			}
-			lookup.Print(ea)
+			lookup.Print(lr)
 
 			// add original entry to row
 			WrapSoftLimit := 40
 			row := []any{
-				text.WrapSoft(ea.Text, WrapSoftLimit),
+				text.WrapSoft(lr.Text, WrapSoftLimit),
 			}
 
 			red := func(err error) string {
@@ -178,51 +178,51 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 				)
 			}
 
-			if ea.Online.Metadata != nil {
-				row = append(row, text.WrapSoft(ea.Online.Metadata.ToString(), WrapSoftLimit))
-			} else if ea.Online.Error != nil {
-				row = append(row, red(ea.Online.Error))
+			if lr.Online.Metadata != nil {
+				row = append(row, text.WrapSoft(lr.Online.Metadata.ToString(), WrapSoftLimit))
+			} else if lr.Online.Error != nil {
+				row = append(row, red(lr.Online.Error))
 			} else {
 				row = append(row, "")
 			}
-			if ea.Crossref.Work != nil {
-				row = append(row, text.WrapSoft(ea.Crossref.Work.ToString(), WrapSoftLimit))
-			} else if ea.Crossref.Error != nil {
-				row = append(row, red(ea.Crossref.Error))
+			if lr.Crossref.Work != nil {
+				row = append(row, text.WrapSoft(lr.Crossref.Work.ToString(), WrapSoftLimit))
+			} else if lr.Crossref.Error != nil {
+				row = append(row, red(lr.Crossref.Error))
 			} else {
 				row = append(row, "")
 			}
-			if ea.Elsevier.Result != nil {
-				row = append(row, text.WrapSoft(ea.Elsevier.Result.ToString(), WrapSoftLimit))
-			} else if ea.Elsevier.Error != nil {
-				row = append(row, red(ea.Elsevier.Error))
+			if lr.Elsevier.Result != nil {
+				row = append(row, text.WrapSoft(lr.Elsevier.Result.ToString(), WrapSoftLimit))
+			} else if lr.Elsevier.Error != nil {
+				row = append(row, red(lr.Elsevier.Error))
 			} else {
 				row = append(row, "")
 			}
-			if ea.Arxiv.Entry != nil {
-				row = append(row, text.WrapSoft(ea.Arxiv.Entry.ToString(), WrapSoftLimit))
-			} else if ea.Arxiv.Error != nil {
-				row = append(row, red(ea.Arxiv.Error))
+			if lr.Arxiv.Entry != nil {
+				row = append(row, text.WrapSoft(lr.Arxiv.Entry.ToString(), WrapSoftLimit))
+			} else if lr.Arxiv.Error != nil {
+				row = append(row, red(lr.Arxiv.Error))
 			} else {
 				row = append(row, "")
 			}
-			if ea.DOIOrg.Found {
+			if lr.DOIOrg.Found {
 				row = append(row, text.WrapSoft("exists", WrapSoftLimit))
-			} else if ea.DOIOrg.Error != nil {
-				row = append(row, red(ea.DOIOrg.Error))
+			} else if lr.DOIOrg.Error != nil {
+				row = append(row, red(lr.DOIOrg.Error))
 			} else {
 				row = append(row, "")
 			}
-			if ea.OSTI.Record != nil {
-				row = append(row, text.WrapSoft(ea.OSTI.Record.ToString(), WrapSoftLimit))
-			} else if ea.OSTI.Error != nil {
-				row = append(row, red(ea.OSTI.Error))
+			if lr.OSTI.Record != nil {
+				row = append(row, text.WrapSoft(lr.OSTI.Record.ToString(), WrapSoftLimit))
+			} else if lr.OSTI.Error != nil {
+				row = append(row, red(lr.OSTI.Error))
 			} else {
 				row = append(row, "")
 			}
 
 			if summarizer != nil {
-				mismatch, comment, err := summarizer.Summarize(ea)
+				mismatch, comment, err := summarizer.Summarize(lr)
 				if err != nil {
 					log.Printf("summarizer error: %v", err)
 					row = append(row, red(err))
