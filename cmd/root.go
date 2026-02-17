@@ -17,6 +17,7 @@ import (
 	"github.com/sandialabs/bibcheck/lookup"
 	"github.com/sandialabs/bibcheck/openrouter"
 	"github.com/sandialabs/bibcheck/shirty"
+	"github.com/sandialabs/bibcheck/summary"
 	"github.com/sandialabs/bibcheck/version"
 )
 
@@ -130,9 +131,23 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 			ElsevierClient: elsevierClient,
 		}
 
+		var summarizer *summary.ShirtySummarizer
+
+		if shirtyApiKey != "" {
+			summarizer = summary.NewShirtySummarizer(
+				shirty.NewWorkflow(shirtyApiKey),
+			)
+		}
+
 		t := table.NewWriter()
 		t.SetOutputMirror(os.Stdout)
-		t.AppendHeader(table.Row{"ORIG", "onl.", "Xref", "Els.", "Arxiv", "doi", "OSTI"})
+
+		header := table.Row{"ORIG", "onl.", "Xref", "Els.", "Arxiv", "doi", "OSTI"}
+		if summarizer != nil {
+			header = append(header, "SUMMARY")
+		}
+
+		t.AppendHeader(header)
 
 		for i := entryStart; i < entryStart+entryCount; i++ {
 			var ea *lookup.EntryAnalysis
@@ -205,6 +220,19 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 			} else {
 				row = append(row, "")
 			}
+
+			if summarizer != nil {
+				mismatch, comment, err := summarizer.Summarize(ea)
+				if err != nil {
+					log.Printf("summarizer error: %v", err)
+					row = append(row, red(err))
+				} else if mismatch {
+					row = append(row, text.WrapSoft(comment, WrapSoftLimit))
+				}
+
+				row = append(row, "")
+			}
+
 			t.AppendRow(row)
 			t.AppendSeparator()
 		}
