@@ -142,9 +142,9 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 		t := table.NewWriter()
 		t.SetOutputMirror(os.Stdout)
 
-		header := table.Row{"ORIG", "onl.", "Xref", "Els.", "Arxiv", "doi", "OSTI"}
+		header := table.Row{"ORIG", "onl.", "Xref", "Els.", "Arx.", "DOI", "OSTI"}
 		if summarizer != nil {
-			header = append(header, "SUMMARY")
+			header = append(header, "ANALYSIS")
 		}
 
 		t.AppendHeader(header)
@@ -228,9 +228,9 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 					row = append(row, red(err))
 				} else if mismatch {
 					row = append(row, text.WrapSoft(comment, WrapSoftLimit))
+				} else {
+					row = append(row, text.WrapSoft("OK", WrapSoftLimit))
 				}
-
-				row = append(row, "")
 			}
 
 			t.AppendRow(row)
