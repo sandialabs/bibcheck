@@ -35,7 +35,7 @@ func Test_20231113_siefert_pmbs_35_true(t *testing.T) {
 
 func impl(t *testing.T, path string, id int, expected bool) {
 
-	var ea *lookup.EntryAnalysis
+	var lr *lookup.Result
 	var err error
 
 	if apiKey, ok := os.LookupEnv("SHIRTY_API_KEY"); ok {
@@ -51,7 +51,7 @@ func impl(t *testing.T, path string, id int, expected bool) {
 			t.Errorf("textract error: %v", err)
 		}
 
-		ea, err = lookup.EntryFromText(tResp.Text, id, "auto",
+		lr, err = lookup.EntryFromText(tResp.Text, id, "auto",
 			client, client, client, client, nil)
 
 	} else if apiKey, ok := os.LookupEnv("OPENROUTER_API_KEY"); ok {
@@ -64,7 +64,7 @@ func impl(t *testing.T, path string, id int, expected bool) {
 			t.Errorf("encode error: %v", err)
 		}
 
-		ea, err = lookup.EntryFromBase64(encoded, id, "auto",
+		lr, err = lookup.EntryFromBase64(encoded, id, "auto",
 			client, client, client, client, nil)
 
 	} else {
@@ -75,10 +75,10 @@ func impl(t *testing.T, path string, id int, expected bool) {
 		t.Errorf("analyze error: %v", err)
 	}
 
-	lookup.Print(ea)
+	lookup.Print(lr)
 
-	exists := ea.Arxiv.Entry != nil || ea.Crossref.Work != nil ||
-		ea.Elsevier.Result != nil || ea.OSTI.Record != nil || ea.Online.Metadata != nil
+	exists := lr.Arxiv.Entry != nil || lr.Crossref.Work != nil ||
+		lr.Elsevier.Result != nil || lr.OSTI.Record != nil || lr.Online.Metadata != nil
 
 	if exists != expected {
 		t.Errorf("Document %s Entry %d: expected %v got %v", path, id, expected, exists)
