@@ -163,7 +163,6 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 				log.Printf("entry analysis error: %v", err)
 				continue
 			}
-			lookup.Print(lr)
 
 			// add original entry to row
 			WrapSoftLimit := 40
