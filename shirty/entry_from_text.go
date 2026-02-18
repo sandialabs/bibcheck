@@ -14,7 +14,8 @@ var (
 	llama_33_70B_Prompt = `Extract the requested bibliography entry from the document's bibliography. Produce JSON.
 - Only extract the requested entry.
 - Do not create a bibliography reference for the provided document, extract the entry from the bibliography.
-- Extract the entire, complete requested entry.
+- Extract the entire, complete requested entry, and nothing else
+    - But, do not include the entry number/ID, e.g [33], 33., [foo1996], etc.
 - Provide the extracted entry as a single line.
 - The provided text may be mangled due to automated extraction from a source document, try to accomodate.
 - Preserve any other errors or incompleteness in the entry
@@ -40,11 +41,11 @@ func (w *Workflow) EntryFromText(text string, id int) (string, error) {
 	// - openai/gpt-oss-120b: seems to work the best
 	temp := new(float64)
 	*temp = 0.0
-	model := openai_gpt_oss_120B_Model
+	model := llama_33_70B_Model
 	req := &openai.ChatRequest{
 		Model: model,
 		Messages: []openai.Message{
-			openai.MakeSystemMessage(openai_gpt_oss_120B_Prompt),
+			openai.MakeSystemMessage(llama_33_70B_Prompt),
 			openai.MakeUserMessage(fmt.Sprintf("Extract bibliography entry %d from the provided document below:\n\nDOCUMENT TEXT:\n\n%s", id, text)),
 		},
 		Temperature: temp,
