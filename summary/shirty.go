@@ -13,12 +13,15 @@ import (
 )
 
 var (
-	analyze_model_openai_gpt_oss_120B  = "openai/gpt-oss-120b"
-	analyze_prompt_openai_gpt_oss_120B = `Compare the provided bibliography entry with metadata resulting from searching for the cited work. Flag if any search result data is inconsistent with the provided bibliography entry.
-- It's okay if some formatting is different (author name abbreviations, title capitalization, etc)
-- Key metadata needs to be accurate and complete: author list, title, venue, date, etc
-- It's okay if the search results are missing some metadata fields
-- Provide a brief accompanying explanation of the matching determination
+	// gpt-oss-120b seems unable to consistently obey the response format
+	analyze_model_llama_33_70B_instruct  = "meta-llama/Llama-3.3-70B-Instruct"
+	analyze_prompt_llama_33_70B_instruct = `The user will provide you with a bibliography entry, and some results for searching for that entry. Determine whether the bibliography entry matches the search results.
+- The author list must provide the same authors in the same order (allowing for "et al." at the end)
+- The title, venue, and date must be the same.
+- Allow for formatting differences (author name abbreviations, title capitalization, date formatting, etc)
+- 
+- Missing data from a search result is okay. Results that conflict with the entry are not.
+- Provide a one phrase explanation
 - Produce JSON
 `
 )
@@ -39,14 +42,32 @@ func (s *ShirtySummarizer) Summarize(lr *lookup.Result) (bool, string, error) {
 	*temp = 0.0
 
 	others := []string{}
+	if lr.Arxiv.Entry != nil {
+		others = append(others, lr.Arxiv.Entry.ToString())
+	}
+	if lr.Crossref.Work != nil {
+		others = append(others, lr.Crossref.Work.ToString())
+	}
+	if lr.DOIOrg.Found {
+		others = append(others, "<DOI from bibliography entry exists, no metadata provided.>")
+	}
+	if lr.Elsevier.Result != nil {
+		others = append(others, lr.Elsevier.Result.ToString())
+	}
+	if lr.Online.Metadata != nil {
+		others = append(others, lr.Online.Metadata.ToString())
+	}
+	if lr.OSTI.Record != nil {
+		others = append(others, lr.OSTI.Record.ToString())
+	}
 
-	model := analyze_model_openai_gpt_oss_120B
+	model := analyze_model_llama_33_70B_instruct
 	req := &openai.ChatRequest{
 		Model: model,
 		Messages: []openai.Message{
-			openai.MakeSystemMessage(analyze_prompt_openai_gpt_oss_120B),
+			openai.MakeSystemMessage(analyze_prompt_llama_33_70B_instruct),
 			openai.MakeUserMessage(
-				fmt.Sprintf("ORIGINAL ENTRY TEXT:\n%s", lr.Text) +
+				fmt.Sprintf("BIBLIOGRAPHY ENTRY:\n%s", lr.Text) +
 					"\n\nSEARCH RESULT:\n" +
 					strings.Join(others, "\n\nSEARCH RESULT:\n"),
 			),
@@ -59,31 +80,31 @@ func (s *ShirtySummarizer) Summarize(lr *lookup.Result) (bool, string, error) {
 				"schema": map[string]any{
 					"type": "object",
 					"properties": map[string]any{
+						"explanation": map[string]string{
+							"type": "string",
+						},
 						"possible_mismatch": map[string]string{
 							"type": "boolean",
 						},
-						"comment": map[string]string{
-							"type": "string",
-						},
 					},
-					"required":             []string{"possible_mismatch", "comment"},
+					"required":             []string{"possible_mismatch", "explanation"},
 					"additionalProperties": false,
 				},
 			},
 		),
 	}
-
 	content, err := s.W.ChatGetChoiceZero(req)
 	if err != nil {
 		return false, "", err
 	}
+
 	result := struct {
-		PossibleMismatch bool
-		Comment          string
+		Explanation      string `json:"explanation"`
+		PossibleMismatch bool   `json:"possible_mismatch"`
 	}{}
-	if err := json.Unmarshal(content, &s); err != nil {
+	if err := json.Unmarshal(content, &result); err != nil {
 		return false, "", fmt.Errorf("couldn't unmarshal structured JSON response: %w", err)
 	}
 
-	return result.PossibleMismatch, result.Comment, nil
+	return result.PossibleMismatch, result.Explanation, nil
 }

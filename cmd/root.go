@@ -177,6 +177,20 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 				)
 			}
 
+			yellow := func(s string) string {
+				return text.WrapSoft(
+					text.FgYellow.Sprintf("%s", s),
+					WrapSoftLimit,
+				)
+			}
+
+			green := func(s string) string {
+				return text.WrapSoft(
+					text.FgGreen.Sprintf("%s", s),
+					WrapSoftLimit,
+				)
+			}
+
 			if lr.Online.Metadata != nil {
 				row = append(row, text.WrapSoft(lr.Online.Metadata.ToString(), WrapSoftLimit))
 			} else if lr.Online.Error != nil {
@@ -222,13 +236,14 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 
 			if summarizer != nil {
 				mismatch, comment, err := summarizer.Summarize(lr)
+				log.Println(mismatch, comment, err)
 				if err != nil {
 					log.Printf("summarizer error: %v", err)
 					row = append(row, red(err))
 				} else if mismatch {
-					row = append(row, text.WrapSoft(comment, WrapSoftLimit))
+					row = append(row, yellow(comment))
 				} else {
-					row = append(row, text.WrapSoft("OK", WrapSoftLimit))
+					row = append(row, green("OK"))
 				}
 			}
 

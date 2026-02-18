@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	CrossrefMatchThreshold float64 = 86 // determined empirically
+	CrossrefMatchThreshold float64 = 100 // determined empirically
 )
 
 // CrossrefQueryBibliographic
