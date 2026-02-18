@@ -15,7 +15,7 @@ type ClientOpt func(*Client)
 func NewClient(apiKey string, options ...ClientOpt) *Client {
 	c := &Client{
 		apiKey:  apiKey,
-		timeout: 30 * time.Second,
+		timeout: 60 * time.Second,
 	}
 	for _, o := range options {
 		o(c)
