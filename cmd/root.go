@@ -142,7 +142,7 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 		t := table.NewWriter()
 		t.SetOutputMirror(os.Stdout)
 
-		header := table.Row{"ORIG", "onl.", "Xref", "Els.", "Arx.", "DOI", "OSTI"}
+		header := table.Row{"#", "ORIG", "onl.", "Xref", "Els.", "Arx.", "DOI", "OSTI"}
 		if summarizer != nil {
 			header = append(header, "ANALYSIS")
 		}
@@ -167,6 +167,7 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 			// add original entry to row
 			WrapSoftLimit := 40
 			row := []any{
+				i,
 				text.WrapSoft(lr.Text, WrapSoftLimit),
 			}
 
