@@ -987,8 +987,8 @@ limitations under the License.
 ## golang.org/x/crypto/acme
 
 * Name: golang.org/x/crypto/acme
-* Version: v0.38.0
-* License: [BSD-3-Clause](https://cs.opensource.google/go/x/crypto/+/v0.38.0:LICENSE)
+* Version: v0.42.0
+* License: [BSD-3-Clause](https://cs.opensource.google/go/x/crypto/+/v0.42.0:LICENSE)
 
 ```
 Copyright 2009 The Go Authors.
@@ -1024,8 +1024,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ## golang.org/x/net
 
 * Name: golang.org/x/net
-* Version: v0.40.0
-* License: [BSD-3-Clause](https://cs.opensource.google/go/x/net/+/v0.40.0:LICENSE)
+* Version: v0.45.0
+* License: [BSD-3-Clause](https://cs.opensource.google/go/x/net/+/v0.45.0:LICENSE)
 
 ```
 Copyright 2009 The Go Authors.
@@ -1061,8 +1061,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ## golang.org/x/sys/unix
 
 * Name: golang.org/x/sys/unix
-* Version: v0.33.0
-* License: [BSD-3-Clause](https://cs.opensource.google/go/x/sys/+/v0.33.0:LICENSE)
+* Version: v0.36.0
+* License: [BSD-3-Clause](https://cs.opensource.google/go/x/sys/+/v0.36.0:LICENSE)
 
 ```
 Copyright 2009 The Go Authors.
@@ -1098,8 +1098,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ## golang.org/x/text
 
 * Name: golang.org/x/text
-* Version: v0.28.0
-* License: [BSD-3-Clause](https://cs.opensource.google/go/x/text/+/v0.28.0:LICENSE)
+* Version: v0.29.0
+* License: [BSD-3-Clause](https://cs.opensource.google/go/x/text/+/v0.29.0:LICENSE)
 
 ```
 Copyright 2009 The Go Authors.
@@ -1168,4 +1168,3 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ```
-
