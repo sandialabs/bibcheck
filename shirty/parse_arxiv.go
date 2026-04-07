@@ -30,7 +30,7 @@ func NewExtractArxivRF() *openai.ResponseFormat {
 }
 
 func (w *Workflow) ParseArxiv(text string) (string, error) {
-	model := "meta-llama/Llama-3.3-70B-Instruct"
+	model := "openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8"
 
 	req := &openai.ChatRequest{
 		Model: model,

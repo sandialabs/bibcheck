@@ -31,7 +31,7 @@ func NewParseOSTIRF() *openai.ResponseFormat {
 
 func (w *Workflow) ParseOSTI(text string) (string, error) {
 
-	model := "meta-llama/Llama-3.3-70B-Instruct"
+	model := "openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8"
 
 	req := &openai.ChatRequest{
 		Model: model,
