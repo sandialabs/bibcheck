@@ -11,14 +11,16 @@ import (
 
 var (
 	llama_33_70B_Model  = "meta-llama/Llama-3.3-70B-Instruct"
-	llama_33_70B_Prompt = `Extract the requested bibliography entry from the document's bibliography. Produce JSON.
+	llama_33_70B_Prompt = `Extract the requested bibliography entry from the document's bibliography.
 - Only extract the requested entry.
 - Do not create a bibliography reference for the provided document, extract the entry from the bibliography.
 - Extract the entire, complete requested entry, and nothing else
+    - The entry may span multiple lines.
     - But, do not include the entry number/ID, e.g [33], 33., [foo1996], etc.
 - Provide the extracted entry as a single line.
 - The provided text may be mangled due to automated extraction from a source document, try to accomodate.
 - Preserve any other errors or incompleteness in the entry
+- Produce JSON.
 `
 
 	openai_gpt_oss_120B_Model  = "openai/gpt-oss-120b"

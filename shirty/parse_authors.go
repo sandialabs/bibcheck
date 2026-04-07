@@ -46,11 +46,11 @@ func (w *Workflow) ParseAuthors(text string) (*entries.Authors, error) {
 		Model: model,
 		Messages: []openai.Message{
 			openai.MakeSystemMessage(`Extract authors from the provided bibliography entry.
-- Produce JSON
 - Extract all authors from the bibliography, exactly as written.
 - Produce an array of authors
 - If there are no authors, produce an empty array.
 - Indicate whether the bibliography entry contains "et al." or some other indication that it's not a comprehensive list of authors.
+- Produce JSON
 `),
 			openai.MakeUserMessage(text),
 		},
