@@ -28,7 +28,7 @@ func NewExtractDOIRF() *ResponseFormat {
 }
 
 func (c *Client) ParseDOI(text string) (string, error) {
-	baseURL := "https://openrouter.ai/api/v1"
+	baseURL := c.baseUrl
 	model := "google/gemini-2.5-flash"
 
 	req := ChatRequest{

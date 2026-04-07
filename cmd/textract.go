@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/sandialabs/bibcheck/config"
 	"github.com/sandialabs/bibcheck/shirty"
 	"github.com/spf13/cobra"
 )
@@ -15,17 +16,18 @@ var textractCmd = &cobra.Command{
 	Short: "Extract text from a file using shirty.sandia.gov",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		settings := config.Runtime()
 
-		if shirtyApiKey == "" {
-			log.Fatal("please provide --shirty-api-key")
+		if settings.ShirtyAPIKey == "" {
+			log.Fatal("please provide SHIRTY_API_KEY or --shirty-api-key")
 		}
-		if shirtyBaseUrl == "" {
-			log.Fatal("pelase provide --shirty-base-url")
+		if settings.ShirtyBaseURL == "" {
+			log.Fatal("please provide SHIRTY_BASE_URL or --shirty-base-url")
 		}
 
 		filePath := args[0]
-		client := shirty.NewWorkflow(shirtyApiKey,
-			shirty.WithBaseUrl(shirtyBaseUrl))
+		client := shirty.NewWorkflow(settings.ShirtyAPIKey,
+			shirty.WithBaseUrl(settings.ShirtyBaseURL))
 		resp, err := client.Textract(filePath)
 		if err != nil {
 			log.Fatal(err)

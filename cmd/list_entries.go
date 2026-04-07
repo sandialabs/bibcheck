@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/sandialabs/bibcheck/config"
 	"github.com/sandialabs/bibcheck/shirty"
 	"github.com/spf13/cobra"
 )
@@ -15,14 +16,15 @@ var listEntriesCmd = &cobra.Command{
 	Short: "List bibliography entries",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		settings := config.Runtime()
 
 		filePath := args[0]
 
-		if shirtyApiKey != "" && shirtyBaseUrl != "" {
+		if settings.ShirtyAPIKey != "" && settings.ShirtyBaseURL != "" {
 
 			shirtyWorkflow := shirty.NewWorkflow(
-				shirtyApiKey,
-				shirty.WithBaseUrl(shirtyBaseUrl),
+				settings.ShirtyAPIKey,
+				shirty.WithBaseUrl(settings.ShirtyBaseURL),
 			)
 
 			text, err := shirtyWorkflow.Textract(filePath)
@@ -51,7 +53,7 @@ var listEntriesCmd = &cobra.Command{
 				log.Fatal("unexpected format:", format)
 			}
 
-		} else if openrouterApiKey != "" && openrouterBaseUrl != "" {
+		} else if settings.OpenRouterAPIKey != "" && settings.OpenRouterBaseURL != "" {
 
 		} else {
 			log.Fatal("requires openrouter or shirty API config")

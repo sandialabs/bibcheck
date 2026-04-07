@@ -47,6 +47,11 @@ go run main.go
 **Analyze a whole document**
 
 ```bash
+export SHIRTY_API_KEY=sk-...
+go run main.go test/20231113_siefert_pmbs.pdf
+```
+
+```bash
 go run main.go --shirty-api-key sk-... test/20231113_siefert_pmbs.pdf 
 ```
 ```
@@ -80,6 +85,11 @@ URL: ✓ LOOKS OKAY
 **Analyze a single entry**
 
 ```bash
+export SHIRTY_API_KEY=sk-...
+go run main.go test/20231113_siefert_pmbs.pdf --entry 14
+```
+
+```bash
 go run main.go --shirty-api-key sk-... test/20231113_siefert_pmbs.pdf --entry 14
 ```
 ```
@@ -99,9 +109,17 @@ URL: NO MATCH
 
 **Interactive GUI (shirty only)**
 ```
+export SHIRTY_API_KEY=sk-...
+go run main.go serve
+```
+or
+```
 go run main.go serve sk-...
 ```
 Then navigate to http://localhost:8080 in your browser
+
+`OPENROUTER_API_KEY` and `SHIRTY_API_KEY` are used automatically when set. Command-line flags still override environment values.
+`OPENROUTER_BASE_URL` and `SHIRTY_BASE_URL` are also supported.
 
 ## Features
 
@@ -205,5 +223,5 @@ save the following as `template.md`
 ```bash
 go install github.com/google/go-licenses/v2@latest
 
-go-licenses report ./... --template template.md
+go-licenses report ./... --ignore github.com/sandialabs/bibcheck --template template.md > NOTICE
 ```

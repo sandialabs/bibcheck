@@ -11,6 +11,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 
+	"github.com/sandialabs/bibcheck/config"
 	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/elsevier"
 	"github.com/sandialabs/bibcheck/entries"
@@ -38,24 +39,28 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		pdfPath := args[0]
+		settings := config.Runtime()
 		entryStart := 1
 		var entryCount int
 
 		// set up clients depending on config
 		var openrouterClient *openrouter.Client
 		var shirtyProvider *shirty.Workflow
-		if openrouterApiKey != "" && openrouterBaseUrl != "" {
-			openrouterClient = openrouter.NewClient(openrouterApiKey)
+		if settings.OpenRouterAPIKey != "" && settings.OpenRouterBaseURL != "" {
+			openrouterClient = openrouter.NewClient(
+				settings.OpenRouterAPIKey,
+				openrouter.WithBaseURL(settings.OpenRouterBaseURL),
+			)
 		}
-		if shirtyApiKey != "" && shirtyBaseUrl != "" {
+		if settings.ShirtyAPIKey != "" && settings.ShirtyBaseURL != "" {
 			shirtyProvider = shirty.NewWorkflow(
-				shirtyApiKey,
-				shirty.WithBaseUrl(shirtyBaseUrl))
+				settings.ShirtyAPIKey,
+				shirty.WithBaseUrl(settings.ShirtyBaseURL))
 		}
 
 		var elsevierClient *elsevier.Client
-		if elsevierApiKey != "" {
-			elsevierClient = elsevier.NewClient(elsevierApiKey)
+		if settings.ElsevierAPIKey != "" {
+			elsevierClient = elsevier.NewClient(settings.ElsevierAPIKey)
 		}
 
 		// different representations of the file
@@ -133,9 +138,12 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 
 		var summarizer *summary.ShirtySummarizer
 
-		if shirtyApiKey != "" {
+		if settings.ShirtyAPIKey != "" {
 			summarizer = summary.NewShirtySummarizer(
-				shirty.NewWorkflow(shirtyApiKey),
+				shirty.NewWorkflow(
+					settings.ShirtyAPIKey,
+					shirty.WithBaseUrl(settings.ShirtyBaseURL),
+				),
 			)
 		}
 
@@ -259,18 +267,14 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 func init() {
 	// don't include the `completion` subcommand
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
-	rootCmd.PersistentFlags().StringVar(&openrouterApiKey, "openrouter-api-key", "", "OpenRouter API key")
-	rootCmd.PersistentFlags().StringVar(&openrouterBaseUrl,
-		"openrouter-base-url",
-		"https://openrouter.ai/api/v1",
-		"Openrouter-compatible API url",
-	)
-	rootCmd.PersistentFlags().StringVar(&shirtyApiKey, "shirty-api-key", "", "shirty.sandia.gov API key")
-	rootCmd.PersistentFlags().StringVar(&shirtyBaseUrl,
-		"shirty-base-url",
-		"https://shirty.sandia.gov/api/v1",
-		"Shirty base URL",
-	)
+	rootCmd.PersistentFlags().String("elsevier-api-key", "", "Elsevier API key")
+	rootCmd.PersistentFlags().String("openrouter-api-key", "", "OpenRouter API key")
+	rootCmd.PersistentFlags().String("openrouter-base-url", config.DefaultOpenRouterBaseURL, "Openrouter-compatible API url")
+	rootCmd.PersistentFlags().String("shirty-api-key", "", "shirty.sandia.gov API key")
+	rootCmd.PersistentFlags().String("shirty-base-url", config.DefaultShirtyBaseURL, "Shirty base URL")
+	if err := config.BindFlags(rootCmd.PersistentFlags()); err != nil {
+		panic(err)
+	}
 	rootCmd.Flags().Int(FlagEntry, -1, "Analyze a single entry")
 	rootCmd.Flags().StringVar(&pipeline, FlagPipeline, "auto", "Analysis pipeline to use")
 
