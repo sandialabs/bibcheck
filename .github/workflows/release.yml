@@ -17,10 +17,16 @@ jobs:
         include:
         - goos: linux
           goarch: amd64
+          artifact_name: bibcheck-linux-amd64
         - goos: darwin
           goarch: arm64
+          artifact_name: bibcheck-darwin-arm64
         - goos: darwin
           goarch: amd64
+          artifact_name: bibcheck-darwin-amd64
+        - goos: windows
+          goarch: amd64
+          artifact_name: bibcheck-windows-amd64.exe
     steps:
       - name: Set timezone
         run: sudo timedatectl set-timezone "America/Denver"
@@ -41,12 +47,12 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-        run: go build -v -ldflags "-X version.gitSha=$GIT_SHA -X version.buildDate=$BUILD_DATE" -o "bibcheck-${{ matrix.goos }}-${{ matrix.goarch }}" main.go
+        run: go build -v -ldflags "-X version.gitSha=$GIT_SHA -X version.buildDate=$BUILD_DATE" -o "${{ matrix.artifact_name }}" main.go
 
       - name: Upload Release Asset
         uses: svenstaro/upload-release-action@6b7fa9f267e90b50a19fef07b3596790bb941741 # v2.11.3
         with:
-          file: bibcheck-${{ matrix.goos }}-${{ matrix.goarch }}
-          asset_name: bibcheck-${{ matrix.goos }}-${{ matrix.goarch }}
+          file: ${{ matrix.artifact_name }}
+          asset_name: ${{ matrix.artifact_name }}
           tag: ${{ github.ref }}
           overwrite: true
