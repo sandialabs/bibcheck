@@ -36,7 +36,7 @@ chmod +x bibcheck-linux-amd64
 
 ## Quick Start (Build from Source)
 
-1. Install go >= 1.23.0
+1. Install Go >= 1.24.0
 2. Compile and run:
 ```bash
 go run main.go
