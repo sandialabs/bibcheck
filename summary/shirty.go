@@ -14,7 +14,7 @@ import (
 
 var (
 	// gpt-oss-120b seems unable to consistently obey the response format
-	analyze_model_llama_33_70B_instruct  = "meta-llama/Llama-3.3-70B-Instruct"
+	analyze_model_llama_33_70B_instruct  = "openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8"
 	analyze_prompt_llama_33_70B_instruct = `The user will provide you with a bibliography entry, and some results for searching for that entry. Determine whether the bibliography entry matches the search results.
 - The author list must provide the same authors in the same order (allowing for "et al." at the end)
 - The title, venue, and date must be the same.

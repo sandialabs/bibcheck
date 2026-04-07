@@ -23,9 +23,9 @@ func (c *Workflow) ExtractBib(text string) ([]Entry, error) {
 	// notes on models
 	// - meta-llama/Llama-3.2-90B-Vision-Instruct: works okay. Likes to keep the inline reference
 	// - meta-llama/Llama-4-Scout-17B-16E-Instruct: doesn't seem to be able to follow the prompt
-	// - meta-llama/Llama-3.3-70B-Instruct: works okay. Likes to keep the inline reference
+	// - openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8: works okay. Likes to keep the inline reference
 	// - microsoft/Phi-3.5-vision-instruct: 500 error
-	model := "meta-llama/Llama-3.3-70B-Instruct"
+	model := "openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8"
 	req := &openai.ChatRequest{
 		Model: model,
 		Messages: []openai.Message{

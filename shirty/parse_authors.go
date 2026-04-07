@@ -37,7 +37,7 @@ func NewParseAuthorsRF() *openai.ResponseFormat {
 }
 
 func (w *Workflow) ParseAuthors(text string) (*entries.Authors, error) {
-	model := "meta-llama/Llama-3.3-70B-Instruct"
+	model := "openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8"
 
 	temp := new(float64)
 	*temp = 0

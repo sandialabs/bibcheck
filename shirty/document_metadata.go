@@ -41,7 +41,7 @@ func NewExtractDocumentMetadataRF() *openai.ResponseFormat {
 }
 
 func newFromTextRequest(text string) *openai.ChatRequest {
-	model := "meta-llama/Llama-3.3-70B-Instruct"
+	model := "openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8"
 
 	return &openai.ChatRequest{
 		Model: model,
@@ -64,7 +64,7 @@ Use the following guidelines:
 }
 
 func newFromHtmlRequest(html string) *openai.ChatRequest {
-	model := "meta-llama/Llama-3.3-70B-Instruct"
+	model := "openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8"
 
 	// model has a limit of 128k tokens
 	// in one example, a string of 1158716 symbols -> 353591 tokens
