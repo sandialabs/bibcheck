@@ -10,7 +10,7 @@ import (
 )
 
 func (c *Client) SearchSoftware(software *entries.Software) (bool, string, error) {
-	baseURL := "https://openrouter.ai/api/v1"
+	baseURL := c.baseUrl
 	// model := "perplexity/sonar"
 	model := "perplexity/sonar-pro"
 

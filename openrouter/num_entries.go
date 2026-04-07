@@ -30,7 +30,7 @@ func NewNumEntriesResponseFormat() *ResponseFormat {
 }
 
 func (c *Client) NumEntries(b64 string) (int, error) {
-	baseURL := "https://openrouter.ai/api/v1"
+	baseURL := c.baseUrl
 	model := "google/gemini-2.5-flash"
 
 	req := ChatRequest{

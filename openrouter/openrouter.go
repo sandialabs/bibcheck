@@ -18,14 +18,26 @@ type Client struct {
 	httpClient *http.Client
 }
 
+type Opt func(*Client)
+
 // NewClient creates a new OpenRouter client
-func NewClient(apiKey string) *Client {
-	return &Client{
+func NewClient(apiKey string, options ...Opt) *Client {
+	c := &Client{
 		apiKey:  apiKey,
 		baseUrl: "https://openrouter.ai/api/v1",
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
+	}
+	for _, o := range options {
+		o(c)
+	}
+	return c
+}
+
+func WithBaseURL(baseURL string) Opt {
+	return func(c *Client) {
+		c.baseUrl = baseURL
 	}
 }
 

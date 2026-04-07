@@ -5,6 +5,7 @@ package cmd
 import (
 	"log"
 
+	"github.com/sandialabs/bibcheck/config"
 	"github.com/sandialabs/bibcheck/server"
 	"github.com/spf13/cobra"
 )
@@ -12,12 +13,17 @@ import (
 var serveCmd = &cobra.Command{
 	Use:   "serve [shirty API key]",
 	Short: "Run web UI server",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		apiKey := config.Runtime().ShirtyAPIKey
+		if len(args) == 1 {
+			apiKey = args[0]
+		}
+		if apiKey == "" {
+			log.Fatal("please provide shirty API key via SHIRTY_API_KEY, --shirty-api-key, or serve argument")
+		}
 
-		shirtyApiKey = args[0]
-
-		s := server.NewServer(shirtyApiKey)
+		s := server.NewServer(apiKey)
 		if err := s.Run(); err != nil {
 			log.Fatal(err)
 		}
