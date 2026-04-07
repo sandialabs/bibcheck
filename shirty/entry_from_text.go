@@ -34,6 +34,8 @@ var (
 )
 
 func (w *Workflow) EntryFromText(text string, id int) (string, error) {
+	text = bibliographyText(text)
+
 	// notes on models
 	// - meta-llama/Llama-3.2-90B-Vision-Instruct: works okay. Likes to keep the inline reference
 	// - meta-llama/Llama-4-Scout-17B-16E-Instruct: doesn't seem to be able to follow the prompt

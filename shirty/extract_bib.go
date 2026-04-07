@@ -15,6 +15,7 @@ type Entry struct {
 }
 
 func (c *Workflow) ExtractBib(text string) ([]Entry, error) {
+	text = bibliographyText(text)
 
 	temp := new(float64)
 	*temp = 0.1
