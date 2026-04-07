@@ -6,8 +6,6 @@ name: Cross-platform Builds
 on:
   pull_request:
     branches: [ "main" ]
-  push:
-    branches: [ "**" ]
 
 jobs:
 
