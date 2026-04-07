@@ -8,7 +8,7 @@ import (
 )
 
 func (c *Client) SearchEntry(text string) (bool, string, error) {
-	baseURL := "https://openrouter.ai/api/v1"
+	baseURL := c.baseUrl
 	// model := "perplexity/sonar"
 	model := "perplexity/sonar-pro"
 

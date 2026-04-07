@@ -104,7 +104,7 @@ func (c *Client) PDFMetadata(raw []byte) (*documents.Metadata, error) {
 }
 
 func (c *Client) extractDocumentMetadataImpl(req *ChatRequest) (*documents.Metadata, error) {
-	baseURL := "https://openrouter.ai/api/v1"
+	baseURL := c.baseUrl
 
 	resp, err := c.ChatCompletion(*req, baseURL)
 	if err != nil {
@@ -133,7 +133,7 @@ func (c *Client) extractDocumentMetadataImpl(req *ChatRequest) (*documents.Metad
 }
 
 func (c *Client) ExtractDocumentMetadata(encoded string) (*documents.Metadata, error) {
-	baseURL := "https://openrouter.ai/api/v1"
+	baseURL := c.baseUrl
 	model := "google/gemini-2.5-flash"
 
 	req := ChatRequest{

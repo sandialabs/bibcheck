@@ -7,6 +7,7 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/sandialabs/bibcheck/config"
 	"github.com/sandialabs/bibcheck/lookup"
 	"github.com/sandialabs/bibcheck/openrouter"
 	"github.com/sandialabs/bibcheck/shirty"
@@ -18,6 +19,7 @@ var entryCmd = &cobra.Command{
 	Short: "Extract a bibliography entry",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
+		settings := config.Runtime()
 
 		filePath := args[0]
 		id, err := strconv.ParseInt(args[1], 10, 32)
@@ -25,10 +27,10 @@ var entryCmd = &cobra.Command{
 			log.Fatalf("expected id %s to be int", args[1])
 		}
 
-		if shirtyApiKey != "" && shirtyBaseUrl != "" {
+		if settings.ShirtyAPIKey != "" && settings.ShirtyBaseURL != "" {
 			shirtyClient := shirty.NewWorkflow(
-				shirtyApiKey,
-				shirty.WithBaseUrl(shirtyBaseUrl),
+				settings.ShirtyAPIKey,
+				shirty.WithBaseUrl(settings.ShirtyBaseURL),
 			)
 
 			text, err := shirtyClient.Textract(filePath)
@@ -42,7 +44,7 @@ var entryCmd = &cobra.Command{
 			}
 			fmt.Println(entryText)
 
-		} else if openrouterApiKey != "" && openrouterBaseUrl != "" {
+		} else if settings.OpenRouterAPIKey != "" && settings.OpenRouterBaseURL != "" {
 
 			encoded, err := lookup.Encode(filePath)
 			if err != nil {
@@ -50,7 +52,8 @@ var entryCmd = &cobra.Command{
 			}
 
 			client := openrouter.NewClient(
-				openrouterApiKey,
+				settings.OpenRouterAPIKey,
+				openrouter.WithBaseURL(settings.OpenRouterBaseURL),
 			)
 
 			entryText, err := client.EntryFromRaw(encoded, int(id))

@@ -36,7 +36,7 @@ func NewClassifyEntryResponseFormat() *ResponseFormat {
 }
 
 func (c *Client) Classify(text string) (string, error) {
-	baseURL := "https://openrouter.ai/api/v1"
+	baseURL := c.baseUrl
 	model := "google/gemini-2.5-flash"
 
 	temperature := new(int)
