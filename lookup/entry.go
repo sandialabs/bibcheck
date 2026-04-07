@@ -287,6 +287,7 @@ func Entry(text string, mode string,
 		// TODO: we can somehow do format=markdown for github, which might produce better results
 
 		if body, contentType, err := retrieveUrl(online.URL); err != nil {
+			log.Printf("retrieve url error: %s", err)
 			EA.Online.Error = fmt.Errorf("retrieve url error: %w", err)
 		} else {
 			log.Println("retrieved URL content type:", contentType)

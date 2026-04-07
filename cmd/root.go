@@ -124,10 +124,10 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 
 			if pdfText == "" {
 				textractResp, err := shirtyProvider.Textract(pdfPath)
-				pdfText = textractResp.Text
 				if err != nil {
 					log.Fatalf("textract error: %v", err)
 				}
+				pdfText = textractResp.Text
 			}
 
 		}

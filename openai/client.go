@@ -2,20 +2,25 @@
 // SPDX-License-Identifier: BSD-3-Clause
 package openai
 
-import "time"
+import (
+	"net/http"
+	"time"
+)
 
 type Client struct {
-	apiKey  string
-	baseUrl string
-	timeout time.Duration
+	apiKey     string
+	baseUrl    string
+	httpClient *http.Client
 }
 
 type ClientOpt func(*Client)
 
 func NewClient(apiKey string, options ...ClientOpt) *Client {
 	c := &Client{
-		apiKey:  apiKey,
-		timeout: 60 * time.Second,
+		apiKey: apiKey,
+		httpClient: &http.Client{
+			Timeout: 60 * time.Second,
+		},
 	}
 	for _, o := range options {
 		o(c)
@@ -31,6 +36,6 @@ func WithBaseUrl(baseUrl string) ClientOpt {
 
 func WithTimeout(t time.Duration) ClientOpt {
 	return func(c *Client) {
-		c.timeout = t
+		c.httpClient.Timeout = t
 	}
 }
