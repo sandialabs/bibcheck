@@ -10,6 +10,7 @@ import (
 )
 
 func (w *Workflow) NumBibEntries(text string) (int, error) {
+	text = bibliographyText(text)
 
 	temp := new(float64)
 	*temp = 0.1

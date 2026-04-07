@@ -16,6 +16,7 @@ const (
 )
 
 func (w *Workflow) BibIdFormat(text string) (string, error) {
+	text = bibliographyText(text)
 
 	temp := new(float64)
 	*temp = 0.1
