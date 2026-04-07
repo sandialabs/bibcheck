@@ -6,6 +6,8 @@ name: Cross-platform Builds
 on:
   pull_request:
     branches: [ "main" ]
+  push:
+    branches: [ "**" ]
 
 jobs:
 
@@ -16,10 +18,16 @@ jobs:
         include:
         - goos: linux
           goarch: amd64
+          artifact_name: bibcheck-linux-amd64
         - goos: darwin
           goarch: arm64
+          artifact_name: bibcheck-darwin-arm64
         - goos: darwin
           goarch: amd64
+          artifact_name: bibcheck-darwin-amd64
+        - goos: windows
+          goarch: amd64
+          artifact_name: bibcheck-windows-amd64.exe
     steps:
       - name: Set timezone
         run: sudo timedatectl set-timezone "America/Denver"
@@ -36,8 +44,8 @@ jobs:
   
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
   
-      - name: Build
+      - name: Build release binary
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-        run: go build -v -ldflags "-X version.gitSha=$GIT_SHA -X version.buildDate=$BUILD_DATE" main.go
+        run: go build -v -ldflags "-X version.gitSha=$GIT_SHA -X version.buildDate=$BUILD_DATE" -o "${{ matrix.artifact_name }}" main.go
