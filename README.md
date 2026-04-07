@@ -123,37 +123,42 @@ Then navigate to http://localhost:8080 in your browser
 
 ## Features
 
-* Bibliographic entry extraction via Google's Gemini family of LLMs
-* Metadata matching against
-    * arxiv.org
-    * osti.gov
-    * crossref.org
-    * api.elsevier.com
-* DOI existence check against doi.org
-* Web search via Perplexity
-
-## Known Issues
-
-* Common terms in the paper will confound Perplexity's search, where it won't surface the specific bib entry.
-* Gemini will occasionaly be unable to extract a citation text.
-  * Gemini Pro is much better, but 4x as expensive and ~4x slower
-* Perplexity really wants to summarize the results.
-* Some papers are easily found on Google Scholar, but Perplexity does not surface them.
+* Extracts bibliography entries from PDF documents and analyzes them one-by-one
+* Supports both CLI analysis and a lightweight web UI for uploaded PDFs
+* Uses configured LLM backends for bibliography counting, entry extraction, metadata parsing, and optional result summarization
+    * `SHIRTY_API_KEY` enables the Shirty-based pipeline
+    * `OPENROUTER_API_KEY` enables the OpenRouter-based pipeline for PDF-based extraction
+* Verifies entries with direct lookups against
+    * doi.org
+    * arXiv
+    * OSTI
+    * Crossref
+    * Elsevier Scopus search (when `ELSEVIER_API_KEY` is configured)
+* Fetches and analyzes linked online resources when an entry points to a URL
+    * HTML pages
+    * PDF documents
 
 ## "Search" strategy
 
-* Unique ID lookup
-  * Some references have a unique ID:
-      * OSTI
-      * DOI
-      * ArXiv
-  * We can directly looks these up:
-      * OSTI directly provides metadata in the response
-      * ArXiv directly provides metadata in the response
-      * doi.org does NOT provide metadata, but at least we can confirm the DOI points at _something_
-  * For OSTI and ArXiv, we can parse the bibliography entry, and present it side-by-side with the retrieve metadata for comparison
-* URL lookup: some entries have a URL (e.g. a documentation website, a blog post, a software homepage, etc)
-    * We can retrieve the contents of the URL, extract the metadata, and present it side-by-side with the bibliography entry
+For each extracted bibliography entry, bibcheck currently works in this order:
+
+* DOI check
+    * If a DOI is present, resolve it through doi.org to confirm that it exists
+    * This does not stop the search, because DOI resolution alone does not provide enough metadata for comparison
+* OSTI lookup
+    * If an OSTI identifier is present, fetch the OSTI record directly
+    * A successful OSTI match is treated as sufficient
+* arXiv lookup
+    * If an arXiv identifier is present, fetch the arXiv metadata directly
+    * A successful arXiv match is treated as sufficient
+* Elsevier search
+    * If `ELSEVIER_API_KEY` is configured, parse authors, title, and publication venue, then query Elsevier
+* Crossref bibliographic search
+    * Query Crossref with the full bibliography entry text
+    * Only accept a result when the top score is strong enough and not effectively tied with the next match
+* Online resource lookup
+    * If no database/source match was found, parse the entry as an online resource
+    * Fetch the URL directly and extract metadata from HTML or PDF content for comparison
 
 ## Roadmap:
 
