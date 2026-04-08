@@ -17,6 +17,10 @@ func GetOSTIRecord(id, rawEntry string) (*osti.Record, error) {
 	id = strings.TrimPrefix(id, "http://www.osti.gov/biblio/")
 	id = strings.TrimPrefix(id, "www.osti.gov/biblio/")
 	id = strings.TrimPrefix(id, "osti.gov/biblio/")
+	id = strings.TrimPrefix(id, "https://www.osti.gov/biblo/")
+	id = strings.TrimPrefix(id, "http://www.osti.gov/biblo/")
+	id = strings.TrimPrefix(id, "www.osti.gov/biblo/")
+	id = strings.TrimPrefix(id, "osti.gov/biblo/")
 
 	ostiClient := osti.NewClient()
 

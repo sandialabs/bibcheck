@@ -145,9 +145,7 @@ func Entry(text string, mode string,
 
 	// check DOI if present
 	// The existence or not of the DOI is not very useful alone, so continue on
-	if doi, err := entryParser.ParseDOI(text); err != nil {
-		EA.DOIOrg.Error = fmt.Errorf("ParseDOI error: %w", err)
-	} else if doi != "" {
+	if doi := entries.ExtractDOI(text); doi != "" {
 		log.Println("Detected DOI", doi)
 		EA.DOIOrg.ID = doi
 		if found, err := CheckDOI(doi); err != nil {
@@ -161,10 +159,7 @@ func Entry(text string, mode string,
 
 	// Check OSTI if present
 	// Finding the ID should provide enough info to evaluate the entry
-	if osti, err := entryParser.ParseOSTI(text); err != nil {
-		log.Printf("OSTI extract error: %v", err)
-		EA.OSTI.Error = fmt.Errorf("ParseOSTI error: %w", err)
-	} else if osti != "" {
+	if osti := entries.ExtractOSTI(text); osti != "" {
 		fmt.Println("Detected OSTI", osti)
 		EA.OSTI.ID = osti
 		if rec, err := GetOSTIRecord(osti, text); err != nil {
@@ -178,10 +173,7 @@ func Entry(text string, mode string,
 
 	// Check arXiv if present
 	// Finding the ID should provide enough info to evaluate the entry
-	if id, err := entryParser.ParseArxiv(text); err != nil {
-		log.Printf("ParseArxiv error: %v", err)
-		EA.Arxiv.Error = fmt.Errorf("ParseArxiv error: %w", err)
-	} else if id != "" {
+	if id := entries.ExtractArxiv(text); id != "" {
 		fmt.Println("Detected arXiv", id)
 		if entry, err := GetArxivMetadata(id, text); err != nil {
 			EA.Arxiv.Error = fmt.Errorf("arxiv check error: %w", err)
