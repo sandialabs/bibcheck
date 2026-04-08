@@ -166,6 +166,7 @@ For each extracted bibliography entry, bibcheck currently works in this order:
 * Allow user to provide email address (for crossref.org API)
 * DBLP search
 * OpenAlex search
+* Web UI
 
 ## Contributing
 
