@@ -3,6 +3,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -22,13 +23,22 @@ import (
 
 var (
 	carelessHideOK bool
+	format         outputFormat
 	pipeline       string
 )
 
 const (
 	FlagCarelessHideOK string = "careless-hide-ok"
 	FlagEntry          string = "entry"
+	FlagFormat         string = "format"
 	FlagPipeline       string = "pipeline"
+)
+
+type outputFormat string
+
+const (
+	outputFormatJSON outputFormat = "json"
+	outputFormatText outputFormat = "text"
 )
 
 var rootCmd = &cobra.Command{
@@ -37,7 +47,11 @@ var rootCmd = &cobra.Command{
 	Long: `bibliograph-checker ` + version.String() + ` (` + version.GitSha() + `)
 A tool that analyzes bibliography entries in PDF files and verifies their existence.`,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := validateOutputFormat(format); err != nil {
+			return err
+		}
+
 		pdfPath := args[0]
 		settings := config.Runtime()
 		entryStart := 1
@@ -77,27 +91,27 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 			if openrouterClient != nil {
 				pdfEncoded, err = lookup.Encode(pdfPath)
 				if err != nil {
-					log.Fatalf("pdf encode error: %v", err)
+					return fmt.Errorf("pdf encode error: %w", err)
 				}
 				fmt.Println("Counting bibliography entries...")
 				entryCount, err = openrouterClient.NumEntries(pdfEncoded)
 				if err != nil {
-					log.Fatalf("Bibliography size error: %v\n", err)
+					return fmt.Errorf("bibliography size error: %w", err)
 				}
 				fmt.Printf("Found %d bibliographic entries\n", entryCount)
 			} else if shirtyProvider != nil {
 				textractResp, err := shirtyProvider.Textract(pdfPath)
 				pdfText = textractResp.Text
 				if err != nil {
-					log.Fatalf("textract error: %v", err)
+					return fmt.Errorf("textract error: %w", err)
 				}
 				entryCount, err = shirtyProvider.NumBibEntries(pdfText)
 				if err != nil {
-					log.Fatalf("bibliography size error: %v\n", err)
+					return fmt.Errorf("bibliography size error: %w", err)
 				}
 
 			} else {
-				log.Fatalf("need shirty or openrouter config")
+				return errors.New("need shirty or openrouter config")
 			}
 		}
 
@@ -125,7 +139,7 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 			if pdfText == "" {
 				textractResp, err := shirtyProvider.Textract(pdfPath)
 				if err != nil {
-					log.Fatalf("textract error: %v", err)
+					return fmt.Errorf("textract error: %w", err)
 				}
 				pdfText = textractResp.Text
 			}
@@ -157,7 +171,7 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 			} else if docTextExtract != nil {
 				lr, err = lookup.EntryFromText(pdfText, i, pipeline, class, docTextExtract, docMeta, entryParser, cfg)
 			} else {
-				log.Fatalf("requires something that can extract a bib entry from a pdf")
+				return errors.New("requires something that can extract a bib entry from a pdf")
 			}
 
 			if err != nil {
@@ -180,7 +194,19 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 		}
 
 		doc := buildDocumentView(views, carelessHideOK)
-		fmt.Fprint(os.Stdout, renderDocument(doc, views, carelessHideOK, singleEntry))
+		switch format {
+		case outputFormatText:
+			fmt.Fprint(os.Stdout, renderDocument(doc, views, carelessHideOK, singleEntry))
+		case outputFormatJSON:
+			rendered, err := renderJSONDocument(doc, views, carelessHideOK, singleEntry)
+			if err != nil {
+				return fmt.Errorf("render json output: %w", err)
+			}
+			fmt.Fprint(os.Stdout, rendered)
+		default:
+			return fmt.Errorf("unsupported output format %q", format)
+		}
+		return nil
 	},
 }
 
@@ -197,6 +223,7 @@ func init() {
 	}
 	rootCmd.Flags().BoolVar(&carelessHideOK, FlagCarelessHideOK, false, "Hide entries whose summary explicitly says they look okay")
 	rootCmd.Flags().Int(FlagEntry, -1, "Analyze a single entry")
+	rootCmd.Flags().Var(newOutputFormatValue(&format), FlagFormat, "Output format: text or json")
 	rootCmd.Flags().StringVar(&pipeline, FlagPipeline, "auto", "Analysis pipeline to use")
 
 	rootCmd.AddCommand(bibCmd)
@@ -212,4 +239,42 @@ func Execute() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func validateOutputFormat(format outputFormat) error {
+	switch format {
+	case outputFormatText, outputFormatJSON:
+		return nil
+	default:
+		return fmt.Errorf("invalid --format %q (supported: text, json)", format)
+	}
+}
+
+type outputFormatValue struct {
+	target *outputFormat
+}
+
+func newOutputFormatValue(target *outputFormat) *outputFormatValue {
+	*target = outputFormatText
+	return &outputFormatValue{target: target}
+}
+
+func (v *outputFormatValue) String() string {
+	if v == nil || v.target == nil {
+		return string(outputFormatText)
+	}
+	return string(*v.target)
+}
+
+func (v *outputFormatValue) Set(value string) error {
+	format := outputFormat(value)
+	if err := validateOutputFormat(format); err != nil {
+		return err
+	}
+	*v.target = format
+	return nil
+}
+
+func (v *outputFormatValue) Type() string {
+	return "outputFormat"
 }
