@@ -20,10 +20,7 @@ type Authors struct {
 }
 
 type Parser interface {
-	ParseDOI(entry string) (string, error)
-	ParseArxiv(entry string) (string, error)
 	ParseURL(entry string) (string, error)
-	ParseOSTI(entry string) (string, error)
 	ParseOnline(entry string) (*Online, error)
 
 	ParseAuthors(entry string) (*Authors, error)
