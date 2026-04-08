@@ -164,6 +164,8 @@ For each extracted bibliography entry, bibcheck currently works in this order:
 
 * docker/podman build instructions
 * Allow user to provide email address (for crossref.org API)
+* DBLP search
+* OpenAlex search
 
 ## Contributing
 
