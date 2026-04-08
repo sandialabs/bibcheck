@@ -15,8 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/sandialabs/bibcheck/config"
 )
 
 type Message struct {
@@ -86,7 +84,6 @@ func (c *Client) Chat(req *ChatRequest) (*ChatResponse, error) {
 		// Set headers
 		httpReq.Header.Set("Content-Type", "application/json")
 		httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
-		httpReq.Header.Set("User-Agent", config.UserAgent())
 
 		// Make the request
 		resp, err := c.httpClient.Do(httpReq)
