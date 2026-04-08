@@ -252,9 +252,10 @@ func Entry(text string, mode string,
 	// crossref search
 	if work, comment, err := CrossrefQueryBibliographic(text); err != nil {
 		EA.Crossref.Error = err
-	} else if work == nil {
-		log.Printf("crossref.org query returned no record: %s", comment)
 	} else {
+		if work == nil {
+			log.Printf("crossref.org query returned no record: %s", comment)
+		}
 		EA.Crossref.Work = work
 		EA.Crossref.Status = SearchStatusDone
 		EA.Crossref.Comment = comment
