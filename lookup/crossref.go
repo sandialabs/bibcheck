@@ -17,7 +17,7 @@ const (
 func CrossrefQueryBibliographic(entry string) (*crossref.CrossrefWork, string, error) {
 
 	// search for 2 results
-	fmt.Println("query crossref.org...")
+	log.Print("query crossref.org...")
 	crossrefResp, err := crossref.QueryBibliographic(entry, 2)
 	if err != nil {
 		return nil, "", fmt.Errorf("crossref API error: %w", err)

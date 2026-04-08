@@ -7,8 +7,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 
 	"github.com/sandialabs/bibcheck/config"
@@ -23,12 +21,14 @@ import (
 )
 
 var (
-	pipeline string
+	carelessHideOK bool
+	pipeline       string
 )
 
 const (
-	FlagEntry    string = "entry"
-	FlagPipeline string = "pipeline"
+	FlagCarelessHideOK string = "careless-hide-ok"
+	FlagEntry          string = "entry"
+	FlagPipeline       string = "pipeline"
 )
 
 var rootCmd = &cobra.Command{
@@ -147,15 +147,8 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 			)
 		}
 
-		t := table.NewWriter()
-		t.SetOutputMirror(os.Stdout)
-
-		header := table.Row{"#", "ORIG", "onl.", "Xref", "Els.", "Arx.", "DOI", "OSTI"}
-		if summarizer != nil {
-			header = append(header, "ANALYSIS")
-		}
-
-		t.AppendHeader(header)
+		views := []entryView{}
+		singleEntry := cmd.Flags().Changed(FlagEntry)
 
 		for i := entryStart; i < entryStart+entryCount; i++ {
 			var lr *lookup.Result
@@ -172,95 +165,22 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 				continue
 			}
 
-			// add original entry to row
-			WrapSoftLimit := 40
-			row := []any{
-				i,
-				text.WrapSoft(lr.Text, WrapSoftLimit),
-			}
-
-			red := func(err error) string {
-				return text.WrapSoft(
-					text.FgRed.Sprintf("%v", err),
-					WrapSoftLimit,
-				)
-			}
-
-			yellow := func(s string) string {
-				return text.WrapSoft(
-					text.FgYellow.Sprintf("%s", s),
-					WrapSoftLimit,
-				)
-			}
-
-			green := func(s string) string {
-				return text.WrapSoft(
-					text.FgGreen.Sprintf("%s", s),
-					WrapSoftLimit,
-				)
-			}
-
-			if lr.Online.Metadata != nil {
-				row = append(row, text.WrapSoft(lr.Online.Metadata.ToString(), WrapSoftLimit))
-			} else if lr.Online.Error != nil {
-				row = append(row, red(lr.Online.Error))
-			} else {
-				row = append(row, "")
-			}
-			if lr.Crossref.Work != nil {
-				row = append(row, text.WrapSoft(lr.Crossref.Work.ToString(), WrapSoftLimit))
-			} else if lr.Crossref.Error != nil {
-				row = append(row, red(lr.Crossref.Error))
-			} else {
-				row = append(row, "")
-			}
-			if lr.Elsevier.Result != nil {
-				row = append(row, text.WrapSoft(lr.Elsevier.Result.ToString(), WrapSoftLimit))
-			} else if lr.Elsevier.Error != nil {
-				row = append(row, red(lr.Elsevier.Error))
-			} else {
-				row = append(row, "")
-			}
-			if lr.Arxiv.Entry != nil {
-				row = append(row, text.WrapSoft(lr.Arxiv.Entry.ToString(), WrapSoftLimit))
-			} else if lr.Arxiv.Error != nil {
-				row = append(row, red(lr.Arxiv.Error))
-			} else {
-				row = append(row, "")
-			}
-			if lr.DOIOrg.Found {
-				row = append(row, text.WrapSoft("exists", WrapSoftLimit))
-			} else if lr.DOIOrg.Error != nil {
-				row = append(row, red(lr.DOIOrg.Error))
-			} else {
-				row = append(row, "")
-			}
-			if lr.OSTI.Record != nil {
-				row = append(row, text.WrapSoft(lr.OSTI.Record.ToString(), WrapSoftLimit))
-			} else if lr.OSTI.Error != nil {
-				row = append(row, red(lr.OSTI.Error))
-			} else {
-				row = append(row, "")
-			}
-
+			outcome := summaryOutcome{}
 			if summarizer != nil {
 				mismatch, comment, err := summarizer.Summarize(lr)
-				log.Println(mismatch, comment, err)
+				outcome.mismatch = mismatch
+				outcome.comment = comment
+				outcome.err = err
 				if err != nil {
 					log.Printf("summarizer error: %v", err)
-					row = append(row, red(err))
-				} else if mismatch {
-					row = append(row, yellow(comment))
-				} else {
-					row = append(row, green("OK"))
 				}
 			}
 
-			t.AppendRow(row)
-			t.AppendSeparator()
+			views = append(views, buildEntryView(i, lr, outcome))
 		}
 
-		t.Render()
+		doc := buildDocumentView(views, carelessHideOK)
+		fmt.Fprint(os.Stdout, renderDocument(doc, views, carelessHideOK, singleEntry))
 	},
 }
 
@@ -275,6 +195,7 @@ func init() {
 	if err := config.BindFlags(rootCmd.PersistentFlags()); err != nil {
 		panic(err)
 	}
+	rootCmd.Flags().BoolVar(&carelessHideOK, FlagCarelessHideOK, false, "Hide entries whose summary explicitly says they look okay")
 	rootCmd.Flags().Int(FlagEntry, -1, "Analyze a single entry")
 	rootCmd.Flags().StringVar(&pipeline, FlagPipeline, "auto", "Analysis pipeline to use")
 
