@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -98,7 +99,7 @@ func NewClientWithTimeout(timeout time.Duration) *Client {
 // GetRecord retrieves a specific OSTI record by ID
 func (c *Client) GetRecord(ostiID string) (*Record, error) {
 
-	fmt.Println("check OSTI record", ostiID)
+	log.Printf("check OSTI record %s", ostiID)
 	endpoint := fmt.Sprintf("%s/records/%s", c.baseURL, ostiID)
 
 	req, err := http.NewRequest("GET", endpoint, nil)

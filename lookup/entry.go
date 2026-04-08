@@ -160,7 +160,7 @@ func Entry(text string, mode string,
 	// Check OSTI if present
 	// Finding the ID should provide enough info to evaluate the entry
 	if osti := entries.ExtractOSTI(text); osti != "" {
-		fmt.Println("Detected OSTI", osti)
+		log.Printf("Detected OSTI %s", osti)
 		EA.OSTI.ID = osti
 		if rec, err := GetOSTIRecord(osti, text); err != nil {
 			EA.OSTI.Error = fmt.Errorf("GetOSTIRecord error: %w", err)
@@ -174,7 +174,7 @@ func Entry(text string, mode string,
 	// Check arXiv if present
 	// Finding the ID should provide enough info to evaluate the entry
 	if id := entries.ExtractArxiv(text); id != "" {
-		fmt.Println("Detected arXiv", id)
+		log.Printf("Detected arXiv %s", id)
 		if entry, err := GetArxivMetadata(id, text); err != nil {
 			EA.Arxiv.Error = fmt.Errorf("arxiv check error: %w", err)
 		} else {
@@ -271,10 +271,11 @@ func Entry(text string, mode string,
 	} else if _, err := url.Parse(online.URL); err != nil {
 		EA.Online.Error = fmt.Errorf("ParseOnline provided a URL that did not parse: %v", err)
 	} else if online.URL != "" {
-		fmt.Println("Online:")
-		fmt.Println("  URL:    ", online.URL)
-		fmt.Println("  Title:  ", online.Title)
-		fmt.Println("  Authors:", strings.Join(online.Authors, ", "))
+		log.Printf("Online:\n  URL:     %s\n  Title:   %s\n  Authors: %s",
+			online.URL,
+			online.Title,
+			strings.Join(online.Authors, ", "),
+		)
 
 		// TODO: we can somehow do format=markdown for github, which might produce better results
 
@@ -322,14 +323,13 @@ func EntryFromBase64(encoded string, id int, mode string,
 		mode = "auto"
 	}
 
-	fmt.Printf("=== Entry %d ===\n", id)
-
 	// Extract citation text
 	text, err := docExtract.EntryFromRaw(encoded, id)
 	if err != nil {
 		return nil, fmt.Errorf("error extracting citation %d: %w", id, err)
 	}
-	fmt.Println(text)
+	log.Printf("=== Entry %d ===", id)
+	log.Print(text)
 
 	return Entry(text, mode, class, docMeta, entryParser, cfg)
 }
@@ -347,14 +347,13 @@ func EntryFromText(text string, id int, mode string,
 		mode = "auto"
 	}
 
-	fmt.Printf("=== Entry %d ===\n", id)
-
 	// Extract citation text
 	text, err := docExtract.EntryFromText(text, id)
 	if err != nil {
 		return nil, fmt.Errorf("error extracting citation %d: %w", id, err)
 	}
-	fmt.Println(text)
+	log.Printf("=== Entry %d ===", id)
+	log.Print(text)
 
 	return Entry(text, mode, class, docMeta, entryParser, cfg)
 }
