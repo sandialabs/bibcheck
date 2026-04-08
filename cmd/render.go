@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	prettytext "github.com/jedib0t/go-pretty/v6/text"
 	"github.com/sandialabs/bibcheck/lookup"
 )
 
@@ -34,22 +35,19 @@ type sourceView struct {
 type entryView struct {
 	number         int
 	originalText   string
-	primaryMessage string
-	primarySource  string
 	summaryState   summaryState
 	summaryComment string
 	sources        []sourceView
 }
 
 type documentView struct {
-	total        int
-	shown        int
-	hiddenOK     int
-	review       int
-	errors       int
-	explicitOK   int
-	unknown      int
-	sourceCounts map[string]int
+	total      int
+	shown      int
+	hiddenOK   int
+	review     int
+	errors     int
+	explicitOK int
+	unknown    int
 }
 
 func buildEntryView(number int, lr *lookup.Result, outcome summaryOutcome) entryView {
@@ -70,29 +68,23 @@ func buildEntryView(number int, lr *lookup.Result, outcome summaryOutcome) entry
 	case outcome.err != nil:
 		view.summaryState = summaryStateError
 		view.summaryComment = fmt.Sprintf("summary error: %v", outcome.err)
-		view.primaryMessage = view.summaryComment
 	case outcome.comment != "":
 		view.summaryComment = outcome.comment
 		if outcome.mismatch {
 			view.summaryState = summaryStateReview
-			view.primaryMessage = outcome.comment
 		} else {
 			view.summaryState = summaryStateOK
-			view.primaryMessage = outcome.comment
 		}
 	default:
 		view.summaryState = deriveSummaryStateFromSources(lr)
-		view.primaryMessage = defaultPrimaryMessage(view.summaryState, lr)
 	}
 
-	view.primarySource = derivePrimarySource(lr)
 	return view
 }
 
 func buildDocumentView(views []entryView, carelessHideOK bool) documentView {
 	doc := documentView{
-		total:        len(views),
-		sourceCounts: map[string]int{},
+		total: len(views),
 	}
 
 	for _, view := range views {
@@ -111,10 +103,6 @@ func buildDocumentView(views []entryView, carelessHideOK bool) documentView {
 			doc.errors++
 		default:
 			doc.unknown++
-		}
-
-		if view.primarySource != "" {
-			doc.sourceCounts[view.primarySource]++
 		}
 	}
 
@@ -139,11 +127,6 @@ func renderDocument(doc documentView, views []entryView, carelessHideOK bool, si
 		}
 		b.WriteString("\n")
 		fmt.Fprintf(&b, "Summary states: review=%d error=%d ok=%d unknown=%d\n", doc.review, doc.errors, doc.explicitOK, doc.unknown)
-		if len(doc.sourceCounts) > 0 {
-			b.WriteString("Primary matches: ")
-			b.WriteString(renderSourceCounts(doc.sourceCounts))
-			b.WriteString("\n")
-		}
 		b.WriteString("\n")
 	}
 
@@ -171,41 +154,12 @@ func renderEntry(view entryView) string {
 
 	fmt.Fprintf(&b, "Entry %d [%s]\n", view.number, strings.ToUpper(string(view.summaryState)))
 	b.WriteString(renderLabeledBlock("Original", view.originalText))
-	if view.primaryMessage != "" {
-		b.WriteString(renderLabeledBlock("Result", view.primaryMessage))
-	}
-	if view.primarySource != "" {
-		fmt.Fprintf(&b, "Primary match: %s\n", view.primarySource)
-	}
-	fmt.Fprintf(&b, "Checks: %s\n", renderSourceLine(view.sources))
 	if view.summaryComment != "" {
 		b.WriteString(renderLabeledBlock("Summary", view.summaryComment))
 	}
+	b.WriteString(renderSourceBlock("Lookups", view.sources))
 
 	return b.String()
-}
-
-func renderSourceLine(sources []sourceView) string {
-	parts := make([]string, 0, len(sources))
-	for _, source := range sources {
-		part := source.name + " " + source.status
-		if source.detail != "" {
-			part += " (" + source.detail + ")"
-		}
-		parts = append(parts, part)
-	}
-	return strings.Join(parts, "; ")
-}
-
-func renderSourceCounts(counts map[string]int) string {
-	order := []string{"OSTI", "arXiv", "Elsevier", "Crossref", "Online", "DOI"}
-	parts := []string{}
-	for _, name := range order {
-		if counts[name] > 0 {
-			parts = append(parts, fmt.Sprintf("%s=%d", name, counts[name]))
-		}
-	}
-	return strings.Join(parts, ", ")
 }
 
 func renderLabeledBlock(label, value string) string {
@@ -226,47 +180,38 @@ func renderLabeledBlock(label, value string) string {
 	return b.String()
 }
 
-func derivePrimarySource(lr *lookup.Result) string {
-	switch {
-	case lr.OSTI.Record != nil:
-		return "OSTI"
-	case lr.Arxiv.Entry != nil:
-		return "arXiv"
-	case lr.Elsevier.Result != nil:
-		return "Elsevier"
-	case lr.Crossref.Work != nil:
-		return "Crossref"
-	case lr.Online.Metadata != nil:
-		return "Online"
-	case lr.DOIOrg.Found:
-		return "DOI"
-	default:
-		return ""
-	}
-}
-
 func deriveSummaryStateFromSources(lr *lookup.Result) summaryState {
 	if lr.OSTI.Error != nil || lr.Arxiv.Error != nil || lr.Elsevier.Error != nil || lr.Crossref.Error != nil || lr.Online.Error != nil || lr.DOIOrg.Error != nil {
 		return summaryStateError
 	}
-	if derivePrimarySource(lr) != "" {
+	if lr.OSTI.Record != nil || lr.Arxiv.Entry != nil || lr.Elsevier.Result != nil || lr.Crossref.Work != nil || lr.Online.Metadata != nil || lr.DOIOrg.Found {
 		return summaryStateUnknown
 	}
 	return summaryStateReview
 }
 
-func defaultPrimaryMessage(state summaryState, lr *lookup.Result) string {
-	switch state {
-	case summaryStateError:
-		return "one or more lookups returned an error"
-	case summaryStateReview:
-		return "no conclusive match found"
-	case summaryStateUnknown:
-		if source := derivePrimarySource(lr); source != "" {
-			return source + " returned a plausible match"
+func renderSourceBlock(label string, sources []sourceView) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s:\n", label)
+	for _, source := range sources {
+		fmt.Fprintf(&b, "  %s: %s", source.name, colorizeSourceStatus(source.status))
+		if source.detail != "" {
+			fmt.Fprintf(&b, " (%s)", source.detail)
 		}
+		b.WriteString("\n")
 	}
-	return ""
+	return b.String()
+}
+
+func colorizeSourceStatus(status string) string {
+	switch status {
+	case "error":
+		return prettytext.FgRed.Sprint(status)
+	case "skipped":
+		return prettytext.FgYellow.Sprint(status)
+	default:
+		return status
+	}
 }
 
 func buildDOISourceView(lr *lookup.Result) sourceView {

@@ -13,8 +13,6 @@ type jsonSourceView struct {
 type jsonEntryView struct {
 	Number         int              `json:"number"`
 	OriginalText   string           `json:"original_text"`
-	PrimaryMessage string           `json:"primary_message"`
-	PrimarySource  string           `json:"primary_source"`
 	SummaryState   summaryState     `json:"summary_state"`
 	SummaryComment string           `json:"summary_comment"`
 	Sources        []jsonSourceView `json:"sources"`
@@ -28,13 +26,12 @@ type jsonSummaryCounts struct {
 }
 
 type jsonDocumentView struct {
-	Format             string            `json:"format"`
-	TotalEntries       int               `json:"total_entries"`
-	ShownEntries       int               `json:"shown_entries"`
-	HiddenOKEntries    int               `json:"hidden_ok_entries"`
-	SummaryCounts      jsonSummaryCounts `json:"summary_counts"`
-	PrimaryMatchCounts map[string]int    `json:"primary_match_counts"`
-	Entries            []jsonEntryView   `json:"entries"`
+	Format          string            `json:"format"`
+	TotalEntries    int               `json:"total_entries"`
+	ShownEntries    int               `json:"shown_entries"`
+	HiddenOKEntries int               `json:"hidden_ok_entries"`
+	SummaryCounts   jsonSummaryCounts `json:"summary_counts"`
+	Entries         []jsonEntryView   `json:"entries"`
 }
 
 func renderJSONDocument(doc documentView, views []entryView, carelessHideOK bool, singleEntry bool) (string, error) {
@@ -49,8 +46,7 @@ func renderJSONDocument(doc documentView, views []entryView, carelessHideOK bool
 			Error:   doc.errors,
 			Unknown: doc.unknown,
 		},
-		PrimaryMatchCounts: doc.sourceCounts,
-		Entries:            []jsonEntryView{},
+		Entries: []jsonEntryView{},
 	}
 
 	for _, view := range views {
@@ -60,8 +56,6 @@ func renderJSONDocument(doc documentView, views []entryView, carelessHideOK bool
 		payload.Entries = append(payload.Entries, jsonEntryView{
 			Number:         view.number,
 			OriginalText:   view.originalText,
-			PrimaryMessage: view.primaryMessage,
-			PrimarySource:  view.primarySource,
 			SummaryState:   view.summaryState,
 			SummaryComment: view.summaryComment,
 			Sources:        toJSONSources(view.sources),
