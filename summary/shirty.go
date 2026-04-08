@@ -5,6 +5,7 @@ package summary
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/sandialabs/bibcheck/lookup"
@@ -15,12 +16,11 @@ import (
 var (
 	// gpt-oss-120b seems unable to consistently obey the response format
 	analyze_model_llama_33_70B_instruct  = "openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8"
-	analyze_prompt_llama_33_70B_instruct = `The user will provide you with a bibliography entry, and some results for searching for that entry. Determine whether the bibliography entry matches the search results.
-- The author list must provide the same authors in the same order (allowing for "et al." at the end)
-- The title, venue, and date must be the same.
-- Allow for formatting differences (author name abbreviations, title capitalization, date formatting, etc)
-- 
-- Missing data from a search result is okay. Results that conflict with the entry are not.
+	analyze_prompt_llama_33_70B_instruct = `The user will provide you with a bibliography entry, and some results for searching external databases for that entry. Determine whether the bibliography entry matches the search results.
+- Search results that conflict with the entry are almost certainly a mismatch
+    - The author list must provide the same authors in the same order (allowing for "et al." at the end)
+    - The title, venue, and date must be the same.
+    - Allow for formatting differences (author name abbreviations, title capitalization, date formatting, etc)
 - Provide a one phrase explanation
 - Produce JSON
 `
@@ -59,6 +59,12 @@ func (s *ShirtySummarizer) Summarize(lr *lookup.Result) (bool, string, error) {
 	}
 	if lr.OSTI.Record != nil {
 		others = append(others, lr.OSTI.Record.ToString())
+	}
+
+	// if there are no results, the provided entry can't be grounded in real results
+	if len(others) == 0 {
+		log.Printf("No search results to summarize")
+		return true, "insufficient search result data", nil
 	}
 
 	model := analyze_model_llama_33_70B_instruct
