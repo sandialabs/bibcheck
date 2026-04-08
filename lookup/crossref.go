@@ -29,7 +29,6 @@ func CrossrefQueryBibliographic(entry string) (*crossref.CrossrefWork, string, e
 
 	best := &crossrefResp.Message.Items[0]
 
-	log.Println("crossref.org best score:", best.Score)
 	if best.Score < CrossrefMatchThreshold {
 		return nil, fmt.Sprintf("score %f < threshold %f", best.Score, CrossrefMatchThreshold), nil
 	}
@@ -46,5 +45,6 @@ func CrossrefQueryBibliographic(entry string) (*crossref.CrossrefWork, string, e
 		}
 	}
 
+	log.Println("crossref.org best score:", best.Score)
 	return best, "", nil
 }
