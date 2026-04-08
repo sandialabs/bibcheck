@@ -82,10 +82,10 @@ func newFromHtmlRequest(html string) *openai.ChatRequest {
 - Publication/Update Date (string, prefering YYYY-MM-DD, but YYYY-MM or YYYY okay)
 
 Use the following guidelines:
-- Wherever user-visible values contradict hidden values (e.g. html meta tags), provide the user-visible values.
+- Prefer user-visible info to hidden values (e.g. html meta tags)
 - The user wants the web page title, which may be different than the title of the whole website.
 - The user wants info about the document itself: don't provide information about external links or references.
-- Provide empty values when the requested information cannot be determined.
+- Provide empty values when the requested information is not present.
 - Produce JSON.
 `),
 			openai.MakeUserMessage(html),
