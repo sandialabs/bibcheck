@@ -99,7 +99,7 @@ func (s *ShirtySummarizer) Summarize(lr *lookup.Result) (bool, string, error) {
 			},
 		),
 	}
-	content, err := s.W.ChatGetChoiceZero(req)
+	content, err := s.W.OpenAIClient().ChatGetChoiceZero(req)
 	if err != nil {
 		return false, "", err
 	}
