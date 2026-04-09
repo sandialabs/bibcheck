@@ -214,6 +214,8 @@ func init() {
 	// don't include the `completion` subcommand
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 	rootCmd.PersistentFlags().String("elsevier-api-key", "", "Elsevier API key")
+	rootCmd.PersistentFlags().String("openai-audit-dir", "", "Directory for OpenAI API audit logs")
+	rootCmd.PersistentFlags().Bool("openai-audit-enabled", true, "Enable OpenAI API audit logging")
 	rootCmd.PersistentFlags().String("openrouter-api-key", "", "OpenRouter API key")
 	rootCmd.PersistentFlags().String("openrouter-base-url", config.DefaultOpenRouterBaseURL, "Openrouter-compatible API url")
 	rootCmd.PersistentFlags().String("shirty-api-key", "", "shirty.sandia.gov API key")
