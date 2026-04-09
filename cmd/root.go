@@ -231,6 +231,7 @@ func init() {
 	rootCmd.AddCommand(bibCmd)
 	rootCmd.AddCommand(doiCmd)
 	rootCmd.AddCommand(entryCmd)
+	rootCmd.AddCommand(evalCmd)
 	rootCmd.AddCommand(listEntriesCmd)
 	rootCmd.AddCommand(textractCmd)
 	rootCmd.AddCommand(serveCmd)
