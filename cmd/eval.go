@@ -78,10 +78,11 @@ var evalReviewCmd = &cobra.Command{
 }
 
 var evalReportCmd = &cobra.Command{
-	Use:   "report",
+	Use:   "report <run-id>",
 	Short: "Report corpus metrics",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return errors.New("not implemented")
+		return runEvalReportCommand(args[0])
 	},
 }
 

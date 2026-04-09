@@ -16,6 +16,7 @@ const (
 	FormatVersion       = 1
 	RunsDirName         = "runs"
 	ResultsDirName      = "results"
+	ReportsDirName      = "reports"
 )
 
 type Workspace struct {
@@ -119,6 +120,75 @@ type SourceResult struct {
 	Detail string `json:"detail,omitempty"`
 }
 
+type SummaryReport struct {
+	FormatVersion      int                `json:"format_version"`
+	RunID              string             `json:"run_id"`
+	GeneratedAt        time.Time          `json:"generated_at"`
+	EntryCounts        DecisionCounts     `json:"entry_counts"`
+	SummaryStateCounts SummaryStateCounts `json:"summary_state_counts"`
+	ReviewCoverage     ReviewCoverage     `json:"review_coverage"`
+	ConfusionMatrix    ConfusionMatrix    `json:"confusion_matrix"`
+	Metrics            Metrics            `json:"metrics"`
+	Papers             []PaperSummary     `json:"papers"`
+	Venues             []VenueSummary     `json:"venues"`
+}
+
+type DecisionCounts struct {
+	MatchFound int `json:"match_found"`
+	NoMatch    int `json:"no_match"`
+	Error      int `json:"error"`
+}
+
+type SummaryStateCounts struct {
+	OK      int `json:"ok"`
+	Review  int `json:"review"`
+	Error   int `json:"error"`
+	Unknown int `json:"unknown"`
+}
+
+type ReviewCoverage struct {
+	ReviewedEntries   int     `json:"reviewed_entries"`
+	UnreviewedEntries int     `json:"unreviewed_entries"`
+	ReviewedFraction  float64 `json:"reviewed_fraction"`
+}
+
+type ConfusionMatrix struct {
+	TP int `json:"tp"`
+	FP int `json:"fp"`
+	FN int `json:"fn"`
+	TN int `json:"tn"`
+}
+
+type Metrics struct {
+	Precision *float64 `json:"precision"`
+	Recall    *float64 `json:"recall"`
+	F1        *float64 `json:"f1"`
+}
+
+type PaperSummary struct {
+	PaperID        string             `json:"paper_id"`
+	VenueID        string             `json:"venue_id"`
+	TotalEntries   int                `json:"total_entries"`
+	EntryCounts    DecisionCounts     `json:"entry_counts"`
+	ReviewCoverage ReviewCoverage     `json:"review_coverage"`
+	SummaryStates  SummaryStateCounts `json:"summary_state_counts"`
+	ErrorRate      float64            `json:"error_rate"`
+	MatchFoundRate float64            `json:"match_found_rate"`
+	NoMatchRate    float64            `json:"no_match_rate"`
+}
+
+type VenueSummary struct {
+	VenueID        string             `json:"venue_id"`
+	PaperCount     int                `json:"paper_count"`
+	TotalEntries   int                `json:"total_entries"`
+	EntryCounts    DecisionCounts     `json:"entry_counts"`
+	ReviewCoverage ReviewCoverage     `json:"review_coverage"`
+	SummaryStates  SummaryStateCounts `json:"summary_state_counts"`
+	ErrorRate      float64            `json:"error_rate"`
+	MatchFoundRate float64            `json:"match_found_rate"`
+	NoMatchRate    float64            `json:"no_match_rate"`
+}
+
 func NewWorkspace(root string) Workspace {
 	return Workspace{Root: root}
 }
@@ -145,6 +215,14 @@ func (w Workspace) RunResultsDir(runID string) string {
 
 func (w Workspace) PaperResultPath(runID, paperID string) string {
 	return filepath.Join(w.RunResultsDir(runID), paperID+".json")
+}
+
+func (w Workspace) ReportsDir(runID string) string {
+	return filepath.Join(w.RunDir(runID), ReportsDirName)
+}
+
+func (w Workspace) ReportPath(runID string) string {
+	return filepath.Join(w.ReportsDir(runID), "summary.json")
 }
 
 func (w Workspace) Ensure() error {
@@ -204,6 +282,25 @@ func (w Workspace) SavePaperResult(result *PaperResult) error {
 	path := w.PaperResultPath(result.RunID, result.PaperID)
 	if err := writeJSONFile(path, result); err != nil {
 		return fmt.Errorf("write paper result %q: %w", path, err)
+	}
+	return nil
+}
+
+func (w Workspace) LoadPaperResult(runID, paperID string) (*PaperResult, error) {
+	var result PaperResult
+	path := w.PaperResultPath(runID, paperID)
+	if err := readJSONFile(path, &result); err != nil {
+		return nil, fmt.Errorf("read paper result %q: %w", path, err)
+	}
+	return &result, nil
+}
+
+func (w Workspace) SaveSummaryReport(report *SummaryReport) error {
+	if err := os.MkdirAll(w.ReportsDir(report.RunID), 0o755); err != nil {
+		return fmt.Errorf("create reports directory %q: %w", w.ReportsDir(report.RunID), err)
+	}
+	if err := writeJSONFile(w.ReportPath(report.RunID), report); err != nil {
+		return fmt.Errorf("write report file %q: %w", w.ReportPath(report.RunID), err)
 	}
 	return nil
 }
