@@ -57,7 +57,7 @@ var evalRunCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run corpus evaluation",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return errors.New("not implemented")
+		return runEvalCommand()
 	},
 }
 
