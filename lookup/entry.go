@@ -333,10 +333,10 @@ func EntryFromBase64(encoded string, id int, mode string,
 	return Entry(text, mode, class, docMeta, entryParser, cfg)
 }
 
-// analyze entry `id` from document text `text`
-func EntryFromText(text string, id int, mode string,
+// analyze entry `id` from a prepared bibliography artifact.
+func EntryFromBibliography(b *documents.Bibliography, id int, mode string,
 	class entries.Classifier,
-	docExtract documents.EntryFromTextExtractor,
+	docExtract documents.EntryFromBibliographyExtractor,
 	docMeta documents.MetaExtractor,
 	entryParser entries.Parser,
 	cfg *EntryConfig,
@@ -347,7 +347,7 @@ func EntryFromText(text string, id int, mode string,
 	}
 
 	// Extract citation text
-	text, err := docExtract.EntryFromText(text, id)
+	text, err := docExtract.EntryFromBibliography(b, id)
 	if err != nil {
 		return nil, fmt.Errorf("error extracting citation %d: %w", id, err)
 	}

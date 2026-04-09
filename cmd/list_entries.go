@@ -7,7 +7,6 @@ import (
 	"log"
 
 	"github.com/sandialabs/bibcheck/config"
-	"github.com/sandialabs/bibcheck/lookup"
 	"github.com/sandialabs/bibcheck/openrouter"
 	"github.com/sandialabs/bibcheck/shirty"
 	"github.com/spf13/cobra"
@@ -29,19 +28,19 @@ var listEntriesCmd = &cobra.Command{
 				shirty.WithBaseUrl(settings.ShirtyBaseURL),
 			)
 
-			text, err := shirtyWorkflow.Textract(filePath)
+			bibliography, err := shirtyWorkflow.PrepareBibliography(filePath)
 			if err != nil {
-				log.Fatalf("textract error: %v", err)
+				log.Fatalf("prepare bibliography error: %v", err)
 			}
 
-			format, err := shirtyWorkflow.BibIdFormat(text.Text)
+			format, err := shirtyWorkflow.BibIdFormat(bibliography)
 			if err != nil {
 				log.Fatalf("error getting bib id format: %v", err)
 			}
 			switch format {
 			case shirty.BibIdFormatNumeric:
 
-				numEntries, err := shirtyWorkflow.NumBibEntries(text.Text)
+				numEntries, err := shirtyWorkflow.NumBibEntries(bibliography)
 				if err != nil {
 					log.Fatalf("error getting number of entries: %v", err)
 				}
@@ -56,23 +55,23 @@ var listEntriesCmd = &cobra.Command{
 			}
 
 		} else if settings.OpenRouterAPIKey != "" && settings.OpenRouterBaseURL != "" {
-			encoded, err := lookup.Encode(filePath)
-			if err != nil {
-				log.Fatalf("encode error: %v", err)
-			}
-
 			client := openrouter.NewClient(
 				settings.OpenRouterAPIKey,
 				openrouter.WithBaseURL(settings.OpenRouterBaseURL),
 			)
 
-			format, err := client.BibIdFormat(encoded)
+			bibliography, err := client.PrepareBibliography(filePath)
+			if err != nil {
+				log.Fatalf("prepare bibliography error: %v", err)
+			}
+
+			format, err := client.BibIdFormat(bibliography)
 			if err != nil {
 				log.Fatalf("error getting bib id format: %v", err)
 			}
 			switch format {
 			case openrouter.BibIdFormatNumeric:
-				numEntries, err := client.NumEntries(encoded)
+				numEntries, err := client.NumBibliographyEntries(bibliography)
 				if err != nil {
 					log.Fatalf("error getting number of entries: %v", err)
 				}

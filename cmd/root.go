@@ -45,9 +45,9 @@ const (
 )
 
 var rootCmd = &cobra.Command{
-	Use:          "bibcheck <pdf-file>",
-	Short:        "Check bibliography entries in a PDF file",
-	Long:         `bibliograph-checker ` + version.String() + ` (` + version.GitSha() + `)
+	Use:   "bibcheck <pdf-file>",
+	Short: "Check bibliography entries in a PDF file",
+	Long: `bibliograph-checker ` + version.String() + ` (` + version.GitSha() + `)
 A tool that analyzes bibliography entries in PDF files and verifies their existence.`,
 	Args:          cobra.ExactArgs(1),
 	SilenceErrors: true,
@@ -82,15 +82,18 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 			elsevierClient = elsevier.NewClient(settings.ElsevierAPIKey)
 		}
 
-		// different representations of the file
-		var pdfEncoded string
-		var pdfText string
+		var bibliography *documents.Bibliography
 		var err error
 
-		if openrouterClient != nil {
-			pdfEncoded, err = lookup.Encode(pdfPath)
+		if shirtyProvider != nil {
+			bibliography, err = shirtyProvider.PrepareBibliography(pdfPath)
 			if err != nil {
-				return fmt.Errorf("pdf encode error: %w", err)
+				return fmt.Errorf("prepare bibliography error: %w", err)
+			}
+		} else if openrouterClient != nil {
+			bibliography, err = openrouterClient.PrepareBibliography(pdfPath)
+			if err != nil {
+				return fmt.Errorf("prepare bibliography error: %w", err)
 			}
 		}
 
@@ -100,20 +103,15 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 		} else {
 
 			// Get citation counts
-			if openrouterClient != nil {
+			if bibliography != nil && openrouterClient != nil && shirtyProvider == nil {
 				fmt.Println("Counting bibliography entries...")
-				entryCount, err = openrouterClient.NumEntries(pdfEncoded)
+				entryCount, err = openrouterClient.NumBibliographyEntries(bibliography)
 				if err != nil {
 					return fmt.Errorf("bibliography size error: %w", err)
 				}
 				fmt.Printf("Found %d bibliographic entries\n", entryCount)
-			} else if shirtyProvider != nil {
-				textractResp, err := shirtyProvider.Textract(pdfPath)
-				pdfText = textractResp.Text
-				if err != nil {
-					return fmt.Errorf("textract error: %w", err)
-				}
-				entryCount, err = shirtyProvider.NumBibEntries(pdfText)
+			} else if bibliography != nil {
+				entryCount, err = shirtyProvider.NumBibEntries(bibliography)
 				if err != nil {
 					return fmt.Errorf("bibliography size error: %w", err)
 				}
@@ -125,15 +123,14 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 
 		var class entries.Classifier
 		var entryParser entries.Parser
-		var docRawExtract documents.EntryFromRawExtractor
-		var docTextExtract documents.EntryFromTextExtractor
+		var docBibliographyExtract documents.EntryFromBibliographyExtractor
 		var docMeta documents.MetaExtractor
 
 		// default to using openrouter, if available
 		if openrouterClient != nil {
 			class = openrouterClient
 			entryParser = openrouterClient
-			docRawExtract = openrouterClient
+			docBibliographyExtract = openrouterClient
 			docMeta = openrouterClient
 		}
 
@@ -141,17 +138,8 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 		if shirtyProvider != nil {
 			class = shirtyProvider
 			entryParser = shirtyProvider
-			docTextExtract = shirtyProvider
+			docBibliographyExtract = shirtyProvider
 			docMeta = shirtyProvider
-
-			if pdfText == "" {
-				textractResp, err := shirtyProvider.Textract(pdfPath)
-				if err != nil {
-					return fmt.Errorf("textract error: %w", err)
-				}
-				pdfText = textractResp.Text
-			}
-
 		}
 
 		cfg := &lookup.EntryConfig{
@@ -171,10 +159,8 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 
 		for i := entryStart; i < entryStart+entryCount; i++ {
 			var lr *lookup.Result
-			if docRawExtract != nil {
-				lr, err = lookup.EntryFromBase64(pdfEncoded, i, pipeline, class, docRawExtract, docMeta, entryParser, cfg)
-			} else if docTextExtract != nil {
-				lr, err = lookup.EntryFromText(pdfText, i, pipeline, class, docTextExtract, docMeta, entryParser, cfg)
+			if docBibliographyExtract != nil && bibliography != nil {
+				lr, err = lookup.EntryFromBibliography(bibliography, i, pipeline, class, docBibliographyExtract, docMeta, entryParser, cfg)
 			} else {
 				return errors.New("requires something that can extract a bib entry from a pdf")
 			}

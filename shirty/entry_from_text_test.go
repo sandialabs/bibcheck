@@ -88,16 +88,14 @@ func impl(t *testing.T, path string, id int, expected []string) {
 		WithBaseUrl("https://shirty.sandia.gov/api/v1"),
 	)
 
-	// can't directly check that the extracted text has the expected values:
-	// it might be split across a pagebreak or something
-	textractResp, err := client.Textract(path)
+	bibliography, err := client.PrepareBibliography(path)
 	if err != nil {
-		t.Errorf("textract error: %v", err)
+		t.Errorf("prepare bibliography error: %v", err)
 	}
 
-	entry, err := client.EntryFromText(textractResp.Text, id)
+	entry, err := client.EntryFromBibliography(bibliography, id)
 	if err != nil {
-		t.Errorf("entry from text error: %v", err)
+		t.Errorf("entry from bibliography error: %v", err)
 	}
 
 	// check that the extracted bibliography entry has the expected strings
