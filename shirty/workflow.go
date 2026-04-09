@@ -38,3 +38,7 @@ func WithBaseUrl(baseUrl string) WorkflowOpt {
 		openai.WithBaseUrl(baseUrl)(w.oaiClient)
 	}
 }
+
+func (w *Workflow) OpenAIClient() *openai.Client {
+	return w.oaiClient
+}
