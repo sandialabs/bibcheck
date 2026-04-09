@@ -3,6 +3,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"path/filepath"
@@ -32,7 +33,10 @@ func runEvalCommand() error {
 		return err
 	}
 
-	selected := selectRunnablePapers(run, evalRetryErrors)
+	selected, err := selectRunnablePapers(run, evalRetryErrors)
+	if err != nil {
+		return err
+	}
 	if len(selected) == 0 {
 		if resumed {
 			fmt.Printf("Resumed run %s\n", run.RunID)
@@ -133,7 +137,12 @@ func prepareEvalRun(workspace eval.Workspace) (*eval.Run, bool, error) {
 		Papers:        make([]eval.RunPaper, 0, len(corpus.Papers)),
 	}
 
-	for _, paper := range corpus.Papers {
+	filtered := filterCorpusPapers(corpus.Papers)
+	if len(filtered) == 0 && hasEvalPaperFilters() {
+		return nil, false, errors.New("no papers matched the requested --venue/--paper filters")
+	}
+
+	for _, paper := range filtered {
 		run.Papers = append(run.Papers, eval.RunPaper{
 			PaperID:      paper.ID,
 			VenueID:      paper.VenueID,
@@ -155,9 +164,14 @@ func normalizeResumablePapers(run *eval.Run) {
 	}
 }
 
-func selectRunnablePapers(run *eval.Run, retryErrors bool) []int {
+func selectRunnablePapers(run *eval.Run, retryErrors bool) ([]int, error) {
+	filteredAny := false
 	selected := []int{}
 	for idx, paper := range run.Papers {
+		if !matchesEvalFilters(paper.VenueID, paper.PaperID) {
+			continue
+		}
+		filteredAny = true
 		switch paper.Status {
 		case eval.RunStatusPending:
 			selected = append(selected, idx)
@@ -167,7 +181,10 @@ func selectRunnablePapers(run *eval.Run, retryErrors bool) []int {
 			}
 		}
 	}
-	return selected
+	if !filteredAny && hasEvalPaperFilters() {
+		return nil, errors.New("no papers in the selected run matched the requested --venue/--paper filters")
+	}
+	return selected, nil
 }
 
 func analyzeEvalPaper(analyzer *analyzer, runID, corpusRoot, paperID, venueID, relativePath string) (*eval.PaperResult, error) {
@@ -263,4 +280,41 @@ func recomputeRunSummary(run *eval.Run) {
 
 func newEvalRunID() string {
 	return strings.ToLower(time.Now().UTC().Format("20060102t150405z"))
+}
+
+func filterCorpusPapers(papers []eval.PaperRef) []eval.PaperRef {
+	if !hasEvalPaperFilters() {
+		return papers
+	}
+
+	filtered := make([]eval.PaperRef, 0, len(papers))
+	for _, paper := range papers {
+		if matchesEvalFilters(paper.VenueID, paper.ID) {
+			filtered = append(filtered, paper)
+		}
+	}
+	return filtered
+}
+
+func hasEvalPaperFilters() bool {
+	return len(evalVenueFilter) > 0 || len(evalPaperFilter) > 0
+}
+
+func matchesEvalFilters(venueID, paperID string) bool {
+	if len(evalVenueFilter) > 0 && !containsString(evalVenueFilter, venueID) {
+		return false
+	}
+	if len(evalPaperFilter) > 0 && !containsString(evalPaperFilter, paperID) {
+		return false
+	}
+	return true
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
 }

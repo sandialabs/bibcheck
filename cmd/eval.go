@@ -16,12 +16,16 @@ var (
 	evalWorkspace   string
 	evalResumeRun   string
 	evalRetryErrors bool
+	evalVenueFilter []string
+	evalPaperFilter []string
 )
 
 const (
 	FlagEvalWorkspace string = "workspace"
 	FlagEvalResume    string = "resume"
 	FlagRetryErrors   string = "retry-errors"
+	FlagEvalVenue     string = "venue"
+	FlagEvalPaper     string = "paper"
 )
 
 var evalCmd = &cobra.Command{
@@ -85,6 +89,8 @@ func init() {
 	evalCmd.PersistentFlags().StringVar(&evalWorkspace, FlagEvalWorkspace, eval.DefaultWorkspaceDir, "Eval workspace directory")
 	evalRunCmd.Flags().StringVar(&evalResumeRun, FlagEvalResume, "", "Resume an existing eval run by run id")
 	evalRunCmd.Flags().BoolVar(&evalRetryErrors, FlagRetryErrors, false, "Retry papers currently marked as error when resuming")
+	evalRunCmd.Flags().StringSliceVar(&evalVenueFilter, FlagEvalVenue, nil, "Restrict processing to matching venue ids")
+	evalRunCmd.Flags().StringSliceVar(&evalPaperFilter, FlagEvalPaper, nil, "Restrict processing to matching paper ids")
 
 	evalCmd.AddCommand(evalDiscoverCmd)
 	evalCmd.AddCommand(evalRunCmd)
