@@ -17,6 +17,7 @@ var (
 	evalRetryErrors    bool
 	evalVenueFilter    []string
 	evalPaperFilter    []string
+	evalEntryFilter    []int
 	evalReviewer       string
 	evalUnreviewed     bool
 	evalDecisionFilter []string
@@ -28,6 +29,7 @@ const (
 	FlagRetryErrors    string = "retry-errors"
 	FlagEvalVenue      string = "venue"
 	FlagEvalPaper      string = "paper"
+	FlagEvalEntry      string = "entry"
 	FlagEvalReviewer   string = "reviewer"
 	FlagEvalUnreviewed string = "unreviewed"
 	FlagEvalDecision   string = "decision"
@@ -98,6 +100,7 @@ func init() {
 	evalRunCmd.Flags().BoolVar(&evalRetryErrors, FlagRetryErrors, false, "Retry papers currently marked as error when resuming")
 	evalRunCmd.Flags().StringSliceVar(&evalVenueFilter, FlagEvalVenue, nil, "Restrict processing to matching venue ids")
 	evalRunCmd.Flags().StringSliceVar(&evalPaperFilter, FlagEvalPaper, nil, "Restrict processing to matching paper ids")
+	evalRunCmd.Flags().IntSliceVar(&evalEntryFilter, FlagEvalEntry, nil, "Restrict reruns to matching entry numbers (requires --resume)")
 	evalReviewCmd.Flags().StringSliceVar(&evalVenueFilter, FlagEvalVenue, nil, "Restrict review to matching venue ids")
 	evalReviewCmd.Flags().StringSliceVar(&evalPaperFilter, FlagEvalPaper, nil, "Restrict review to matching paper ids")
 	evalReviewCmd.Flags().StringVar(&evalReviewer, FlagEvalReviewer, "", "Reviewer name or initials to store in new annotations")

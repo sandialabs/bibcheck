@@ -26,6 +26,9 @@ func runEvalCommand() error {
 	if err != nil {
 		return err
 	}
+	if len(evalEntryFilter) > 0 && !resumed {
+		return errors.New("--entry requires --resume so updated entries can be merged into existing paper results")
+	}
 
 	normalizeResumablePapers(run)
 	recomputeRunSummary(run)
@@ -75,7 +78,7 @@ func runEvalCommand() error {
 			return err
 		}
 
-		result, err := analyzeEvalPaper(analyzer, run.RunID, run.CorpusRoot, paper.PaperID, paper.VenueID, paper.RelativePath)
+		result, err := analyzeEvalPaper(workspace, analyzer, run.RunID, run.CorpusRoot, paper.PaperID, paper.VenueID, paper.RelativePath, resumed)
 		finishedAt := time.Now().UTC()
 		paper.FinishedAt = &finishedAt
 		run.UpdatedAt = finishedAt
@@ -175,8 +178,12 @@ func selectRunnablePapers(run *eval.Run, retryErrors bool) ([]int, error) {
 		switch paper.Status {
 		case eval.RunStatusPending:
 			selected = append(selected, idx)
+		case eval.RunStatusDone:
+			if len(evalEntryFilter) > 0 {
+				selected = append(selected, idx)
+			}
 		case eval.RunStatusError:
-			if retryErrors {
+			if retryErrors || len(evalEntryFilter) > 0 {
 				selected = append(selected, idx)
 			}
 		}
@@ -187,7 +194,7 @@ func selectRunnablePapers(run *eval.Run, retryErrors bool) ([]int, error) {
 	return selected, nil
 }
 
-func analyzeEvalPaper(analyzer *analyzer, runID, corpusRoot, paperID, venueID, relativePath string) (*eval.PaperResult, error) {
+func analyzeEvalPaper(workspace eval.Workspace, analyzer *analyzer, runID, corpusRoot, paperID, venueID, relativePath string, resumed bool) (*eval.PaperResult, error) {
 	pdfPath := filepath.Join(corpusRoot, filepath.FromSlash(relativePath))
 	prepared, err := analyzer.prepareDocument(pdfPath, true)
 	if err != nil {
@@ -206,6 +213,9 @@ func analyzeEvalPaper(analyzer *analyzer, runID, corpusRoot, paperID, venueID, r
 	}
 
 	for i := 1; i <= prepared.entryCount; i++ {
+		if !matchesEvalEntryFilter(i) {
+			continue
+		}
 		view, err := analyzer.analyzeEntry(prepared, i)
 		if err != nil {
 			result.Entries = append(result.Entries, eval.EntryResult{
@@ -220,6 +230,14 @@ func analyzeEvalPaper(analyzer *analyzer, runID, corpusRoot, paperID, venueID, r
 			continue
 		}
 		result.Entries = append(result.Entries, toEvalEntryResult(paperID, venueID, view))
+	}
+
+	if len(evalEntryFilter) > 0 && resumed {
+		existing, err := workspace.LoadPaperResult(runID, paperID)
+		if err != nil {
+			return nil, err
+		}
+		return mergePaperResults(existing, result, prepared.entryCount), nil
 	}
 
 	return result, nil
@@ -317,4 +335,42 @@ func containsString(values []string, target string) bool {
 		}
 	}
 	return false
+}
+
+func matchesEvalEntryFilter(entryNumber int) bool {
+	if len(evalEntryFilter) == 0 {
+		return true
+	}
+	for _, entry := range evalEntryFilter {
+		if entry == entryNumber {
+			return true
+		}
+	}
+	return false
+}
+
+func mergePaperResults(existing, updated *eval.PaperResult, totalEntries int) *eval.PaperResult {
+	merged := *existing
+	merged.RunID = updated.RunID
+	merged.PDFPath = updated.PDFPath
+	merged.CompletedAt = updated.CompletedAt
+	merged.TotalEntries = totalEntries
+
+	entriesByNumber := map[int]eval.EntryResult{}
+	for _, entry := range existing.Entries {
+		entriesByNumber[entry.EntryNumber] = entry
+	}
+	for _, entry := range updated.Entries {
+		entriesByNumber[entry.EntryNumber] = entry
+	}
+
+	merged.Entries = make([]eval.EntryResult, 0, len(entriesByNumber))
+	for i := 1; i <= totalEntries; i++ {
+		entry, ok := entriesByNumber[i]
+		if !ok {
+			continue
+		}
+		merged.Entries = append(merged.Entries, entry)
+	}
+	return &merged
 }
