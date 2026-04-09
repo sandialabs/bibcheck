@@ -3,7 +3,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -13,19 +12,25 @@ import (
 )
 
 var (
-	evalWorkspace   string
-	evalResumeRun   string
-	evalRetryErrors bool
-	evalVenueFilter []string
-	evalPaperFilter []string
+	evalWorkspace      string
+	evalResumeRun      string
+	evalRetryErrors    bool
+	evalVenueFilter    []string
+	evalPaperFilter    []string
+	evalReviewer       string
+	evalUnreviewed     bool
+	evalDecisionFilter []string
 )
 
 const (
-	FlagEvalWorkspace string = "workspace"
-	FlagEvalResume    string = "resume"
-	FlagRetryErrors   string = "retry-errors"
-	FlagEvalVenue     string = "venue"
-	FlagEvalPaper     string = "paper"
+	FlagEvalWorkspace  string = "workspace"
+	FlagEvalResume     string = "resume"
+	FlagRetryErrors    string = "retry-errors"
+	FlagEvalVenue      string = "venue"
+	FlagEvalPaper      string = "paper"
+	FlagEvalReviewer   string = "reviewer"
+	FlagEvalUnreviewed string = "unreviewed"
+	FlagEvalDecision   string = "decision"
 )
 
 var evalCmd = &cobra.Command{
@@ -70,10 +75,11 @@ var evalRunCmd = &cobra.Command{
 }
 
 var evalReviewCmd = &cobra.Command{
-	Use:   "review",
+	Use:   "review <run-id>",
 	Short: "Review stored corpus results",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return errors.New("not implemented")
+		return runEvalReviewCommand(args[0])
 	},
 }
 
@@ -92,6 +98,11 @@ func init() {
 	evalRunCmd.Flags().BoolVar(&evalRetryErrors, FlagRetryErrors, false, "Retry papers currently marked as error when resuming")
 	evalRunCmd.Flags().StringSliceVar(&evalVenueFilter, FlagEvalVenue, nil, "Restrict processing to matching venue ids")
 	evalRunCmd.Flags().StringSliceVar(&evalPaperFilter, FlagEvalPaper, nil, "Restrict processing to matching paper ids")
+	evalReviewCmd.Flags().StringSliceVar(&evalVenueFilter, FlagEvalVenue, nil, "Restrict review to matching venue ids")
+	evalReviewCmd.Flags().StringSliceVar(&evalPaperFilter, FlagEvalPaper, nil, "Restrict review to matching paper ids")
+	evalReviewCmd.Flags().StringVar(&evalReviewer, FlagEvalReviewer, "", "Reviewer name or initials to store in new annotations")
+	evalReviewCmd.Flags().BoolVar(&evalUnreviewed, FlagEvalUnreviewed, false, "Only show entries without existing annotations")
+	evalReviewCmd.Flags().StringSliceVar(&evalDecisionFilter, FlagEvalDecision, nil, "Restrict review to matching final decisions: match_found, no_match, error")
 
 	evalCmd.AddCommand(evalDiscoverCmd)
 	evalCmd.AddCommand(evalRunCmd)
