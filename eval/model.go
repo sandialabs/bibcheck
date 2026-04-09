@@ -189,6 +189,14 @@ func (w Workspace) SaveRun(run *Run) error {
 	return nil
 }
 
+func (w Workspace) LoadRun(runID string) (*Run, error) {
+	var run Run
+	if err := readJSONFile(w.RunPath(runID), &run); err != nil {
+		return nil, fmt.Errorf("read run file %q: %w", w.RunPath(runID), err)
+	}
+	return &run, nil
+}
+
 func (w Workspace) SavePaperResult(result *PaperResult) error {
 	if err := w.EnsureRun(result.RunID); err != nil {
 		return err

@@ -13,11 +13,15 @@ import (
 )
 
 var (
-	evalWorkspace string
+	evalWorkspace   string
+	evalResumeRun   string
+	evalRetryErrors bool
 )
 
 const (
 	FlagEvalWorkspace string = "workspace"
+	FlagEvalResume    string = "resume"
+	FlagRetryErrors   string = "retry-errors"
 )
 
 var evalCmd = &cobra.Command{
@@ -79,6 +83,8 @@ var evalReportCmd = &cobra.Command{
 
 func init() {
 	evalCmd.PersistentFlags().StringVar(&evalWorkspace, FlagEvalWorkspace, eval.DefaultWorkspaceDir, "Eval workspace directory")
+	evalRunCmd.Flags().StringVar(&evalResumeRun, FlagEvalResume, "", "Resume an existing eval run by run id")
+	evalRunCmd.Flags().BoolVar(&evalRetryErrors, FlagRetryErrors, false, "Retry papers currently marked as error when resuming")
 
 	evalCmd.AddCommand(evalDiscoverCmd)
 	evalCmd.AddCommand(evalRunCmd)

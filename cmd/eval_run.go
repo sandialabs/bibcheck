@@ -21,38 +21,25 @@ func runEvalCommand() error {
 	}
 
 	workspace := eval.NewWorkspace(workspaceRoot)
-	corpus, err := workspace.LoadCorpus()
+	run, resumed, err := prepareEvalRun(workspace)
 	if err != nil {
 		return err
 	}
-	run := &eval.Run{
-		FormatVersion: eval.FormatVersion,
-		RunID:         newEvalRunID(),
-		CreatedAt:     time.Now().UTC(),
-		UpdatedAt:     time.Now().UTC(),
-		GitSHA:        version.GitSha(),
-		Pipeline:      pipeline,
-		CorpusRoot:    corpus.CorpusRoot,
-		Papers:        make([]eval.RunPaper, 0, len(corpus.Papers)),
-	}
 
-	for _, paper := range corpus.Papers {
-		run.Papers = append(run.Papers, eval.RunPaper{
-			PaperID:      paper.ID,
-			VenueID:      paper.VenueID,
-			RelativePath: paper.RelativePath,
-			Status:       eval.RunStatusPending,
-			ResultPath:   filepath.ToSlash(filepath.Join(eval.ResultsDirName, paper.ID+".json")),
-		})
-	}
+	normalizeResumablePapers(run)
 	recomputeRunSummary(run)
+	if err := workspace.SaveRun(run); err != nil {
+		return err
+	}
 
-	if len(corpus.Papers) == 0 {
-		if err := workspace.SaveRun(run); err != nil {
-			return err
+	selected := selectRunnablePapers(run, evalRetryErrors)
+	if len(selected) == 0 {
+		if resumed {
+			fmt.Printf("Resumed run %s\n", run.RunID)
+		} else {
+			fmt.Printf("Created run %s\n", run.RunID)
 		}
-		fmt.Printf("Created run %s\n", run.RunID)
-		fmt.Printf("Processed 0 papers: done=0 error=0\n")
+		fmt.Printf("Processed 0 papers: done=%d error=%d\n", run.StatusSummary.Done, run.StatusSummary.Error)
 		fmt.Printf("Wrote %s\n", workspace.RunPath(run.RunID))
 		return nil
 	}
@@ -71,7 +58,8 @@ func runEvalCommand() error {
 		return err
 	}
 
-	for idx := range run.Papers {
+	processedThisInvocation := 0
+	for _, idx := range selected {
 		paper := &run.Papers[idx]
 		now := time.Now().UTC()
 		paper.Status = eval.RunStatusRunning
@@ -83,7 +71,7 @@ func runEvalCommand() error {
 			return err
 		}
 
-		result, err := analyzeEvalPaper(analyzer, run.RunID, corpus.CorpusRoot, paper.PaperID, paper.VenueID, paper.RelativePath)
+		result, err := analyzeEvalPaper(analyzer, run.RunID, run.CorpusRoot, paper.PaperID, paper.VenueID, paper.RelativePath)
 		finishedAt := time.Now().UTC()
 		paper.FinishedAt = &finishedAt
 		run.UpdatedAt = finishedAt
@@ -108,12 +96,78 @@ func runEvalCommand() error {
 		if err := workspace.SaveRun(run); err != nil {
 			return err
 		}
+		processedThisInvocation++
 	}
 
-	fmt.Printf("Created run %s\n", run.RunID)
-	fmt.Printf("Processed %d papers: done=%d error=%d\n", len(run.Papers), run.StatusSummary.Done, run.StatusSummary.Error)
+	if resumed {
+		fmt.Printf("Resumed run %s\n", run.RunID)
+	} else {
+		fmt.Printf("Created run %s\n", run.RunID)
+	}
+	fmt.Printf("Processed %d papers: done=%d error=%d\n", processedThisInvocation, run.StatusSummary.Done, run.StatusSummary.Error)
 	fmt.Printf("Wrote %s\n", workspace.RunPath(run.RunID))
 	return nil
+}
+
+func prepareEvalRun(workspace eval.Workspace) (*eval.Run, bool, error) {
+	if evalResumeRun != "" {
+		run, err := workspace.LoadRun(evalResumeRun)
+		if err != nil {
+			return nil, false, err
+		}
+		return run, true, nil
+	}
+
+	corpus, err := workspace.LoadCorpus()
+	if err != nil {
+		return nil, false, err
+	}
+	run := &eval.Run{
+		FormatVersion: eval.FormatVersion,
+		RunID:         newEvalRunID(),
+		CreatedAt:     time.Now().UTC(),
+		UpdatedAt:     time.Now().UTC(),
+		GitSHA:        version.GitSha(),
+		Pipeline:      pipeline,
+		CorpusRoot:    corpus.CorpusRoot,
+		Papers:        make([]eval.RunPaper, 0, len(corpus.Papers)),
+	}
+
+	for _, paper := range corpus.Papers {
+		run.Papers = append(run.Papers, eval.RunPaper{
+			PaperID:      paper.ID,
+			VenueID:      paper.VenueID,
+			RelativePath: paper.RelativePath,
+			Status:       eval.RunStatusPending,
+			ResultPath:   filepath.ToSlash(filepath.Join(eval.ResultsDirName, paper.ID+".json")),
+		})
+	}
+	return run, false, nil
+}
+
+func normalizeResumablePapers(run *eval.Run) {
+	for idx := range run.Papers {
+		paper := &run.Papers[idx]
+		if paper.Status == eval.RunStatusRunning {
+			paper.Status = eval.RunStatusPending
+			paper.FinishedAt = nil
+		}
+	}
+}
+
+func selectRunnablePapers(run *eval.Run, retryErrors bool) []int {
+	selected := []int{}
+	for idx, paper := range run.Papers {
+		switch paper.Status {
+		case eval.RunStatusPending:
+			selected = append(selected, idx)
+		case eval.RunStatusError:
+			if retryErrors {
+				selected = append(selected, idx)
+			}
+		}
+	}
+	return selected
 }
 
 func analyzeEvalPaper(analyzer *analyzer, runID, corpusRoot, paperID, venueID, relativePath string) (*eval.PaperResult, error) {
