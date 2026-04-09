@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -61,10 +62,15 @@ func buildSummaryReport(workspace eval.Workspace, run *eval.Run) (*eval.SummaryR
 		if err != nil {
 			return nil, err
 		}
+		annotations, err := workspace.LoadAnnotations(paper.PaperID)
+		if err != nil {
+			return nil, err
+		}
 
-		paperSummary := summarizePaperResult(result)
+		paperSummary := summarizePaperResult(result, annotations)
 		report.Papers = append(report.Papers, paperSummary)
 		accumulatePaperIntoReport(report, paperSummary)
+		accumulateAnnotatedEntries(&report.ConfusionMatrix, result, annotations)
 
 		venueSummary := venueIndex[paperSummary.VenueID]
 		if venueSummary == nil {
@@ -84,6 +90,7 @@ func buildSummaryReport(workspace eval.Workspace, run *eval.Run) (*eval.SummaryR
 	for idx := range report.Venues {
 		finalizeCoverage(&report.Venues[idx].ReviewCoverage, report.Venues[idx].TotalEntries)
 	}
+	finalizeMetrics(&report.ConfusionMatrix, &report.Metrics)
 
 	slices.SortFunc(report.Papers, func(a, b eval.PaperSummary) int {
 		return strings.Compare(a.PaperID, b.PaperID)
@@ -95,7 +102,7 @@ func buildSummaryReport(workspace eval.Workspace, run *eval.Run) (*eval.SummaryR
 	return report, nil
 }
 
-func summarizePaperResult(result *eval.PaperResult) eval.PaperSummary {
+func summarizePaperResult(result *eval.PaperResult, annotations *eval.AnnotationFile) eval.PaperSummary {
 	summary := eval.PaperSummary{
 		PaperID:      result.PaperID,
 		VenueID:      result.VenueID,
@@ -105,6 +112,11 @@ func summarizePaperResult(result *eval.PaperResult) eval.PaperSummary {
 	for _, entry := range result.Entries {
 		accumulateEntryCounts(&summary.EntryCounts, entry.FinalDecision)
 		accumulateSummaryState(&summary.SummaryStates, entry.SummaryState)
+		annotation, ok := findAnnotation(annotations, entry.EntryNumber)
+		if ok {
+			summary.ReviewCoverage.ReviewedEntries++
+			_ = annotation
+		}
 	}
 	finalizeRates(&summary.EntryCounts, summary.TotalEntries, &summary.MatchFoundRate, &summary.NoMatchRate, &summary.ErrorRate)
 	finalizeCoverage(&summary.ReviewCoverage, summary.TotalEntries)
@@ -115,6 +127,7 @@ func accumulatePaperIntoReport(report *eval.SummaryReport, paper eval.PaperSumma
 	report.EntryCounts.MatchFound += paper.EntryCounts.MatchFound
 	report.EntryCounts.NoMatch += paper.EntryCounts.NoMatch
 	report.EntryCounts.Error += paper.EntryCounts.Error
+	report.ReviewCoverage.ReviewedEntries += paper.ReviewCoverage.ReviewedEntries
 
 	report.SummaryStateCounts.OK += paper.SummaryStates.OK
 	report.SummaryStateCounts.Review += paper.SummaryStates.Review
@@ -128,6 +141,7 @@ func accumulatePaperIntoVenue(venue *eval.VenueSummary, paper eval.PaperSummary)
 	venue.EntryCounts.MatchFound += paper.EntryCounts.MatchFound
 	venue.EntryCounts.NoMatch += paper.EntryCounts.NoMatch
 	venue.EntryCounts.Error += paper.EntryCounts.Error
+	venue.ReviewCoverage.ReviewedEntries += paper.ReviewCoverage.ReviewedEntries
 	venue.SummaryStates.OK += paper.SummaryStates.OK
 	venue.SummaryStates.Review += paper.SummaryStates.Review
 	venue.SummaryStates.Error += paper.SummaryStates.Error
@@ -178,4 +192,56 @@ func finalizeCoverage(coverage *eval.ReviewCoverage, total int) {
 
 func totalEntries(counts eval.DecisionCounts) int {
 	return counts.MatchFound + counts.NoMatch + counts.Error
+}
+
+func findAnnotation(file *eval.AnnotationFile, entryNumber int) (eval.EntryAnnotation, bool) {
+	if file == nil {
+		return eval.EntryAnnotation{}, false
+	}
+	annotation, ok := file.Entries[strconv.Itoa(entryNumber)]
+	if !ok {
+		return eval.EntryAnnotation{}, false
+	}
+	return annotation, true
+}
+
+func accumulateAnnotatedEntries(matrix *eval.ConfusionMatrix, result *eval.PaperResult, annotations *eval.AnnotationFile) {
+	for _, entry := range result.Entries {
+		annotation, ok := findAnnotation(annotations, entry.EntryNumber)
+		if !ok {
+			continue
+		}
+		switch annotation.Label {
+		case eval.AnnotationTP:
+			matrix.TP++
+		case eval.AnnotationFP:
+			matrix.FP++
+		case eval.AnnotationFN:
+			matrix.FN++
+		case eval.AnnotationTN:
+			matrix.TN++
+		}
+	}
+}
+
+func finalizeMetrics(matrix *eval.ConfusionMatrix, metrics *eval.Metrics) {
+	precisionDenom := matrix.TP + matrix.FP
+	if precisionDenom > 0 {
+		value := float64(matrix.TP) / float64(precisionDenom)
+		metrics.Precision = &value
+	}
+
+	recallDenom := matrix.TP + matrix.FN
+	if recallDenom > 0 {
+		value := float64(matrix.TP) / float64(recallDenom)
+		metrics.Recall = &value
+	}
+
+	if metrics.Precision != nil && metrics.Recall != nil {
+		denom := *metrics.Precision + *metrics.Recall
+		if denom > 0 {
+			value := 2 * (*metrics.Precision) * (*metrics.Recall) / denom
+			metrics.F1 = &value
+		}
+	}
 }

@@ -17,6 +17,7 @@ const (
 	RunsDirName         = "runs"
 	ResultsDirName      = "results"
 	ReportsDirName      = "reports"
+	AnnotationsDirName  = "annotations"
 )
 
 type Workspace struct {
@@ -118,6 +119,31 @@ type SourceResult struct {
 	Name   string `json:"name"`
 	Status string `json:"status"`
 	Detail string `json:"detail,omitempty"`
+}
+
+type AnnotationLabel string
+
+const (
+	AnnotationTP AnnotationLabel = "tp"
+	AnnotationFP AnnotationLabel = "fp"
+	AnnotationFN AnnotationLabel = "fn"
+	AnnotationTN AnnotationLabel = "tn"
+)
+
+type AnnotationFile struct {
+	FormatVersion int                        `json:"format_version"`
+	PaperID       string                     `json:"paper_id"`
+	UpdatedAt     time.Time                  `json:"updated_at"`
+	Entries       map[string]EntryAnnotation `json:"entries"`
+}
+
+type EntryAnnotation struct {
+	EntryNumber            int             `json:"entry_number"`
+	Label                  AnnotationLabel `json:"label"`
+	Note                   string          `json:"note,omitempty"`
+	Reviewer               string          `json:"reviewer,omitempty"`
+	Timestamp              *time.Time      `json:"timestamp,omitempty"`
+	CanonicalReferenceText string          `json:"canonical_reference_text,omitempty"`
 }
 
 type SummaryReport struct {
@@ -225,6 +251,14 @@ func (w Workspace) ReportPath(runID string) string {
 	return filepath.Join(w.ReportsDir(runID), "summary.json")
 }
 
+func (w Workspace) AnnotationsDir() string {
+	return filepath.Join(w.Root, AnnotationsDirName)
+}
+
+func (w Workspace) AnnotationPath(paperID string) string {
+	return filepath.Join(w.AnnotationsDir(), paperID+".json")
+}
+
 func (w Workspace) Ensure() error {
 	if err := os.MkdirAll(w.Root, 0o755); err != nil {
 		return fmt.Errorf("create eval workspace %q: %w", w.Root, err)
@@ -303,6 +337,35 @@ func (w Workspace) SaveSummaryReport(report *SummaryReport) error {
 		return fmt.Errorf("write report file %q: %w", w.ReportPath(report.RunID), err)
 	}
 	return nil
+}
+
+func (w Workspace) SaveAnnotations(file *AnnotationFile) error {
+	if err := os.MkdirAll(filepath.Dir(w.AnnotationPath(file.PaperID)), 0o755); err != nil {
+		return fmt.Errorf("create annotations directory %q: %w", filepath.Dir(w.AnnotationPath(file.PaperID)), err)
+	}
+	if err := writeJSONFile(w.AnnotationPath(file.PaperID), file); err != nil {
+		return fmt.Errorf("write annotation file %q: %w", w.AnnotationPath(file.PaperID), err)
+	}
+	return nil
+}
+
+func (w Workspace) LoadAnnotations(paperID string) (*AnnotationFile, error) {
+	var file AnnotationFile
+	path := w.AnnotationPath(paperID)
+	if err := readJSONFile(path, &file); err != nil {
+		if os.IsNotExist(err) {
+			return &AnnotationFile{
+				FormatVersion: FormatVersion,
+				PaperID:       paperID,
+				Entries:       map[string]EntryAnnotation{},
+			}, nil
+		}
+		return nil, fmt.Errorf("read annotation file %q: %w", path, err)
+	}
+	if file.Entries == nil {
+		file.Entries = map[string]EntryAnnotation{}
+	}
+	return &file, nil
 }
 
 func writeJSONFile(path string, value any) error {
