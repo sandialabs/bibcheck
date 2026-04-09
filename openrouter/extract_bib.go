@@ -3,8 +3,10 @@
 package openrouter
 
 import (
+	"encoding/base64"
 	"fmt"
 
+	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/schema"
 )
 
@@ -20,7 +22,7 @@ func NewExtractBibResponseFormat() *ResponseFormat {
 	}
 }
 
-func (c *Client) ExtractBib(b64 string) ([]Entry, error) {
+func (c *Client) ExtractBib(b *documents.Bibliography) ([]Entry, error) {
 	req := ChatRequest{
 		Model: "google/gemini-2.5-pro",
 		Messages: []Message{
@@ -31,7 +33,7 @@ func (c *Client) ExtractBib(b64 string) ([]Entry, error) {
 - Preserve any errors present in the extracted entries.
 - Use the document's bibliography identifier for entry_id, but omit that identifier from entry_text.
 - Produce JSON.`),
-			userBase64File(b64),
+			userBase64File(base64.StdEncoding.EncodeToString(b.PDF)),
 		},
 		ResponseFormat: NewExtractBibResponseFormat(),
 		Provider: Provider{

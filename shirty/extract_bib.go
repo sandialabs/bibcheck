@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/openai"
 	"github.com/sandialabs/bibcheck/schema"
 )
@@ -15,8 +16,11 @@ type Entry struct {
 	EntryText string `json:"entry_text"`
 }
 
-func (c *Workflow) ExtractBib(text string) ([]Entry, error) {
-	text = bibliographyText(text)
+func (c *Workflow) ExtractBib(b *documents.Bibliography) ([]Entry, error) {
+	text, err := b.Content()
+	if err != nil {
+		return nil, err
+	}
 
 	temp := new(float64)
 	*temp = 0.1
