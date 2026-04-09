@@ -55,17 +55,13 @@ func (w *Workflow) ParseOnline(text string) (*entries.Online, error) {
 		ResponseFormat: NewParseOnlineRF(),
 	}
 
-	resp, err := w.oaiClient.Chat(req)
+	content, err := w.oaiClient.ChatGetChoiceZero(req)
 	if err != nil {
-		return nil, fmt.Errorf("chat completion error: %w", err)
-	}
-
-	if len(resp.Choices) != 1 {
-		return nil, fmt.Errorf("expected one choice in response")
+		return nil, fmt.Errorf("chat choice 0 error: %w", err)
 	}
 
 	online := entries.Online{}
-	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &online); err != nil {
+	if err := json.Unmarshal(content, &online); err != nil {
 		return nil, fmt.Errorf("couldn't unmarshal structured JSON response: %w", err)
 	}
 

@@ -45,21 +45,15 @@ Produce JSON.
 		ResponseFormat: NewParseURLRF(),
 	}
 
-	resp, err := w.oaiClient.Chat(req)
+	content, err := w.oaiClient.ChatGetChoiceZero(req)
 	if err != nil {
-		return "", fmt.Errorf("chat completion error: %w", err)
-	}
-
-	// log.Println(resp.Choices)
-
-	if len(resp.Choices) != 1 {
-		return "", fmt.Errorf("expected one choice in response")
+		return "", fmt.Errorf("chat choice 0 error: %w", err)
 	}
 
 	s := struct {
 		Url string `json:"url"`
 	}{}
-	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &s); err != nil {
+	if err := json.Unmarshal(content, &s); err != nil {
 		return "", fmt.Errorf("couldn't unmarshal structured JSON response: %w", err)
 	}
 

@@ -62,17 +62,13 @@ Produce JSON.`),
 		),
 	}
 
-	resp, err := c.oaiClient.Chat(req)
+	content, err := c.oaiClient.ChatGetChoiceZero(req)
 	if err != nil {
-		return nil, fmt.Errorf("openai error: %w", err)
-	}
-
-	if len(resp.Choices) != 1 {
-		return nil, fmt.Errorf("expected 1 choice in openai response")
+		return nil, fmt.Errorf("chat choice 0 error: %w", err)
 	}
 
 	es := []Entry{}
-	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &es); err != nil {
+	if err := json.Unmarshal(content, &es); err != nil {
 		return nil, fmt.Errorf("couldn't unmarshal structured JSON response: %w", err)
 	}
 

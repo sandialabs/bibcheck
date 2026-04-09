@@ -111,19 +111,13 @@ func (w *Workflow) PDFMetadata(content []byte) (*documents.Metadata, error) {
 }
 
 func (c *Workflow) extractDocumentMetadataImpl(req *openai.ChatRequest) (*documents.Metadata, error) {
-	resp, err := c.oaiClient.Chat(req)
+	content, err := c.oaiClient.ChatGetChoiceZero(req)
 	if err != nil {
-		return nil, fmt.Errorf("chat completion error: %w", err)
-	}
-
-	// log.Println(resp.Choices)
-
-	if len(resp.Choices) != 1 {
-		return nil, fmt.Errorf("expected one choice in response")
+		return nil, fmt.Errorf("chat choice 0 error: %w", err)
 	}
 
 	d := documents.Metadata{}
-	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &d); err != nil {
+	if err := json.Unmarshal(content, &d); err != nil {
 		return nil, fmt.Errorf("couldn't unmarshal structured JSON response: %w", err)
 	}
 

@@ -65,6 +65,21 @@ func MakeSystemMessage(c string) Message {
 	}
 }
 
+func (r *ChatResponse) GetChoiceZero() ([]byte, error) {
+	if len(r.Choices) != 1 {
+		return nil, fmt.Errorf("expected 1 choice in openai response")
+	}
+	return []byte(r.Choices[0].Message.Content), nil
+}
+
+func (c *Client) ChatGetChoiceZero(req *ChatRequest) ([]byte, error) {
+	resp, err := c.Chat(req)
+	if err != nil {
+		return nil, fmt.Errorf("openai error: %w", err)
+	}
+	return resp.GetChoiceZero()
+}
+
 func (c *Client) Chat(req *ChatRequest) (*ChatResponse, error) {
 	url := c.baseUrl + "/chat/completions"
 

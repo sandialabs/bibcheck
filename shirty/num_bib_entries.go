@@ -42,19 +42,15 @@ Produce JSON.`),
 		),
 	}
 
-	resp, err := w.oaiClient.Chat(req)
+	content, err := w.oaiClient.ChatGetChoiceZero(req)
 	if err != nil {
-		return -1, fmt.Errorf("openai client chat error: %w", err)
-	}
-
-	if len(resp.Choices) != 1 {
-		return -1, fmt.Errorf("expected 1 choice in openai response")
+		return -1, fmt.Errorf("chat choice 0 error: %w", err)
 	}
 
 	s := struct {
 		NumEntries int `json:"num_entries"`
 	}{}
-	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &s); err != nil {
+	if err := json.Unmarshal(content, &s); err != nil {
 		return -1, fmt.Errorf("couldn't unmarshal structured JSON response: %w", err)
 	}
 
