@@ -71,13 +71,32 @@ func (c *Client) Chat(req *ChatRequest) (*ChatResponse, error) {
 	// Marshal the request to JSON
 	jsonData, err := json.Marshal(req)
 	if err != nil {
+		model := ""
+		if req != nil {
+			model = req.Model
+		}
+		c.audit.write(auditRecord{
+			Method:      http.MethodPost,
+			URL:         url,
+			Model:       model,
+			Attempt:     1,
+			MaxAttempts: maxRetries + 1,
+			Outcome:     "marshal_error",
+			Error:       formatAuditError(err),
+		})
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
+	requestBytes := len(jsonData)
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
+		auditRecord := newAuditRecord(http.MethodPost, url, req, requestBytes, attempt+1)
+
 		// Create the HTTP request
 		httpReq, err := http.NewRequest("POST", url, bytes.NewReader(jsonData))
 		if err != nil {
+			auditRecord.Outcome = "request_build_error"
+			auditRecord.Error = formatAuditError(err)
+			c.audit.write(auditRecord)
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
 
@@ -86,10 +105,20 @@ func (c *Client) Chat(req *ChatRequest) (*ChatResponse, error) {
 		httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
 
 		// Make the request
+		start := time.Now()
 		resp, err := c.httpClient.Do(httpReq)
+		auditRecord.DurationMS = time.Since(start).Milliseconds()
 		if err != nil {
+			if isRetryableTimeout(err) {
+				auditRecord.Outcome = "timeout"
+			} else {
+				auditRecord.Outcome = "network_error"
+			}
+			auditRecord.Error = formatAuditError(err)
+
 			if isRetryableTimeout(err) && attempt < maxRetries {
 				waitFor := retryDelayForAttempt(attempt)
+				c.audit.write(auditRecord)
 				log.Printf(
 					"openai: timeout retry_after=%s attempt=%d/%d error=%v",
 					waitFor,
@@ -100,33 +129,47 @@ func (c *Client) Chat(req *ChatRequest) (*ChatResponse, error) {
 				time.Sleep(waitFor)
 				continue
 			}
+			c.audit.write(auditRecord)
 			return nil, fmt.Errorf("http.Client.Do error: %w", err)
 		}
 
 		body, readErr := io.ReadAll(resp.Body)
 		resp.Body.Close()
+		auditRecord.StatusCode = resp.StatusCode
+		auditRecord.ResponseBytes = len(body)
 		if readErr != nil {
+			auditRecord.Outcome = "read_error"
+			auditRecord.Error = formatAuditError(readErr)
+			c.audit.write(auditRecord)
 			return nil, fmt.Errorf("failed to read response body: %w", readErr)
 		}
 
 		correlationIDs := extractCorrelationIDs(resp.Header)
 		correlationLog := formatCorrelationIDs(correlationIDs)
+		auditRecord.CorrelationIDs = correlationIDs
 
 		// Check status code
 		if resp.StatusCode == http.StatusOK {
 			var chatResp ChatResponse
 			if err := json.Unmarshal(body, &chatResp); err != nil {
+				auditRecord.Outcome = "unmarshal_error"
+				auditRecord.Error = formatAuditError(err)
+				c.audit.write(auditRecord)
 				return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 			}
+			auditRecord.Outcome = "success"
+			c.audit.write(auditRecord)
 			return &chatResp, nil
 		}
 
 		retryAfter, hasRetryAfter := retryAfterDuration(resp.Header)
+		auditRecord.Outcome = outcomeForStatus(resp.StatusCode, hasRetryAfter)
 		if (resp.StatusCode == http.StatusTooManyRequests || hasRetryAfter) && attempt < maxRetries {
 			waitFor := retryAfter
 			if !hasRetryAfter {
 				waitFor = retryDelayForAttempt(attempt)
 			}
+			c.audit.write(auditRecord)
 			log.Printf(
 				"openai: rate limited by upstream status=%d retry_after=%s attempt=%d/%d correlation_ids=%s",
 				resp.StatusCode,
@@ -139,6 +182,7 @@ func (c *Client) Chat(req *ChatRequest) (*ChatResponse, error) {
 			continue
 		}
 
+		c.audit.write(auditRecord)
 		log.Printf(
 			"openai: API request failed status=%d correlation_ids=%s",
 			resp.StatusCode,

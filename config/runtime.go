@@ -11,6 +11,8 @@ import (
 
 const (
 	KeyElsevierAPIKey    = "elsevier_api_key"
+	KeyOpenAIAuditDir    = "openai_audit_dir"
+	KeyOpenAIAuditEnable = "openai_audit_enabled"
 	KeyOpenRouterAPIKey  = "openrouter_api_key"
 	KeyOpenRouterBaseURL = "openrouter_base_url"
 	KeyShirtyAPIKey      = "shirty_api_key"
@@ -22,6 +24,8 @@ const (
 
 type Settings struct {
 	ElsevierAPIKey    string
+	OpenAIAuditDir    string
+	OpenAIAuditEnable bool
 	OpenRouterAPIKey  string
 	OpenRouterBaseURL string
 	ShirtyAPIKey      string
@@ -33,6 +37,7 @@ var runtimeConfig = viper.New()
 func init() {
 	runtimeConfig.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	runtimeConfig.AutomaticEnv()
+	runtimeConfig.SetDefault(KeyOpenAIAuditEnable, true)
 	runtimeConfig.SetDefault(KeyOpenRouterBaseURL, DefaultOpenRouterBaseURL)
 	runtimeConfig.SetDefault(KeyShirtyBaseURL, DefaultShirtyBaseURL)
 }
@@ -40,6 +45,8 @@ func init() {
 func BindFlags(flags *pflag.FlagSet) error {
 	for key, flagName := range map[string]string{
 		KeyElsevierAPIKey:    "elsevier-api-key",
+		KeyOpenAIAuditDir:    "openai-audit-dir",
+		KeyOpenAIAuditEnable: "openai-audit-enabled",
 		KeyOpenRouterAPIKey:  "openrouter-api-key",
 		KeyOpenRouterBaseURL: "openrouter-base-url",
 		KeyShirtyAPIKey:      "shirty-api-key",
@@ -52,6 +59,8 @@ func BindFlags(flags *pflag.FlagSet) error {
 
 	for key, envName := range map[string]string{
 		KeyElsevierAPIKey:    "ELSEVIER_API_KEY",
+		KeyOpenAIAuditDir:    "OPENAI_AUDIT_DIR",
+		KeyOpenAIAuditEnable: "OPENAI_AUDIT_ENABLED",
 		KeyOpenRouterAPIKey:  "OPENROUTER_API_KEY",
 		KeyOpenRouterBaseURL: "OPENROUTER_BASE_URL",
 		KeyShirtyAPIKey:      "SHIRTY_API_KEY",
@@ -68,6 +77,8 @@ func BindFlags(flags *pflag.FlagSet) error {
 func Runtime() Settings {
 	return Settings{
 		ElsevierAPIKey:    runtimeConfig.GetString(KeyElsevierAPIKey),
+		OpenAIAuditDir:    runtimeConfig.GetString(KeyOpenAIAuditDir),
+		OpenAIAuditEnable: runtimeConfig.GetBool(KeyOpenAIAuditEnable),
 		OpenRouterAPIKey:  runtimeConfig.GetString(KeyOpenRouterAPIKey),
 		OpenRouterBaseURL: runtimeConfig.GetString(KeyOpenRouterBaseURL),
 		ShirtyAPIKey:      runtimeConfig.GetString(KeyShirtyAPIKey),
