@@ -3,7 +3,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -11,13 +10,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sandialabs/bibcheck/config"
-	"github.com/sandialabs/bibcheck/documents"
-	"github.com/sandialabs/bibcheck/elsevier"
-	"github.com/sandialabs/bibcheck/entries"
-	"github.com/sandialabs/bibcheck/lookup"
-	"github.com/sandialabs/bibcheck/openrouter"
-	"github.com/sandialabs/bibcheck/shirty"
-	"github.com/sandialabs/bibcheck/summary"
 	"github.com/sandialabs/bibcheck/version"
 )
 
@@ -56,141 +48,35 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 		settings := config.Runtime()
 		entryStart := 1
 		var entryCount int
-
-		// set up clients depending on config
-		var openrouterClient *openrouter.Client
-		var shirtyProvider *shirty.Workflow
-		if settings.OpenRouterAPIKey != "" && settings.OpenRouterBaseURL != "" {
-			openrouterClient = openrouter.NewClient(
-				settings.OpenRouterAPIKey,
-				openrouter.WithBaseURL(settings.OpenRouterBaseURL),
-			)
+		analyzer, err := newAnalyzer(settings)
+		if err != nil {
+			return err
 		}
-		if settings.ShirtyAPIKey != "" && settings.ShirtyBaseURL != "" {
-			shirtyProvider = shirty.NewWorkflow(
-				settings.ShirtyAPIKey,
-				shirty.WithBaseUrl(settings.ShirtyBaseURL))
-		}
-
-		var elsevierClient *elsevier.Client
-		if settings.ElsevierAPIKey != "" {
-			elsevierClient = elsevier.NewClient(settings.ElsevierAPIKey)
-		}
-
-		// different representations of the file
-		var pdfEncoded string
-		var pdfText string
-		var err error
+		var prepared *preparedDocument
 
 		if cmd.Flags().Changed(FlagEntry) {
 			entryStart, _ = cmd.Flags().GetInt(FlagEntry)
 			entryCount = 1
+			prepared, err = analyzer.prepareDocument(pdfPath, false)
 		} else {
-
-			// Get citation counts
-			if openrouterClient != nil {
-				pdfEncoded, err = lookup.Encode(pdfPath)
-				if err != nil {
-					return fmt.Errorf("pdf encode error: %w", err)
-				}
-				fmt.Println("Counting bibliography entries...")
-				entryCount, err = openrouterClient.NumEntries(pdfEncoded)
-				if err != nil {
-					return fmt.Errorf("bibliography size error: %w", err)
-				}
-				fmt.Printf("Found %d bibliographic entries\n", entryCount)
-			} else if shirtyProvider != nil {
-				textractResp, err := shirtyProvider.Textract(pdfPath)
-				pdfText = textractResp.Text
-				if err != nil {
-					return fmt.Errorf("textract error: %w", err)
-				}
-				entryCount, err = shirtyProvider.NumBibEntries(pdfText)
-				if err != nil {
-					return fmt.Errorf("bibliography size error: %w", err)
-				}
-
-			} else {
-				return errors.New("need shirty or openrouter config")
-			}
+			prepared, err = analyzer.prepareDocument(pdfPath, true)
+			entryCount = prepared.entryCount
+			fmt.Printf("Found %d bibliographic entries\n", entryCount)
 		}
-
-		var class entries.Classifier
-		var entryParser entries.Parser
-		var docRawExtract documents.EntryFromRawExtractor
-		var docTextExtract documents.EntryFromTextExtractor
-		var docMeta documents.MetaExtractor
-
-		// default to using openrouter, if available
-		if openrouterClient != nil {
-			class = openrouterClient
-			entryParser = openrouterClient
-			docRawExtract = openrouterClient
-			docMeta = openrouterClient
-		}
-
-		// use shirty where possible
-		if shirtyProvider != nil {
-			class = shirtyProvider
-			entryParser = shirtyProvider
-			docTextExtract = shirtyProvider
-			docMeta = shirtyProvider
-
-			if pdfText == "" {
-				textractResp, err := shirtyProvider.Textract(pdfPath)
-				if err != nil {
-					return fmt.Errorf("textract error: %w", err)
-				}
-				pdfText = textractResp.Text
-			}
-
-		}
-
-		cfg := &lookup.EntryConfig{
-			ElsevierClient: elsevierClient,
-		}
-
-		var summarizer *summary.ShirtySummarizer
-
-		if settings.ShirtyAPIKey != "" {
-			summarizer = summary.NewShirtySummarizer(
-				shirty.NewWorkflow(
-					settings.ShirtyAPIKey,
-					shirty.WithBaseUrl(settings.ShirtyBaseURL),
-				),
-			)
+		if err != nil {
+			return err
 		}
 
 		views := []entryView{}
 		singleEntry := cmd.Flags().Changed(FlagEntry)
 
 		for i := entryStart; i < entryStart+entryCount; i++ {
-			var lr *lookup.Result
-			if docRawExtract != nil {
-				lr, err = lookup.EntryFromBase64(pdfEncoded, i, pipeline, class, docRawExtract, docMeta, entryParser, cfg)
-			} else if docTextExtract != nil {
-				lr, err = lookup.EntryFromText(pdfText, i, pipeline, class, docTextExtract, docMeta, entryParser, cfg)
-			} else {
-				return errors.New("requires something that can extract a bib entry from a pdf")
-			}
-
+			view, err := analyzer.analyzeEntry(prepared, i)
 			if err != nil {
 				log.Printf("entry analysis error: %v", err)
 				continue
 			}
-
-			outcome := summaryOutcome{}
-			if summarizer != nil {
-				mismatch, comment, err := summarizer.Summarize(lr)
-				outcome.mismatch = mismatch
-				outcome.comment = comment
-				outcome.err = err
-				if err != nil {
-					log.Printf("summarizer error: %v", err)
-				}
-			}
-
-			views = append(views, buildEntryView(i, lr, outcome))
+			views = append(views, view)
 		}
 
 		doc := buildDocumentView(views, carelessHideOK)
