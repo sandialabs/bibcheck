@@ -9,35 +9,11 @@ import (
 
 	"github.com/sandialabs/bibcheck/entries"
 	"github.com/sandialabs/bibcheck/openai"
+	"github.com/sandialabs/bibcheck/schema"
 )
 
 func NewParseSoftwareRF() *openai.ResponseFormat {
-	return &openai.ResponseFormat{
-		Type: "json_schema",
-		JSONSchema: map[string]any{
-			"name":   "software",
-			"strict": true,
-			"schema": map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"name": map[string]string{
-						"type": "string",
-					},
-					"developers": map[string]any{
-						"type": "array",
-						"items": map[string]string{
-							"type": "string",
-						},
-					},
-					"homepage_url": map[string]string{
-						"type": "string",
-					},
-				},
-				"required":             []string{"name", "developers", "homepage_url"},
-				"additionalProperties": false,
-			},
-		},
-	}
+	return openai.NewResponseFormat(schema.SoftwareJSONSchema())
 }
 
 func (w *Workflow) ParseSoftware(text string) (*entries.Software, error) {

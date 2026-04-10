@@ -9,35 +9,11 @@ import (
 
 	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/openai"
+	"github.com/sandialabs/bibcheck/schema"
 )
 
 func NewExtractDocumentMetadataRF() *openai.ResponseFormat {
-	return &openai.ResponseFormat{
-		Type: "json_schema",
-		JSONSchema: map[string]any{
-			"name":   "metadata",
-			"strict": true,
-			"schema": map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"title": map[string]string{
-						"type": "string",
-					},
-					"authors": map[string]any{
-						"type": "array",
-						"items": map[string]string{
-							"type": "string",
-						},
-					},
-					"publication_date": map[string]string{
-						"type": "string",
-					},
-				},
-				"required":             []string{"title", "authors", "publication_date"},
-				"additionalProperties": false,
-			},
-		},
-	}
+	return openai.NewResponseFormat(schema.DocumentMetadataJSONSchema())
 }
 
 func newFromTextRequest(text string) *openai.ChatRequest {

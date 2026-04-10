@@ -8,30 +8,13 @@ import (
 	"log"
 
 	"github.com/sandialabs/bibcheck/entries"
+	"github.com/sandialabs/bibcheck/schema"
 )
 
 func NewClassifyEntryResponseFormat() *ResponseFormat {
 	return &ResponseFormat{
-		Type: "json_schema",
-		JSONSchema: map[string]any{
-			"name":   "entry_exists",
-			"strict": true,
-			"schema": map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"kind": map[string]any{
-						"type": "string",
-						"enum": []string{
-							entries.KindScientificPublication,
-							entries.KindSoftwarePackage,
-							entries.KindWebsite,
-							entries.KindUnknown},
-					},
-				},
-				"required":             []string{"kind"},
-				"additionalProperties": false,
-			},
-		},
+		Type:       "json_schema",
+		JSONSchema: schema.ClassifyEntryJSONSchema(),
 	}
 }
 

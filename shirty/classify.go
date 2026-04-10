@@ -8,31 +8,11 @@ import (
 
 	"github.com/sandialabs/bibcheck/entries"
 	"github.com/sandialabs/bibcheck/openai"
+	"github.com/sandialabs/bibcheck/schema"
 )
 
 func NewClassifyEntryRF() *openai.ResponseFormat {
-	return &openai.ResponseFormat{
-		Type: "json_schema",
-		JSONSchema: map[string]any{
-			"name":   "entry_exists",
-			"strict": true,
-			"schema": map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"kind": map[string]any{
-						"type": "string",
-						"enum": []string{
-							entries.KindScientificPublication,
-							entries.KindSoftwarePackage,
-							entries.KindWebsite,
-							entries.KindUnknown},
-					},
-				},
-				"required":             []string{"kind"},
-				"additionalProperties": false,
-			},
-		},
-	}
+	return openai.NewResponseFormat(schema.ClassifyEntryJSONSchema())
 }
 
 func (w *Workflow) Classify(text string) (string, error) {

@@ -5,25 +5,14 @@ package openrouter
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/sandialabs/bibcheck/schema"
 )
 
 func NewParseURLRF() *ResponseFormat {
 	return &ResponseFormat{
-		Type: "json_schema",
-		JSONSchema: map[string]any{
-			"name":   "url",
-			"strict": true,
-			"schema": map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"url": map[string]string{
-						"type": "string",
-					},
-				},
-				"required":             []string{"url"},
-				"additionalProperties": false,
-			},
-		},
+		Type:       "json_schema",
+		JSONSchema: schema.ParseURLJSONSchema(),
 	}
 }
 

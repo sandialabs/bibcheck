@@ -7,34 +7,13 @@ import (
 	"fmt"
 
 	"github.com/sandialabs/bibcheck/entries"
+	"github.com/sandialabs/bibcheck/schema"
 )
 
 func NewParseOnlineRF() *ResponseFormat {
 	return &ResponseFormat{
-		Type: "json_schema",
-		JSONSchema: map[string]any{
-			"name":   "website",
-			"strict": true,
-			"schema": map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"title": map[string]string{
-						"type": "string",
-					},
-					"authors": map[string]any{
-						"type": "array",
-						"items": map[string]string{
-							"type": "string",
-						},
-					},
-					"url": map[string]string{
-						"type": "string",
-					},
-				},
-				"required":             []string{"title", "authors", "url"},
-				"additionalProperties": false,
-			},
-		},
+		Type:       "json_schema",
+		JSONSchema: schema.WebsiteJSONSchema(),
 	}
 }
 
