@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/sandialabs/bibcheck/lookup"
+	"github.com/sandialabs/bibcheck/schema"
 )
 
 const (
@@ -68,24 +69,8 @@ func (c *Client) Summarize(lr *lookup.Result) (bool, string, error) {
 			),
 		},
 		ResponseFormat: &ResponseFormat{
-			Type: "json_schema",
-			JSONSchema: map[string]any{
-				"name":   "compare",
-				"strict": true,
-				"schema": map[string]any{
-					"type": "object",
-					"properties": map[string]any{
-						"explanation": map[string]string{
-							"type": "string",
-						},
-						"possible_mismatch": map[string]string{
-							"type": "boolean",
-						},
-					},
-					"required":             []string{"possible_mismatch", "explanation"},
-					"additionalProperties": false,
-				},
-			},
+			Type:       "json_schema",
+			JSONSchema: schema.SummaryJSONSchema(),
 		},
 		Provider: Provider{
 			RequireParameters: true,
