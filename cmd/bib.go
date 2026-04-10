@@ -7,7 +7,6 @@ import (
 	"log"
 
 	"github.com/sandialabs/bibcheck/config"
-	"github.com/sandialabs/bibcheck/lookup"
 	"github.com/sandialabs/bibcheck/openrouter"
 	"github.com/sandialabs/bibcheck/shirty"
 	"github.com/spf13/cobra"
@@ -28,12 +27,12 @@ var bibCmd = &cobra.Command{
 				shirty.WithBaseUrl(settings.ShirtyBaseURL),
 			)
 
-			text, err := shirtyClient.Textract(filePath)
+			bibliography, err := shirtyClient.PrepareBibliography(filePath)
 			if err != nil {
-				log.Fatalf("textract error: %v", err)
+				log.Fatalf("prepare bibliography error: %v", err)
 			}
 
-			entries, err := shirtyClient.ExtractBib(text.Text)
+			entries, err := shirtyClient.ExtractBib(bibliography)
 			if err != nil {
 				log.Fatalf("openai error: %v", err)
 			}
@@ -42,17 +41,17 @@ var bibCmd = &cobra.Command{
 			}
 
 		} else if settings.OpenRouterAPIKey != "" && settings.OpenRouterBaseURL != "" {
-			encoded, err := lookup.Encode(filePath)
-			if err != nil {
-				log.Fatalf("encode error: %v", err)
-			}
-
 			client := openrouter.NewClient(
 				settings.OpenRouterAPIKey,
 				openrouter.WithBaseURL(settings.OpenRouterBaseURL),
 			)
 
-			entries, err := client.ExtractBib(encoded)
+			bibliography, err := client.PrepareBibliography(filePath)
+			if err != nil {
+				log.Fatalf("prepare bibliography error: %v", err)
+			}
+
+			entries, err := client.ExtractBib(bibliography)
 			if err != nil {
 				log.Fatalf("analyze error: %v", err)
 			}

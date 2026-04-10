@@ -55,11 +55,11 @@ func doAnalyze(shirtyApiKey string, doc *Document) {
 
 	client := shirty.NewWorkflow(shirtyApiKey)
 
-	textractResp, err := client.Textract(filepath.Join("uploads", doc.Filename))
+	bibliography, err := client.PrepareBibliography(filepath.Join("uploads", doc.Filename))
 	if err != nil {
-		log.Fatalf("textract error: %v", err)
+		log.Fatalf("prepare bibliography error: %v", err)
 	}
-	numEntries, err := client.NumBibEntries(textractResp.Text)
+	numEntries, err := client.NumBibEntries(bibliography)
 	if err != nil {
 		log.Fatalf("bibliography size error: %v\n", err)
 		return
@@ -84,7 +84,7 @@ func doAnalyze(shirtyApiKey string, doc *Document) {
 		ent.TextStatus = "active"
 		doc.mu.Unlock()
 
-		text, err := client.EntryFromText(textractResp.Text, i+1)
+		text, err := client.EntryFromBibliography(bibliography, i+1)
 		if err != nil {
 			log.Printf("error extracting citation %d: %v", i+1, err)
 			ent.TextStatus = "error"

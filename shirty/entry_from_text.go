@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/openai"
 	"github.com/sandialabs/bibcheck/schema"
 )
@@ -36,8 +37,11 @@ var (
 `
 )
 
-func (w *Workflow) EntryFromText(text string, id int) (string, error) {
-	text = bibliographyText(text)
+func (w *Workflow) EntryFromBibliography(b *documents.Bibliography, id int) (string, error) {
+	text, err := b.Content()
+	if err != nil {
+		return "", err
+	}
 
 	// notes on models
 	// - meta-llama/Llama-3.2-90B-Vision-Instruct: works okay. Likes to keep the inline reference
