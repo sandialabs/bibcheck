@@ -8,35 +8,11 @@ import (
 
 	"github.com/sandialabs/bibcheck/entries"
 	"github.com/sandialabs/bibcheck/openai"
+	"github.com/sandialabs/bibcheck/schema"
 )
 
 func NewParseOnlineRF() *openai.ResponseFormat {
-	return &openai.ResponseFormat{
-		Type: "json_schema",
-		JSONSchema: map[string]any{
-			"name":   "website",
-			"strict": true,
-			"schema": map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"title": map[string]string{
-						"type": "string",
-					},
-					"authors": map[string]any{
-						"type": "array",
-						"items": map[string]string{
-							"type": "string",
-						},
-					},
-					"url": map[string]string{
-						"type": "string",
-					},
-				},
-				"required":             []string{"title", "authors", "url"},
-				"additionalProperties": false,
-			},
-		},
-	}
+	return openai.NewResponseFormat(schema.WebsiteJSONSchema())
 }
 
 func (w *Workflow) ParseOnline(text string) (*entries.Online, error) {
