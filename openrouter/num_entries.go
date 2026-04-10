@@ -3,40 +3,26 @@
 package openrouter
 
 import (
-	"encoding/json"
 	"fmt"
-	"log"
+
+	"github.com/sandialabs/bibcheck/schema"
 )
 
 func NewNumEntriesResponseFormat() *ResponseFormat {
 	return &ResponseFormat{
-		Type: "json_schema",
-		JSONSchema: map[string]any{
-			"name":   "num_entries",
-			"strict": true,
-			"schema": map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"num_entries": map[string]string{
-						"type":        "number",
-						"description": "the number of bibliography entries in the document",
-					},
-				},
-				"required":             []string{"num_entries"},
-				"additionalProperties": false,
-			},
-		},
+		Type:       "json_schema",
+		JSONSchema: schema.NumEntriesJSONSchema("num_entries", "number"),
 	}
 }
 
 func (c *Client) NumEntries(b64 string) (int, error) {
-	baseURL := c.baseUrl
-	model := "google/gemini-2.5-flash"
-
 	req := ChatRequest{
-		Model: model,
+		Model: "google/gemini-2.5-flash",
 		Messages: []Message{
-			systemString("Extract the number of bibliography entries from the provided document. Produce JSON"),
+			systemString(`Determine the number of entries in the bibliography or references section of the provided document.
+- Count bibliography entries only.
+- Do not count citations in the main body.
+- Produce JSON.`),
 			userBase64File(b64),
 		},
 		ResponseFormat: NewNumEntriesResponseFormat(),
@@ -46,28 +32,12 @@ func (c *Client) NumEntries(b64 string) (int, error) {
 		},
 	}
 
-	resp, err := c.ChatCompletion(req, baseURL)
-	if err != nil {
-		return -1, fmt.Errorf("chat completion error: %w", err)
+	result := struct {
+		NumEntries int `json:"num_entries"`
+	}{}
+	if err := c.chatStructured(req, &result); err != nil {
+		return -1, fmt.Errorf("NumEntries error: %w", err)
 	}
 
-	if len(resp.Choices) != 1 {
-		return -1, fmt.Errorf("expected one choice in response")
-	}
-
-	content := resp.Choices[0].Message.Content
-
-	if cstring, ok := content.(string); ok {
-		s := struct {
-			NumEntries int `json:"num_entries"`
-		}{}
-		if err := json.Unmarshal([]byte(cstring), &s); err != nil {
-			log.Println(cstring)
-			return -1, fmt.Errorf("couldn't unmarshal structured JSON response: %w", err)
-		}
-
-		return s.NumEntries, nil
-	}
-
-	return -1, fmt.Errorf("content was not string")
+	return result.NumEntries, nil
 }

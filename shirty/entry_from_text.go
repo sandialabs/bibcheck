@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/sandialabs/bibcheck/openai"
+	"github.com/sandialabs/bibcheck/schema"
 )
 
 var (
@@ -52,26 +53,8 @@ func (w *Workflow) EntryFromText(text string, id int) (string, error) {
 			openai.MakeSystemMessage(llama_33_70B_Prompt),
 			openai.MakeUserMessage(fmt.Sprintf("Extract bibliography entry %d from the provided document below:\n\nDOCUMENT TEXT:\n\n%s", id, text)),
 		},
-		Temperature: temp,
-		ResponseFormat: openai.NewResponseFormat(
-			map[string]any{
-				"name":   "bib_entry",
-				"strict": true,
-				"schema": map[string]any{
-					"type": "object",
-					"properties": map[string]any{
-						"entry_id": map[string]string{
-							"type": "string",
-						},
-						"entry_text": map[string]string{
-							"type": "string",
-						},
-					},
-					"required":             []string{"entry_id", "entry_text"},
-					"additionalProperties": false,
-				},
-			},
-		),
+		Temperature:    temp,
+		ResponseFormat: openai.NewResponseFormat(schema.BibliographyEntryJSONSchema()),
 	}
 
 	content, err := w.oaiClient.ChatGetChoiceZero(req)
