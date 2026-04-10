@@ -8,31 +8,13 @@ import (
 
 	"github.com/sandialabs/bibcheck/entries"
 	"github.com/sandialabs/bibcheck/openai"
+	"github.com/sandialabs/bibcheck/schema"
 )
 
 func NewParseAuthorsRF() *openai.ResponseFormat {
 	return &openai.ResponseFormat{
-		Type: "json_schema",
-		JSONSchema: map[string]any{
-			"name":   "authors",
-			"strict": true,
-			"schema": map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"authors": map[string]any{
-						"type": "array",
-						"items": map[string]string{
-							"type": "string",
-						},
-					},
-					"has_et_al": map[string]string{
-						"type": "boolean",
-					},
-				},
-				"required":             []string{"authors", "has_et_al"},
-				"additionalProperties": false,
-			},
-		},
+		Type:       "json_schema",
+		JSONSchema: schema.ParseAuthorsJSONSchema(),
 	}
 }
 
