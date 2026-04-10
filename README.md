@@ -127,7 +127,7 @@ Then navigate to http://localhost:8080 in your browser
 * Supports both CLI analysis and a lightweight web UI for uploaded PDFs
 * Uses configured LLM backends for bibliography counting, entry extraction, metadata parsing, and optional result summarization
     * `SHIRTY_API_KEY` enables the Shirty-based pipeline
-    * `OPENROUTER_API_KEY` enables the OpenRouter-based pipeline for PDF-based extraction
+    * `OPENROUTER_API_KEY` enables the OpenRouter-based CLI pipeline for bibliography counting, entry extraction, and metadata parsing
 * Verifies entries with direct lookups against
     * doi.org
     * arXiv
@@ -137,6 +137,10 @@ Then navigate to http://localhost:8080 in your browser
 * Fetches and analyzes linked online resources when an entry points to a URL
     * HTML pages
     * PDF documents
+* Includes bibliography-oriented CLI helpers
+    * `bib` extracts the bibliography
+    * `entry` extracts a single bibliography entry
+    * `list-entries` lists numeric bibliography entry IDs
 
 ## "Search" strategy
 
