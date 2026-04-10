@@ -7,6 +7,8 @@ import (
 	"log"
 
 	"github.com/sandialabs/bibcheck/config"
+	"github.com/sandialabs/bibcheck/lookup"
+	"github.com/sandialabs/bibcheck/openrouter"
 	"github.com/sandialabs/bibcheck/shirty"
 	"github.com/spf13/cobra"
 )
@@ -40,7 +42,23 @@ var bibCmd = &cobra.Command{
 			}
 
 		} else if settings.OpenRouterAPIKey != "" && settings.OpenRouterBaseURL != "" {
-			log.Fatalf("for with openrouter not implemented")
+			encoded, err := lookup.Encode(filePath)
+			if err != nil {
+				log.Fatalf("encode error: %v", err)
+			}
+
+			client := openrouter.NewClient(
+				settings.OpenRouterAPIKey,
+				openrouter.WithBaseURL(settings.OpenRouterBaseURL),
+			)
+
+			entries, err := client.ExtractBib(encoded)
+			if err != nil {
+				log.Fatalf("analyze error: %v", err)
+			}
+			for _, entry := range entries {
+				fmt.Printf("[%s] %s\n", entry.EntryId, entry.EntryText)
+			}
 
 		} else {
 			log.Fatalf("requires shirty or openrouter API config")
