@@ -10,6 +10,7 @@ import (
 
 	"github.com/sandialabs/bibcheck/lookup"
 	"github.com/sandialabs/bibcheck/openai"
+	"github.com/sandialabs/bibcheck/schema"
 )
 
 var (
@@ -65,26 +66,8 @@ func (w *Workflow) Summarize(lr *lookup.Result) (bool, string, error) {
 					strings.Join(searchResults, "\n\nSEARCH RESULT:\n"),
 			),
 		},
-		Temperature: temp,
-		ResponseFormat: openai.NewResponseFormat(
-			map[string]any{
-				"name":   "compare",
-				"strict": true,
-				"schema": map[string]any{
-					"type": "object",
-					"properties": map[string]any{
-						"explanation": map[string]string{
-							"type": "string",
-						},
-						"possible_mismatch": map[string]string{
-							"type": "boolean",
-						},
-					},
-					"required":             []string{"possible_mismatch", "explanation"},
-					"additionalProperties": false,
-				},
-			},
-		),
+		Temperature:    temp,
+		ResponseFormat: openai.NewResponseFormat(schema.SummaryJSONSchema()),
 	}
 	content, err := w.oaiClient.ChatGetChoiceZero(req)
 	if err != nil {

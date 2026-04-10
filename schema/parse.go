@@ -45,3 +45,23 @@ func ParseTitleJSONSchema() map[string]any {
 func ParsePubJSONSchema() map[string]any {
 	return ParseTitleJSONSchema()
 }
+
+func SummaryJSONSchema() map[string]any {
+	return map[string]any{
+		"name":   "compare",
+		"strict": true,
+		"schema": map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"explanation": map[string]string{
+					"type": "string",
+				},
+				"possible_mismatch": map[string]string{
+					"type": "boolean",
+				},
+			},
+			"required":             []string{"possible_mismatch", "explanation"},
+			"additionalProperties": false,
+		},
+	}
+}
