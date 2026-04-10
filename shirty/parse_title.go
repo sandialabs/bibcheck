@@ -7,25 +7,13 @@ import (
 	"fmt"
 
 	"github.com/sandialabs/bibcheck/openai"
+	"github.com/sandialabs/bibcheck/schema"
 )
 
 func NewParseTitleRF() *openai.ResponseFormat {
 	return &openai.ResponseFormat{
-		Type: "json_schema",
-		JSONSchema: map[string]any{
-			"name":   "title",
-			"strict": true,
-			"schema": map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"title": map[string]string{
-						"type": "string",
-					},
-				},
-				"required":             []string{"title"},
-				"additionalProperties": false,
-			},
-		},
+		Type:       "json_schema",
+		JSONSchema: schema.ParseTitleJSONSchema(),
 	}
 }
 

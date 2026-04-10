@@ -148,6 +148,38 @@ type Choice struct {
 	Message Message `json:"message"`
 }
 
+func choiceZeroString(resp *ChatResponse) (string, error) {
+	if len(resp.Choices) != 1 {
+		return "", fmt.Errorf("expected one choice in response")
+	}
+
+	content := resp.Choices[0].Message.Content
+	cstring, ok := content.(string)
+	if !ok {
+		return "", fmt.Errorf("content was not string")
+	}
+
+	return cstring, nil
+}
+
+func (c *Client) chatStructured(req ChatRequest, dest any) error {
+	resp, err := c.ChatCompletion(req, c.baseUrl)
+	if err != nil {
+		return fmt.Errorf("chat completion error: %w", err)
+	}
+
+	content, err := choiceZeroString(resp)
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal([]byte(content), dest); err != nil {
+		return fmt.Errorf("couldn't unmarshal structured JSON response: %w", err)
+	}
+
+	return nil
+}
+
 // ChatCompletion sends a chat completion request
 func (c *Client) ChatCompletion(req ChatRequest, baseURL string) (*ChatResponse, error) {
 	// Marshal request to JSON
