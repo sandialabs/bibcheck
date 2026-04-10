@@ -45,11 +45,13 @@ const (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "bibcheck <pdf-file>",
-	Short: "Check bibliography entries in a PDF file",
-	Long: `bibliograph-checker ` + version.String() + ` (` + version.GitSha() + `)
+	Use:          "bibcheck <pdf-file>",
+	Short:        "Check bibliography entries in a PDF file",
+	Long:         `bibliograph-checker ` + version.String() + ` (` + version.GitSha() + `)
 A tool that analyzes bibliography entries in PDF files and verifies their existence.`,
-	Args: cobra.ExactArgs(1),
+	Args:          cobra.ExactArgs(1),
+	SilenceErrors: true,
+	SilenceUsage:  true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := validateOutputFormat(format); err != nil {
 			return err
