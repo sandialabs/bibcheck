@@ -32,7 +32,7 @@ func NewClient(apiKey string, options ...ClientOpt) *Client {
 	c := &Client{
 		apiKey: apiKey,
 		httpClient: &http.Client{
-			Timeout: 60 * time.Second,
+			Timeout: 30 * time.Second,
 		},
 		audit: audit,
 	}
