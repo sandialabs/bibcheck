@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/sandialabs/bibcheck/openai"
+	"github.com/sandialabs/bibcheck/schema"
 )
 
 type Entry struct {
@@ -36,30 +37,8 @@ func (c *Workflow) ExtractBib(text string) ([]Entry, error) {
 Produce JSON.`),
 			openai.MakeUserMessage(text),
 		},
-		Temperature: temp,
-		ResponseFormat: openai.NewResponseFormat(
-			map[string]any{
-				"name":       "bibliography",
-				"properties": map[string]any{},
-				"strict":     true,
-				"schema": map[string]any{
-					"type": "array",
-					"items": map[string]any{
-						"type": "object",
-						"properties": map[string]any{
-							"entry_id": map[string]string{
-								"type": "string",
-							},
-							"entry_text": map[string]string{
-								"type": "string",
-							},
-						},
-						"required":             []string{"entry_id", "entry_text"},
-						"additionalProperties": false,
-					},
-				},
-			},
-		),
+		Temperature:    temp,
+		ResponseFormat: openai.NewResponseFormat(schema.ExtractBibJSONSchema()),
 	}
 
 	content, err := c.oaiClient.ChatGetChoiceZero(req)

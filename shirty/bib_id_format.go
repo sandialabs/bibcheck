@@ -6,13 +6,15 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/sandialabs/bibcheck/bibliography"
 	"github.com/sandialabs/bibcheck/openai"
+	"github.com/sandialabs/bibcheck/schema"
 )
 
 const (
-	BibIdFormatUnknown      string = ""
-	BibIdFormatNumeric      string = "numeric"
-	BibIdFormatAlphanumeric string = "alphanumeric"
+	BibIdFormatUnknown      string = bibliography.BibIDFormatUnknown
+	BibIdFormatNumeric      string = bibliography.BibIDFormatNumeric
+	BibIdFormatAlphanumeric string = bibliography.BibIDFormatAlphanumeric
 )
 
 func (w *Workflow) BibIdFormat(text string) (string, error) {
@@ -31,24 +33,8 @@ func (w *Workflow) BibIdFormat(text string) (string, error) {
 Produce JSON.`),
 			openai.MakeUserMessage(fmt.Sprintf("DOCUMENT TEXT:\n%s", text)),
 		},
-		Temperature: temp,
-		ResponseFormat: openai.NewResponseFormat(
-			map[string]any{
-				"name":   "bib_id_format",
-				"strict": true,
-				"schema": map[string]any{
-					"type": "object",
-					"properties": map[string]any{
-						"id_format": map[string]any{
-							"type": "string",
-							"enum": []string{BibIdFormatNumeric, BibIdFormatAlphanumeric},
-						},
-					},
-					"required":             []string{"id_format"},
-					"additionalProperties": false,
-				},
-			},
-		),
+		Temperature:    temp,
+		ResponseFormat: openai.NewResponseFormat(schema.BibIDFormatJSONSchema(BibIdFormatNumeric, BibIdFormatAlphanumeric)),
 	}
 
 	content, err := w.oaiClient.ChatGetChoiceZero(req)

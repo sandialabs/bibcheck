@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/sandialabs/bibcheck/openai"
+	"github.com/sandialabs/bibcheck/schema"
 )
 
 func (w *Workflow) NumBibEntries(text string) (int, error) {
@@ -23,23 +24,8 @@ func (w *Workflow) NumBibEntries(text string) (int, error) {
 Produce JSON.`),
 			openai.MakeUserMessage(fmt.Sprintf("DOCUMENT TEXT:\n%s", text)),
 		},
-		Temperature: temp,
-		ResponseFormat: openai.NewResponseFormat(
-			map[string]any{
-				"name":   "num_bib_entries",
-				"strict": true,
-				"schema": map[string]any{
-					"type": "object",
-					"properties": map[string]any{
-						"num_entries": map[string]string{
-							"type": "integer",
-						},
-					},
-					"required":             []string{"num_entries"},
-					"additionalProperties": false,
-				},
-			},
-		),
+		Temperature:    temp,
+		ResponseFormat: openai.NewResponseFormat(schema.NumEntriesJSONSchema("num_bib_entries", "integer")),
 	}
 
 	content, err := w.oaiClient.ChatGetChoiceZero(req)
