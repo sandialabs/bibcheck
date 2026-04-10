@@ -1,4 +1,4 @@
-package lookup
+package lookup_test
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/sandialabs/bibcheck/elsevier"
+	"github.com/sandialabs/bibcheck/lookup"
 	"github.com/sandialabs/bibcheck/shirty"
 )
 
@@ -31,7 +32,7 @@ through Hierarchical Communicators. Parallel Comput. 76 (2018),
 70–90. https://doi.org/10.1016/j.parco.2018.05.006`
 		expected := "10.1016/j.parco.2018.05.006"
 
-		if EA, err := Entry(text, "", w, w, w, &EntryConfig{
+		if EA, err := lookup.Entry(text, "", w, w, w, &lookup.EntryConfig{
 			ElsevierClient: elsevierClientFromEnv(),
 		}); err != nil {
 			t.Fatalf("Entry error: %v", err)
@@ -56,7 +57,7 @@ Kelley, Christian R Trott, Jeremiah Wilke, and Ichitaro Yamazaki. 2021. Kokkos k
 sparse/dense linear algebra and graph kernels. arXiv preprint arXiv:2103.11991 -, - (2021), 1–12`
 		expected := "https://arxiv.org/abs/2103.11991"
 
-		if EA, err := Entry(text, "", w, w, w, &EntryConfig{
+		if EA, err := lookup.Entry(text, "", w, w, w, &lookup.EntryConfig{
 			ElsevierClient: elsevierClientFromEnv(),
 		}); err != nil {
 			t.Fatalf("Entry error: %v", err)
@@ -80,7 +81,7 @@ Mercier. 2018. Hardware Topology Management in MPI Applications
 through Hierarchical Communicators. Parallel Comput. 76 (2018),
 70–90. https://doi.org/10.1016/j.parco.2018.05.006`
 
-		if EA, err := Entry(text, "", w, w, w, &EntryConfig{
+		if EA, err := lookup.Entry(text, "", w, w, w, &lookup.EntryConfig{
 			ElsevierClient: elsevierClientFromEnv(),
 		}); err != nil {
 			t.Fatalf("Entry error: %v", err)
@@ -111,7 +112,7 @@ Swarm and Evolutionary Computation,
 Volume 100,
 2026,`
 
-	EA, err := Entry(text, "", w, w, w, &EntryConfig{
+	EA, err := lookup.Entry(text, "", w, w, w, &lookup.EntryConfig{
 		ElsevierClient: elsevierClientFromEnv(),
 	})
 	if err != nil {
@@ -155,7 +156,7 @@ Swarm and Evolutionary Computation,
 Volume 100,
 2026,`
 
-	EA, err := Entry(text, "", w, w, w, nil)
+	EA, err := lookup.Entry(text, "", w, w, w, nil)
 	if err != nil {
 		t.Fatalf("Entry error: %v", err)
 	}
@@ -189,7 +190,7 @@ func Test_Online_1(t *testing.T) {
 		text := `2023. Frontier User Guide. https://docs.olcf.ornl.gov/systems/frontier_
 user_guide.html`
 
-		EA, err := Entry(text, "", w, w, w, nil)
+		EA, err := lookup.Entry(text, "", w, w, w, nil)
 		if err != nil {
 			t.Fatalf("Entry error: %v", err)
 		}
