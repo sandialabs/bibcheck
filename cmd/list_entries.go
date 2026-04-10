@@ -7,6 +7,8 @@ import (
 	"log"
 
 	"github.com/sandialabs/bibcheck/config"
+	"github.com/sandialabs/bibcheck/lookup"
+	"github.com/sandialabs/bibcheck/openrouter"
 	"github.com/sandialabs/bibcheck/shirty"
 	"github.com/spf13/cobra"
 )
@@ -54,6 +56,35 @@ var listEntriesCmd = &cobra.Command{
 			}
 
 		} else if settings.OpenRouterAPIKey != "" && settings.OpenRouterBaseURL != "" {
+			encoded, err := lookup.Encode(filePath)
+			if err != nil {
+				log.Fatalf("encode error: %v", err)
+			}
+
+			client := openrouter.NewClient(
+				settings.OpenRouterAPIKey,
+				openrouter.WithBaseURL(settings.OpenRouterBaseURL),
+			)
+
+			format, err := client.BibIdFormat(encoded)
+			if err != nil {
+				log.Fatalf("error getting bib id format: %v", err)
+			}
+			switch format {
+			case openrouter.BibIdFormatNumeric:
+				numEntries, err := client.NumEntries(encoded)
+				if err != nil {
+					log.Fatalf("error getting number of entries: %v", err)
+				}
+				for e := range numEntries {
+					fmt.Println(e + 1)
+				}
+
+			case openrouter.BibIdFormatAlphanumeric:
+				log.Fatal("unsupported format:", format)
+			default:
+				log.Fatal("unexpected format:", format)
+			}
 
 		} else {
 			log.Fatal("requires openrouter or shirty API config")
