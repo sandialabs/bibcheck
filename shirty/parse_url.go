@@ -7,26 +7,11 @@ import (
 	"fmt"
 
 	"github.com/sandialabs/bibcheck/openai"
+	"github.com/sandialabs/bibcheck/schema"
 )
 
 func NewParseURLRF() *openai.ResponseFormat {
-	return &openai.ResponseFormat{
-		Type: "json_schema",
-		JSONSchema: map[string]any{
-			"name":   "url",
-			"strict": true,
-			"schema": map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"url": map[string]string{
-						"type": "string",
-					},
-				},
-				"required":             []string{"url"},
-				"additionalProperties": false,
-			},
-		},
-	}
+	return openai.NewResponseFormat(schema.ParseURLJSONSchema())
 }
 
 func (w *Workflow) ParseURL(text string) (string, error) {
