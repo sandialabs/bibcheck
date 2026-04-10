@@ -218,13 +218,13 @@ func buildDOISourceView(lr *lookup.Result) sourceView {
 	view := sourceView{name: "DOI", status: "skipped"}
 	switch {
 	case lr.DOIOrg.Found:
-		view.status = "matched"
+		view.status = "found"
 		view.detail = "exists"
 	case lr.DOIOrg.Error != nil:
 		view.status = "error"
 		view.detail = lr.DOIOrg.Error.Error()
 	case lr.DOIOrg.ID != "":
-		view.status = "no-match"
+		view.status = "not-found"
 		view.detail = lr.DOIOrg.ID
 	}
 	return view
@@ -234,13 +234,13 @@ func buildOSTISourceView(lr *lookup.Result) sourceView {
 	view := sourceView{name: "OSTI", status: "skipped"}
 	switch {
 	case lr.OSTI.Record != nil:
-		view.status = "matched"
+		view.status = "found"
 		view.detail = lr.OSTI.Record.ToString()
 	case lr.OSTI.Error != nil:
 		view.status = "error"
 		view.detail = lr.OSTI.Error.Error()
 	case lr.OSTI.ID != "":
-		view.status = "no-match"
+		view.status = "not-found"
 		view.detail = lr.OSTI.ID
 	}
 	return view
@@ -250,13 +250,13 @@ func buildArxivSourceView(lr *lookup.Result) sourceView {
 	view := sourceView{name: "arXiv", status: "skipped"}
 	switch {
 	case lr.Arxiv.Entry != nil:
-		view.status = "matched"
+		view.status = "found"
 		view.detail = lr.Arxiv.Entry.ToString()
 	case lr.Arxiv.Error != nil:
 		view.status = "error"
 		view.detail = lr.Arxiv.Error.Error()
 	case lr.Arxiv.ID != "":
-		view.status = "no-match"
+		view.status = "not-found"
 		view.detail = lr.Arxiv.ID
 	}
 	return view
@@ -299,13 +299,13 @@ func buildOnlineSourceView(lr *lookup.Result) sourceView {
 	view := sourceView{name: "Online", status: "skipped"}
 	switch {
 	case lr.Online.Metadata != nil:
-		view.status = "matched"
+		view.status = "found"
 		view.detail = lr.Online.Metadata.ToString()
 	case lr.Online.Error != nil:
 		view.status = "error"
 		view.detail = lr.Online.Error.Error()
 	case lr.Online.Status == lookup.SearchStatusDone:
-		view.status = "no-match"
+		view.status = "not-found"
 	}
 	return view
 }
