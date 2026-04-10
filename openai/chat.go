@@ -179,14 +179,14 @@ func (c *Client) Chat(req *ChatRequest) (*ChatResponse, error) {
 
 		retryAfter, hasRetryAfter := retryAfterDuration(resp.Header)
 		auditRecord.Outcome = outcomeForStatus(resp.StatusCode, hasRetryAfter)
-		if (resp.StatusCode == http.StatusTooManyRequests || hasRetryAfter) && attempt < maxRetries {
+		if shouldRetryStatus(resp.StatusCode, hasRetryAfter) && attempt < maxRetries {
 			waitFor := retryAfter
 			if !hasRetryAfter {
 				waitFor = retryDelayForAttempt(attempt)
 			}
 			c.audit.write(auditRecord)
 			log.Printf(
-				"openai: rate limited by upstream status=%d retry_after=%s attempt=%d/%d correlation_ids=%s",
+				"openai: retrying upstream status=%d retry_after=%s attempt=%d/%d correlation_ids=%s",
 				resp.StatusCode,
 				waitFor,
 				attempt+1,
@@ -219,7 +219,7 @@ func Temperature(t float64) *float64 {
 }
 
 func retryDelayForAttempt(attempt int) time.Duration {
-	return time.Duration(attempt+1) * time.Second
+	return time.Second << attempt
 }
 
 func retryAfterDuration(headers http.Header) (time.Duration, bool) {
@@ -244,6 +244,10 @@ func retryAfterDuration(headers http.Header) (time.Duration, bool) {
 	}
 
 	return 0, false
+}
+
+func shouldRetryStatus(statusCode int, hasRetryAfter bool) bool {
+	return statusCode == http.StatusTooManyRequests || hasRetryAfter || (statusCode >= 500 && statusCode <= 599)
 }
 
 func extractCorrelationIDs(headers http.Header) []string {
