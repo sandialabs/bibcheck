@@ -1,6 +1,6 @@
 // Copyright 2025 National Technology and Engineering Solutions of Sandia
 // SPDX-License-Identifier: BSD-3-Clause
-package summary
+package shirty
 
 import (
 	"encoding/json"
@@ -10,13 +10,12 @@ import (
 
 	"github.com/sandialabs/bibcheck/lookup"
 	"github.com/sandialabs/bibcheck/openai"
-	"github.com/sandialabs/bibcheck/shirty"
 )
 
 var (
 	// gpt-oss-120b seems unable to consistently obey the response format
-	analyze_model_llama_33_70B_instruct  = "openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8"
-	analyze_prompt_llama_33_70B_instruct = `The user will provide you with a bibliography entry, and some results for searching external databases for that entry. Determine whether the bibliography entry matches the search results.
+	summaryModelLlama33_70BInstruct  = "openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8"
+	summaryPromptLlama33_70BInstruct = `The user will provide you with a bibliography entry, and some results for searching external databases for that entry. Determine whether the bibliography entry matches the search results.
 - Search results that conflict with the entry are almost certainly a mismatch
     - The author list must provide the same authors in the same order (allowing for "et al." at the end)
     - The title, venue, and date must be the same.
@@ -26,56 +25,44 @@ var (
 `
 )
 
-type ShirtySummarizer struct {
-	W *shirty.Workflow
-}
-
-func NewShirtySummarizer(w *shirty.Workflow) *ShirtySummarizer {
-	return &ShirtySummarizer{
-		W: w,
-	}
-}
-
-// Analyze returns (mismatch, comment, error)
-func (s *ShirtySummarizer) Summarize(lr *lookup.Result) (bool, string, error) {
+// Summarize returns (mismatch, comment, error).
+func (w *Workflow) Summarize(lr *lookup.Result) (bool, string, error) {
 	temp := new(float64)
 	*temp = 0.0
 
-	others := []string{}
+	searchResults := []string{}
 	if lr.Arxiv.Entry != nil {
-		others = append(others, lr.Arxiv.Entry.ToString())
+		searchResults = append(searchResults, lr.Arxiv.Entry.ToString())
 	}
 	if lr.Crossref.Work != nil {
-		others = append(others, lr.Crossref.Work.ToString())
+		searchResults = append(searchResults, lr.Crossref.Work.ToString())
 	}
 	if lr.DOIOrg.Found {
-		others = append(others, "<DOI from bibliography entry exists, no metadata provided.>")
+		searchResults = append(searchResults, "<DOI from bibliography entry exists, no metadata provided.>")
 	}
 	if lr.Elsevier.Result != nil {
-		others = append(others, lr.Elsevier.Result.ToString())
+		searchResults = append(searchResults, lr.Elsevier.Result.ToString())
 	}
 	if lr.Online.Metadata != nil {
-		others = append(others, lr.Online.Metadata.ToString())
+		searchResults = append(searchResults, lr.Online.Metadata.ToString())
 	}
 	if lr.OSTI.Record != nil {
-		others = append(others, lr.OSTI.Record.ToString())
+		searchResults = append(searchResults, lr.OSTI.Record.ToString())
 	}
 
-	// if there are no results, the provided entry can't be grounded in real results
-	if len(others) == 0 {
+	if len(searchResults) == 0 {
 		log.Printf("No search results to summarize")
 		return true, "insufficient search result data", nil
 	}
 
-	model := analyze_model_llama_33_70B_instruct
 	req := &openai.ChatRequest{
-		Model: model,
+		Model: summaryModelLlama33_70BInstruct,
 		Messages: []openai.Message{
-			openai.MakeSystemMessage(analyze_prompt_llama_33_70B_instruct),
+			openai.MakeSystemMessage(summaryPromptLlama33_70BInstruct),
 			openai.MakeUserMessage(
 				fmt.Sprintf("BIBLIOGRAPHY ENTRY:\n%s", lr.Text) +
 					"\n\nSEARCH RESULT:\n" +
-					strings.Join(others, "\n\nSEARCH RESULT:\n"),
+					strings.Join(searchResults, "\n\nSEARCH RESULT:\n"),
 			),
 		},
 		Temperature: temp,
@@ -99,7 +86,7 @@ func (s *ShirtySummarizer) Summarize(lr *lookup.Result) (bool, string, error) {
 			},
 		),
 	}
-	content, err := s.W.OpenAIClient().ChatGetChoiceZero(req)
+	content, err := w.oaiClient.ChatGetChoiceZero(req)
 	if err != nil {
 		return false, "", err
 	}

@@ -18,7 +18,6 @@ import (
 	"github.com/sandialabs/bibcheck/elsevier"
 	"github.com/sandialabs/bibcheck/entries"
 	"github.com/sandialabs/bibcheck/osti"
-	"github.com/sandialabs/bibcheck/shirty"
 )
 
 const (
@@ -96,7 +95,6 @@ type Result struct {
 
 type EntryConfig struct {
 	ElsevierClient *elsevier.Client
-	ShirtyWorkflow *shirty.Workflow
 }
 
 func retrieveUrl(url string) ([]byte, string, error) {

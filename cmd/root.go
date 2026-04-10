@@ -17,7 +17,6 @@ import (
 	"github.com/sandialabs/bibcheck/lookup"
 	"github.com/sandialabs/bibcheck/openrouter"
 	"github.com/sandialabs/bibcheck/shirty"
-	"github.com/sandialabs/bibcheck/summary"
 	"github.com/sandialabs/bibcheck/version"
 )
 
@@ -35,6 +34,10 @@ const (
 )
 
 type outputFormat string
+
+type summarizer interface {
+	Summarize(*lookup.Result) (bool, string, error)
+}
 
 const (
 	outputFormatJSON outputFormat = "json"
@@ -82,6 +85,13 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 		var pdfText string
 		var err error
 
+		if openrouterClient != nil {
+			pdfEncoded, err = lookup.Encode(pdfPath)
+			if err != nil {
+				return fmt.Errorf("pdf encode error: %w", err)
+			}
+		}
+
 		if cmd.Flags().Changed(FlagEntry) {
 			entryStart, _ = cmd.Flags().GetInt(FlagEntry)
 			entryCount = 1
@@ -89,10 +99,6 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 
 			// Get citation counts
 			if openrouterClient != nil {
-				pdfEncoded, err = lookup.Encode(pdfPath)
-				if err != nil {
-					return fmt.Errorf("pdf encode error: %w", err)
-				}
 				fmt.Println("Counting bibliography entries...")
 				entryCount, err = openrouterClient.NumEntries(pdfEncoded)
 				if err != nil {
@@ -150,15 +156,12 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 			ElsevierClient: elsevierClient,
 		}
 
-		var summarizer *summary.ShirtySummarizer
-
-		if settings.ShirtyAPIKey != "" {
-			summarizer = summary.NewShirtySummarizer(
-				shirty.NewWorkflow(
-					settings.ShirtyAPIKey,
-					shirty.WithBaseUrl(settings.ShirtyBaseURL),
-				),
-			)
+		var summarizer summarizer
+		if openrouterClient != nil {
+			summarizer = openrouterClient
+		}
+		if shirtyProvider != nil {
+			summarizer = shirtyProvider
 		}
 
 		views := []entryView{}
