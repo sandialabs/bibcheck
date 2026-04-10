@@ -6,12 +6,16 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/openai"
 	"github.com/sandialabs/bibcheck/schema"
 )
 
-func (w *Workflow) NumBibEntries(text string) (int, error) {
-	text = bibliographyText(text)
+func (w *Workflow) NumBibEntries(b *documents.Bibliography) (int, error) {
+	text, err := b.Content()
+	if err != nil {
+		return -1, err
+	}
 
 	temp := new(float64)
 	*temp = 0.1

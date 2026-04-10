@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/sandialabs/bibcheck/bibliography"
+	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/openai"
 	"github.com/sandialabs/bibcheck/schema"
 )
@@ -17,8 +18,11 @@ const (
 	BibIdFormatAlphanumeric string = bibliography.BibIDFormatAlphanumeric
 )
 
-func (w *Workflow) BibIdFormat(text string) (string, error) {
-	text = bibliographyText(text)
+func (w *Workflow) BibIdFormat(b *documents.Bibliography) (string, error) {
+	text, err := b.Content()
+	if err != nil {
+		return BibIdFormatUnknown, err
+	}
 
 	temp := new(float64)
 	*temp = 0.1

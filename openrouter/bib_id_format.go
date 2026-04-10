@@ -3,9 +3,11 @@
 package openrouter
 
 import (
+	"encoding/base64"
 	"fmt"
 
 	"github.com/sandialabs/bibcheck/bibliography"
+	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/schema"
 )
 
@@ -22,7 +24,7 @@ func NewBibIDFormatResponseFormat() *ResponseFormat {
 	}
 }
 
-func (c *Client) BibIdFormat(b64 string) (string, error) {
+func (c *Client) BibIdFormat(b *documents.Bibliography) (string, error) {
 	req := ChatRequest{
 		Model: "google/gemini-2.5-flash",
 		Messages: []Message{
@@ -31,7 +33,7 @@ func (c *Client) BibIdFormat(b64 string) (string, error) {
 - alphanumeric (for example [Smith1997])
 - Base the answer on the bibliography or references section.
 - Produce JSON.`),
-			userBase64File(b64),
+			userBase64File(base64.StdEncoding.EncodeToString(b.PDF)),
 		},
 		ResponseFormat: NewBibIDFormatResponseFormat(),
 		Provider: Provider{

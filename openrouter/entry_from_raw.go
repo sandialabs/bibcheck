@@ -3,8 +3,10 @@
 package openrouter
 
 import (
+	"encoding/base64"
 	"fmt"
 
+	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/schema"
 )
 
@@ -16,6 +18,20 @@ func NewBibEntryTextResponseFormat() *ResponseFormat {
 }
 
 func (c *Client) EntryFromRaw(b64 string, i int) (string, error) {
+	raw, err := base64.StdEncoding.DecodeString(b64)
+	if err != nil {
+		return "", fmt.Errorf("decode base64 pdf error: %w", err)
+	}
+
+	bibliography, err := c.PrepareBibliographyContent(raw)
+	if err != nil {
+		return "", fmt.Errorf("prepare bibliography error: %w", err)
+	}
+
+	return c.EntryFromBibliography(bibliography, i)
+}
+
+func (c *Client) EntryFromBibliography(b *documents.Bibliography, i int) (string, error) {
 	req := ChatRequest{
 		Model: "google/gemini-2.5-pro",
 		Messages: []Message{
@@ -27,7 +43,7 @@ If so, extract ONLY THAT ENTRY from the bibliography of the provided document.
 - Preserve any errors in the entry.
 - Omit the inline reference ID that the document uses, e.g. [1] or [Smith1997].
 Produce JSON.`),
-			userStringAndBase64File(fmt.Sprintf("Extract bibliography entry %d", i), b64),
+			userStringAndBase64File(fmt.Sprintf("Extract bibliography entry %d", i), base64.StdEncoding.EncodeToString(b.PDF)),
 		},
 		ResponseFormat: NewBibEntryTextResponseFormat(),
 		Provider: Provider{
@@ -41,7 +57,7 @@ Produce JSON.`),
 		BibliographyEntry string `json:"bibliography_entry"`
 	}{}
 	if err := c.chatStructured(req, &result); err != nil {
-		return "", fmt.Errorf("EntryFromRaw error: %w", err)
+		return "", fmt.Errorf("EntryFromBibliography error: %w", err)
 	}
 
 	if !result.EntryExists {

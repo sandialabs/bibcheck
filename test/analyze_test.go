@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/lookup"
 	"github.com/sandialabs/bibcheck/openrouter"
 	"github.com/sandialabs/bibcheck/shirty"
@@ -45,13 +46,13 @@ func impl(t *testing.T, path string, id int, expected bool) {
 			shirty.WithBaseUrl("https://shirty.sandia.gov/api/v1"),
 		)
 
-		var tResp *shirty.TextractResponse
-		tResp, err = client.Textract(path)
+		var bibliography *documents.Bibliography
+		bibliography, err = client.PrepareBibliography(path)
 		if err != nil {
-			t.Errorf("textract error: %v", err)
+			t.Errorf("prepare bibliography error: %v", err)
 		}
 
-		lr, err = lookup.EntryFromText(tResp.Text, id, "auto",
+		lr, err = lookup.EntryFromBibliography(bibliography, id, "auto",
 			client, client, client, client, nil)
 
 	} else if apiKey, ok := os.LookupEnv("OPENROUTER_API_KEY"); ok {

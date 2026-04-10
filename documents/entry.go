@@ -7,7 +7,7 @@ type EntryFromRawExtractor interface {
 	EntryFromRaw(b64 string, id int) (string, error)
 }
 
-type EntryFromTextExtractor interface {
-	// Retrieve bib entry `id` from `text` file text
-	EntryFromText(text string, id int) (string, error)
+type EntryFromBibliographyExtractor interface {
+	// Retrieve bib entry `id` from a prepared bibliography artifact.
+	EntryFromBibliography(b *Bibliography, id int) (string, error)
 }
