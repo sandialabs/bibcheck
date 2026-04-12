@@ -80,7 +80,6 @@ func main() {
 	manifestPath := flag.String("manifest", "", "Path to benchmark manifest JSON")
 	datasetDir := flag.String("dataset", "", "Directory with same-basename PDF and truth JSON files")
 	openRouterAPIKey := flag.String("openrouter-api-key", "", "OpenRouter API key")
-	openRouterBaseURL := flag.String("openrouter-base-url", "", "OpenRouter-compatible API base URL")
 	flag.Parse()
 
 	if *manifestPath == "" || *datasetDir == "" {
@@ -90,13 +89,9 @@ func main() {
 
 	settings := config.Runtime()
 	apiKey := chooseFirstNonEmpty(*openRouterAPIKey, settings.OpenRouterAPIKey)
-	baseURL := chooseFirstNonEmpty(*openRouterBaseURL, settings.OpenRouterBaseURL)
 	if apiKey == "" {
 		fmt.Fprintln(os.Stderr, "missing OpenRouter API key")
 		os.Exit(1)
-	}
-	if baseURL == "" {
-		baseURL = config.DefaultOpenRouterBaseURL
 	}
 
 	m, err := loadManifest(*manifestPath)
@@ -111,7 +106,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	client := openrouter.NewClient(apiKey, openrouter.WithBaseURL(baseURL))
+	client := openrouter.NewClient(apiKey)
 	results, err := runBenchmark(client, m, docs)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "run benchmark: %v\n", err)
