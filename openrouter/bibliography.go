@@ -22,8 +22,9 @@ const (
 )
 
 type BibliographyPageDetectorConfig struct {
-	Model  string
-	Prompt string
+	Model     string
+	Prompt    string
+	PDFEngine *PDFEngine
 }
 
 type BibliographyPageDetection struct {
@@ -153,6 +154,9 @@ func (c *Client) pageContainsBibliography(pagePDF []byte, cfg BibliographyPageDe
 			RequireParameters: true,
 			Sort:              "price",
 		},
+	}
+	if cfg.PDFEngine != nil {
+		req.Plugins = PDFParserPlugins(*cfg.PDFEngine)
 	}
 
 	result := struct {
