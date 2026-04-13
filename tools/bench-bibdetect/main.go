@@ -29,6 +29,7 @@ type runConfig struct {
 	Name       string `json:"name"`
 	Model      string `json:"model"`
 	PromptFile string `json:"prompt_file"`
+	PDFEngine  string `json:"pdf_engine"`
 }
 
 type truthDocument struct {
@@ -150,6 +151,9 @@ func loadManifest(path string) (*manifest, error) {
 		if run.PromptFile == "" {
 			return nil, fmt.Errorf("run %q missing prompt_file", run.Name)
 		}
+		if _, err := parsePDFEngine(run.PDFEngine); err != nil {
+			return nil, fmt.Errorf("run %q invalid pdf_engine: %w", run.Name, err)
+		}
 	}
 
 	return &m, nil
@@ -234,6 +238,11 @@ func runBenchmark(client *openrouter.Client, m *manifest, docs []datasetDocument
 			Model:  run.Model,
 			Prompt: string(prompt),
 		}
+		engine, err := parsePDFEngine(run.PDFEngine)
+		if err != nil {
+			return nil, fmt.Errorf("parse pdf_engine for run %q: %w", run.Name, err)
+		}
+		cfg.PDFEngine = engine
 
 		for _, doc := range docs {
 			rm.Documents++
@@ -260,6 +269,20 @@ func runBenchmark(client *openrouter.Client, m *manifest, docs []datasetDocument
 	}
 
 	return results, nil
+}
+
+func parsePDFEngine(value string) (*openrouter.PDFEngine, error) {
+	if value == "" {
+		return nil, nil
+	}
+
+	engine := openrouter.PDFEngine(value)
+	switch engine {
+	case openrouter.PDFEngineCloudflareAI, openrouter.PDFEngineMistralOCR, openrouter.PDFEngineNative:
+		return &engine, nil
+	default:
+		return nil, fmt.Errorf("unsupported value %q", value)
+	}
 }
 
 func benchmarkDocument(client *openrouter.Client, cfg openrouter.BibliographyPageDetectorConfig, doc datasetDocument) documentMetrics {
