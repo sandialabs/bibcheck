@@ -122,6 +122,36 @@ type ResponseFormat struct {
 	JSONSchema map[string]interface{} `json:"json_schema"`
 }
 
+type PDFEngine string
+
+const (
+	PDFEngineCloudflareAI PDFEngine = "cloudflare-ai"
+	PDFEngineMistralOCR   PDFEngine = "mistral-ocr"
+	PDFEngineNative       PDFEngine = "native"
+)
+
+type PDFPlugin struct {
+	Engine PDFEngine `json:"engine,omitempty"`
+}
+
+type Plugin struct {
+	ID  string     `json:"id"`
+	PDF *PDFPlugin `json:"pdf,omitempty"`
+}
+
+func FileParserPlugin(engine PDFEngine) Plugin {
+	return Plugin{
+		ID: "file-parser",
+		PDF: &PDFPlugin{
+			Engine: engine,
+		},
+	}
+}
+
+func PDFParserPlugins(engine PDFEngine) []Plugin {
+	return []Plugin{FileParserPlugin(engine)}
+}
+
 // Provider represents provider configuration
 type Provider struct {
 	RequireParameters bool   `json:"require_parameters"`
@@ -132,6 +162,7 @@ type Provider struct {
 type ChatRequest struct {
 	Model          string          `json:"model"`
 	Messages       []Message       `json:"messages"`
+	Plugins        []Plugin        `json:"plugins,omitempty"`
 	ResponseFormat *ResponseFormat `json:"response_format,omitempty"`
 	Provider       Provider        `json:"provider,omitempty"`
 	Temperature    *int            `json:"temperature,omitempty"`
