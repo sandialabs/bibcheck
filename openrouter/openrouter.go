@@ -158,6 +158,24 @@ type Provider struct {
 	Sort              string `json:"sort,omitempty"`
 }
 
+type Reasoning struct {
+	Effort    string `json:"effort,omitempty"`
+	MaxTokens *int   `json:"max_tokens,omitempty"`
+	Exclude   *bool  `json:"exclude,omitempty"`
+	Enabled   *bool  `json:"enabled,omitempty"`
+}
+
+func (r *Reasoning) isEmpty() bool {
+	if r == nil {
+		return true
+	}
+
+	return r.Effort == "" &&
+		r.MaxTokens == nil &&
+		r.Exclude == nil &&
+		r.Enabled == nil
+}
+
 // ChatRequest represents the request payload
 type ChatRequest struct {
 	Model          string          `json:"model"`
@@ -166,6 +184,7 @@ type ChatRequest struct {
 	ResponseFormat *ResponseFormat `json:"response_format,omitempty"`
 	Provider       Provider        `json:"provider,omitempty"`
 	Temperature    *int            `json:"temperature,omitempty"`
+	Reasoning      *Reasoning      `json:"reasoning,omitempty"`
 }
 
 // ChatResponse represents the API response
@@ -213,6 +232,15 @@ func (c *Client) chatStructured(req ChatRequest, dest any) error {
 
 // ChatCompletion sends a chat completion request
 func (c *Client) ChatCompletion(req ChatRequest, baseURL string) (*ChatResponse, error) {
+	if req.Reasoning != nil {
+		if req.Reasoning.Effort != "" && req.Reasoning.MaxTokens != nil {
+			return nil, fmt.Errorf("reasoning.effort and reasoning.max_tokens are mutually exclusive")
+		}
+		if req.Reasoning.isEmpty() {
+			req.Reasoning = nil
+		}
+	}
+
 	// Marshal request to JSON
 	jsonData, err := json.Marshal(req)
 	if err != nil {
