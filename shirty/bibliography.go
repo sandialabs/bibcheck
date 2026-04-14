@@ -38,7 +38,8 @@ func (w *Workflow) PrepareBibliographyContent(pdf []byte) (*documents.Bibliograp
 	}
 
 	matches := make([]bool, pageCount)
-	for page := 1; page <= pageCount; page++ {
+	seenBibliography := false
+	for page := pageCount; page >= 1; page-- {
 		pagePDF, err := documents.PDFSlicePages(pdf, page, page)
 		if err != nil {
 			return nil, fmt.Errorf("slice page %d error: %w", page, err)
@@ -53,6 +54,15 @@ func (w *Workflow) PrepareBibliographyContent(pdf []byte) (*documents.Bibliograp
 		}
 		matches[page-1] = match
 		log.Printf("bibliography page %d/%d match=%t", page, pageCount, match)
+
+		if match {
+			seenBibliography = true
+			continue
+		}
+		if seenBibliography {
+			log.Printf("stopping bibliography detection at page %d/%d after contiguous bibliography block", page, pageCount)
+			break
+		}
 	}
 
 	startPage, endPage, ok := bibliographyPageRange(matches)
