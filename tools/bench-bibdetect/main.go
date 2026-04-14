@@ -26,10 +26,11 @@ type manifest struct {
 }
 
 type runConfig struct {
-	Name       string `json:"name"`
-	Model      string `json:"model"`
-	PromptFile string `json:"prompt_file"`
-	PDFEngine  string `json:"pdf_engine"`
+	Name             string `json:"name"`
+	Model            string `json:"model"`
+	PromptFile       string `json:"prompt_file"`
+	PDFEngine        string `json:"pdf_engine"`
+	ReasoningEnabled *bool  `json:"reasoning_enabled"`
 }
 
 type truthDocument struct {
@@ -235,8 +236,9 @@ func runBenchmark(client *openrouter.Client, m *manifest, docs []datasetDocument
 		}
 
 		cfg := openrouter.BibliographyPageDetectorConfig{
-			Model:  run.Model,
-			Prompt: string(prompt),
+			Model:            run.Model,
+			Prompt:           string(prompt),
+			ReasoningEnabled: run.ReasoningEnabled,
 		}
 		engine, err := parsePDFEngine(run.PDFEngine)
 		if err != nil {
