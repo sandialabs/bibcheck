@@ -22,9 +22,10 @@ const (
 )
 
 type BibliographyPageDetectorConfig struct {
-	Model     string
-	Prompt    string
-	PDFEngine *PDFEngine
+	Model            string
+	Prompt           string
+	PDFEngine        *PDFEngine
+	ReasoningEnabled *bool
 }
 
 type BibliographyPageDetection struct {
@@ -157,6 +158,13 @@ func (c *Client) pageContainsBibliography(pagePDF []byte, cfg BibliographyPageDe
 	}
 	if cfg.PDFEngine != nil {
 		req.Plugins = PDFParserPlugins(*cfg.PDFEngine)
+	}
+	if cfg.ReasoningEnabled != nil {
+		if req.Reasoning == nil {
+			req.Reasoning = &Reasoning{}
+		}
+		req.Reasoning.Enabled = new(bool)
+		*req.Reasoning.Enabled = true
 	}
 
 	result := struct {
