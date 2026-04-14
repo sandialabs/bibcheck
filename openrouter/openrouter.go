@@ -189,13 +189,22 @@ type ChatRequest struct {
 
 // ChatResponse represents the API response
 type ChatResponse struct {
-	ID      string   `json:"id"`
-	Choices []Choice `json:"choices"`
+	ID      string     `json:"id"`
+	Choices []Choice   `json:"choices"`
+	Usage   *ChatUsage `json:"usage,omitempty"`
 }
 
 // Choice represents a response choice
 type Choice struct {
 	Message Message `json:"message"`
+}
+
+// ChatUsage represents usage metadata returned by OpenRouter.
+type ChatUsage struct {
+	PromptTokens     int      `json:"prompt_tokens,omitempty"`
+	CompletionTokens int      `json:"completion_tokens,omitempty"`
+	TotalTokens      int      `json:"total_tokens,omitempty"`
+	Cost             *float64 `json:"cost,omitempty"`
 }
 
 func choiceZeroString(resp *ChatResponse) (string, error) {
@@ -223,10 +232,17 @@ func (c *Client) chatStructured(req ChatRequest, dest any) error {
 		return err
 	}
 
+	if err := unmarshalStructuredContent(content, dest); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func unmarshalStructuredContent(content string, dest any) error {
 	if err := json.Unmarshal([]byte(content), dest); err != nil {
 		return fmt.Errorf("couldn't unmarshal structured JSON response: %w", err)
 	}
-
 	return nil
 }
 
