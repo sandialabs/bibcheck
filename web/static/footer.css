@@ -5,8 +5,9 @@
   gap: 10px 24px;
   width: 100%;
   padding: 18px 24px;
-  border-top: 1px solid #d7dce4;
-  color: #586272;
+  border-top: 1px solid #cbd2d9;
+  background: #003359;
+  color: #e5e8ec;
   font-size: 0.9rem;
 }
 
@@ -16,6 +17,10 @@
 }
 
 .app-footer a {
-  color: #1f4e79;
+  color: #ffffff;
   font-weight: 650;
+}
+
+.app-footer a:hover {
+  color: #00add0;
 }
