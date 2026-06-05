@@ -164,29 +164,11 @@ For each extracted bibliography entry, bibcheck currently works in this order:
     * If no database/source match was found, parse the entry as an online resource
     * Fetch the URL directly and extract metadata from HTML or PDF content for comparison
 
-## Roadmap:
 
-* docker/podman build instructions
-* Allow user to provide email address (for crossref.org API)
-* DBLP search
-* OpenAlex search
-* Web UI
 
 ## Contributing
 
-### Running Tests
-
-Run tests with a shirty key or an openrouter key
-
-```bash
-go test -v ./... -args --shirty-api-key="sk-..."
-go test -v ./... -args --openrouter-api-key="sk-or-v1-..."
-```
-
-### Release Deployments
-
-* Create fine-grained token with "Contents" repository permissions (write)
-* Add it as an actions secret: `RELEASE_TOKEN`
+See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Acknowledgements
 
@@ -210,30 +192,12 @@ https://scholar.google.com/scholar?hl=en&as_sdt=0%2C32&q=Quantum+information&btn
 * Show selected file in upload GUI
 * extract alphanumeric bibliography entry
     * structured response asking for all bibliography IDs
-* try other shirty LLMs
-    * `openai/gpt-oss-120b`
-
-## Licensing
-
-To list third-party licenses:
-
-save the following as `template.md`
-```md
-{{ range . }}
-## {{ .Name }}
-
-* Name: {{ .Name }}
-* Version: {{ .Version }}
-* License: [{{ .LicenseName }}]({{ .LicenseURL }})
-
-```
-{{ .LicenseText }}
-```
-{{ end }}
-```
-
-```bash
-go install github.com/google/go-licenses/v2@latest
-
-go-licenses report ./... --ignore github.com/sandialabs/bibcheck --template template.md > NOTICE
-```
+* docker/podman CLI
+* Allow user to provide email address (for crossref.org API)
+* DBLP search
+* OpenAlex search
+* Elsevier API key in Web UI
+* Version / SHA in WebUI
+    * if versioned, only show that
+    * version links to release, sha links to commit
+* Version / SHA in CLI
