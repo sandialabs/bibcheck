@@ -44,12 +44,12 @@ func (a *app) Render() vecty.ComponentOrHTML {
 }
 
 func (a *app) renderLanding() vecty.ComponentOrHTML {
-	dropClasses := "drop-target"
+	dropClasses := []string{"drop-target"}
 	if a.dragging {
-		dropClasses += " dragging"
+		dropClasses = append(dropClasses, "dragging")
 	}
 	if a.filename != "" {
-		dropClasses += " selected"
+		dropClasses = append(dropClasses, "selected")
 	}
 
 	return elem.Body(
@@ -95,7 +95,7 @@ func (a *app) renderLanding() vecty.ComponentOrHTML {
 				),
 				elem.Div(
 					vecty.Markup(
-						vecty.Class(dropClasses),
+						vecty.Class(dropClasses...),
 						event.DragEnter(func(e *vecty.Event) {
 							e.Value.Call("preventDefault")
 							a.dragging = true
