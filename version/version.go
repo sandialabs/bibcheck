@@ -22,5 +22,5 @@ func BuildDate() string {
 }
 
 func String() string {
-	return "0.1.0"
+	return "0.3.0"
 }
