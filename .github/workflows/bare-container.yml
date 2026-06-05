@@ -1,0 +1,42 @@
+name: Bare Container
+
+on:
+    push:
+        branches: ["main"]
+        tags:
+            - "v*"
+    pull_request:
+        branches: ["main"]
+    workflow_dispatch:
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 #v6.0.3
+
+            - name: Log in to GHCR
+              if: github.event_name != 'pull_request'
+              uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+              with:
+                  registry: ghcr.io
+                  username: sandialabs
+                  password: ${{ secrets.CR_PAT }}
+
+            - name: Set image tags
+              id: image-tags
+              run: |
+                  if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+                    echo "tags=ghcr.io/sandialabs/bibcheck-wasm:${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+                  else
+                    echo "tags=ghcr.io/sandialabs/bibcheck-wasm:latest" >> "$GITHUB_OUTPUT"
+                  fi
+
+            - name: Build and push container
+              uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+              with:
+                  context: .
+                  file: bare.Dockerfile
+                  push: ${{ github.event_name != 'pull_request' }}
+                  tags: ${{ steps.image-tags.outputs.tags }}

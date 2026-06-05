@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/sandialabs/bibcheck/internal/wasmhttp"
 )
 
 // ArticleMetadataParams contains optional parameters for the article metadata search
@@ -113,6 +115,7 @@ func (c *Client) ArticleMetadataRaw(query string, params *ArticleMetadataParams)
 	req.Header.Set("X-ELS-APIKey", c.apiKey)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "github.com/sandialabs/bibcheck")
+	wasmhttp.ConfigureRequest(req)
 
 	// Execute request
 	client := &http.Client{Timeout: c.timeout}

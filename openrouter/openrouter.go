@@ -9,6 +9,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/sandialabs/bibcheck/internal/wasmhttp"
 )
 
 const (
@@ -266,6 +268,7 @@ func (c *Client) ChatCompletion(req ChatRequest, baseURL string) (*ChatResponse,
 	// Set headers
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
+	wasmhttp.ConfigureRequest(httpReq)
 
 	// Send request
 	resp, err := c.httpClient.Do(httpReq)

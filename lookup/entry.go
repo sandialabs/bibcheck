@@ -17,6 +17,7 @@ import (
 	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/elsevier"
 	"github.com/sandialabs/bibcheck/entries"
+	"github.com/sandialabs/bibcheck/internal/wasmhttp"
 	"github.com/sandialabs/bibcheck/osti"
 )
 
@@ -101,10 +102,17 @@ func retrieveUrl(url string) ([]byte, string, error) {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
+	fetchURL := wasmhttp.FetchURL(url)
 	log.Println("GET", url)
-	resp, err := client.Get(url)
+	req, err := http.NewRequest(http.MethodGet, fetchURL, nil)
 	if err != nil {
-		return nil, "", fmt.Errorf("http.Client.Get error: %w", err)
+		return nil, "", fmt.Errorf("http.NewRequest error: %w", err)
+	}
+	wasmhttp.ConfigureRequest(req)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("http.Client.Do error: %w", err)
 	}
 	defer resp.Body.Close()
 

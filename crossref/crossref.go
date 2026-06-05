@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/sandialabs/bibcheck/config"
+	"github.com/sandialabs/bibcheck/internal/wasmhttp"
 )
 
 // CrossrefWork represents a work item from the Crossref API
@@ -106,6 +107,7 @@ func QueryBibliographic(reference string, rows int) (*CrossrefResponse, error) {
 
 	// Set headers
 	req.Header.Set("User-Agent", config.UserAgent())
+	wasmhttp.ConfigureRequest(req)
 
 	// Make the request
 	resp, err := client.Do(req)

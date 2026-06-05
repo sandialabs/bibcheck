@@ -39,6 +39,12 @@ func WithBaseUrl(baseUrl string) WorkflowOpt {
 	}
 }
 
+func WithAuditEnabled(enabled bool) WorkflowOpt {
+	return func(w *Workflow) {
+		openai.WithAuditEnabled(enabled)(w.oaiClient)
+	}
+}
+
 func (w *Workflow) OpenAIClient() *openai.Client {
 	return w.oaiClient
 }

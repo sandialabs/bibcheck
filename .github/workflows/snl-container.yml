@@ -1,0 +1,28 @@
+name: SNL Container
+
+on:
+    pull_request:
+        branches: ["main"]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 #v6.0.3
+
+            - name: Generate dummy CA certificate
+              run: |
+                  openssl req -x509 -newkey rsa:2048 -sha256 -days 1 -nodes \
+                    -keyout /tmp/snl-ci.key \
+                    -out corpca.crt \
+                    -subj "/CN=snl-ci.invalid"
+                  openssl x509 -in corpca.crt -noout -subject
+
+            - name: Build SNL container
+              uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+              with:
+                  context: .
+                  file: snl.Dockerfile
+                  push: false
+                  tags: bibcheck-snl:test

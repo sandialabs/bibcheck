@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/sandialabs/bibcheck/config"
+	"github.com/sandialabs/bibcheck/internal/wasmhttp"
 )
 
 var ErrDoesNotExist = errors.New("no arxiv entry found")
@@ -113,6 +114,7 @@ func (c *Client) GetByID(arxivID string) (*Entry, error) {
 
 	// Set User-Agent header for politeness
 	req.Header.Set("User-Agent", config.UserAgent())
+	wasmhttp.ConfigureRequest(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

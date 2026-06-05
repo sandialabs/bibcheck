@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 
 	"github.com/sandialabs/bibcheck/config"
+	"github.com/sandialabs/bibcheck/internal/wasmhttp"
 )
 
 type TextractResponse struct {
@@ -37,6 +38,7 @@ func (w *Workflow) textractImpl(requestBody io.Reader, contentType string) (*Tex
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("User-Agent", config.UserAgent())
+	wasmhttp.ConfigureRequest(req)
 
 	// Send the request
 	client := &http.Client{}

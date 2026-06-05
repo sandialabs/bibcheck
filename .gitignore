@@ -1,2 +1,5 @@
 .DS_Store
 uploads
+.gocache/
+.gomodcache/
+corpca.crt
