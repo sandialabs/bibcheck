@@ -81,12 +81,15 @@ Use these defaults:
 ## Local Container Development
 
 ```bash
-podman build -t bibcheck-wasm .
+podman build -f bare.Dockerfile -t bibcheck-wasm .
 ```
 
-If your environment requires some specific SSL certificates, try this:
+If your environment requires some specific SSL certificate, do this:
 ```bash
-podman build -t bibcheck-wasm --secret id=corpca,src=/etc/ssl/certs/<whatever>.pem
+
+# retrieve the certificate, name it `corpca.crt`
+
+podman build -f corpca.Dockerfile -t bibcheck-wasm
 ```
 
 Run with the image's default user:
