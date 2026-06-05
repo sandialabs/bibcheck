@@ -5,25 +5,25 @@ WORKDIR /src
 ENV GOMODCACHE=/tmp/gomodcache
 ENV GOCACHE=/tmp/gocache
 
-COPY go.mod go.sum ./
-# RUN go mod download
+COPY corpca.crt /usr/local/share/ca-certificates/corpca.crt
+RUN update-ca-certificates
 
-# if the user provided a corpca secret, then assume it's a certificate and try to use it before go mod download
-RUN --mount=type=secret,id=corpca,target=/usr/local/share/ca-certificates/corpca.crt,required=false \
-    if [ -f /usr/local/share/ca-certificates/corpca.crt ]; then \
-        update-ca-certificates; \
-    fi && \
-    go mod download
+COPY go.mod go.sum ./
+RUN go mod download
 
 COPY . .
-RUN mkdir -p /out
-RUN CGO_ENABLED=0 go build -o /out/bibcheck .
-RUN GOOS=js GOARCH=wasm go build -o /out/app.wasm ./web/app
-RUN cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" /out/wasm_exec.js
-RUN cp web/static/index.html web/static/style.css /out/
-RUN chmod -R g=u /out
+
+RUN mkdir -p /out && \
+    CGO_ENABLED=0 go build -o /out/bibcheck . && \
+    GOOS=js GOARCH=wasm go build -o /out/app.wasm ./web/app && \
+    cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" /out/wasm_exec.js && \
+    cp web/static/index.html web/static/style.css /out/ && \
+    chmod -R g=u /out
 
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
+
+COPY corpca.crt /etc/pki/ca-trust/source/anchors/corpca.crt
+RUN update-ca-trust
 
 COPY --from=build --chown=1001:0 /out/bibcheck /usr/local/bin/bibcheck
 COPY --from=build --chown=1001:0 /out/app.wasm /opt/bibcheck/web/app.wasm
