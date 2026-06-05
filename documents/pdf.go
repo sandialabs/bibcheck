@@ -7,10 +7,15 @@ import (
 	"fmt"
 
 	pdfapi "github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
+func init() {
+	pdfapi.DisableConfigDir()
+}
+
 func PDFPageCount(pdf []byte) (int, error) {
-	return pdfapi.PageCount(bytes.NewReader(pdf), nil)
+	return pdfapi.PageCount(bytes.NewReader(pdf), pdfConfig())
 }
 
 func PDFSlicePages(pdf []byte, startPage, endPage int) ([]byte, error) {
@@ -23,8 +28,12 @@ func PDFSlicePages(pdf []byte, startPage, endPage int) ([]byte, error) {
 
 	var buf bytes.Buffer
 	selection := []string{fmt.Sprintf("%d-%d", startPage, endPage)}
-	if err := pdfapi.Trim(bytes.NewReader(pdf), &buf, selection, nil); err != nil {
+	if err := pdfapi.Trim(bytes.NewReader(pdf), &buf, selection, pdfConfig()); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func pdfConfig() *model.Configuration {
+	return model.NewDefaultConfiguration()
 }
