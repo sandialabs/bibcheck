@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"syscall/js"
 
@@ -22,6 +23,7 @@ type app struct {
 
 	shirtyKey     string
 	openRouterKey string
+	entry         string
 	filename      string
 	pdf           []byte
 	dragging      bool
@@ -86,6 +88,28 @@ func (a *app) renderLanding() vecty.ComponentOrHTML {
 								prop.Value(a.openRouterKey),
 								event.Input(func(e *vecty.Event) {
 									a.openRouterKey = e.Target.Get("value").String()
+									a.errorMessage = ""
+									vecty.Rerender(a)
+								}),
+							),
+						),
+					),
+				),
+				elem.Details(
+					vecty.Markup(vecty.Class("advanced-options")),
+					elem.Summary(vecty.Text("Advanced options")),
+					elem.Label(
+						vecty.Markup(vecty.Class("field")),
+						elem.Span(vecty.Text("Bibliography entry")),
+						elem.Input(
+							vecty.Markup(
+								prop.Type(prop.TypeNumber),
+								vecty.Attribute("min", "1"),
+								vecty.Attribute("step", "1"),
+								prop.Placeholder("All entries"),
+								prop.Value(a.entry),
+								event.Input(func(e *vecty.Event) {
+									a.entry = e.Target.Get("value").String()
 									a.errorMessage = ""
 									vecty.Rerender(a)
 								}),
@@ -230,6 +254,13 @@ func (a *app) ready() bool {
 }
 
 func (a *app) start() {
+	entry, err := selectedEntry(a.entry)
+	if err != nil {
+		a.errorMessage = err.Error()
+		vecty.Rerender(a)
+		return
+	}
+
 	rt, err := workflow.NewRuntime(workflow.Keys{
 		ShirtyAPIKey:     a.shirtyKey,
 		OpenRouterAPIKey: a.openRouterKey,
@@ -246,7 +277,8 @@ func (a *app) start() {
 	vecty.Rerender(a)
 
 	pdf := append([]byte(nil), a.pdf...)
-	go workflow.AnalyzePDF(context.Background(), rt, pdf, func(state workflow.State) {
+	options := workflow.Options{Entry: entry}
+	go workflow.AnalyzePDFWithOptions(context.Background(), rt, pdf, options, func(state workflow.State) {
 		a.state = state
 		vecty.Rerender(a)
 	})
@@ -314,6 +346,18 @@ func dropSubtitle(filename string) string {
 		return "PDF ready for analysis"
 	}
 	return "or choose a file"
+}
+
+func selectedEntry(value string) (int, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return 0, nil
+	}
+	entry, err := strconv.Atoi(trimmed)
+	if err != nil || entry < 1 {
+		return 0, fmt.Errorf("Bibliography entry must be a positive whole number.")
+	}
+	return entry, nil
 }
 
 func providerText(provider workflow.ProviderKind) string {

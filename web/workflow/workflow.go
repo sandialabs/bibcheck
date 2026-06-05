@@ -48,6 +48,10 @@ type State struct {
 
 type Progress func(State)
 
+type Options struct {
+	Entry int
+}
+
 type Provider interface {
 	PrepareBibliographyContent([]byte) (*documents.Bibliography, error)
 	EntryFromBibliography(*documents.Bibliography, int) (string, error)
@@ -109,6 +113,10 @@ func NewRuntime(keys Keys) (*Runtime, error) {
 }
 
 func AnalyzePDF(ctx context.Context, rt *Runtime, pdf []byte, progress Progress) State {
+	return AnalyzePDFWithOptions(ctx, rt, pdf, Options{}, progress)
+}
+
+func AnalyzePDFWithOptions(ctx context.Context, rt *Runtime, pdf []byte, options Options, progress Progress) State {
 	if rt == nil || rt.Provider == nil || rt.Counter == nil {
 		state := State{Phase: "Starting"}
 		return fail(progress, state, errors.New("missing analysis runtime"))
@@ -132,21 +140,29 @@ func AnalyzePDF(ctx context.Context, rt *Runtime, pdf []byte, progress Progress)
 		return fail(progress, state, fmt.Errorf("prepare bibliography: %w", err))
 	}
 
-	state.Phase = "Counting entries"
-	emit(progress, state)
-	count, err := rt.Counter.CountBibliographyEntries(bibliography)
-	if err != nil {
-		return fail(progress, state, fmt.Errorf("count bibliography entries: %w", err))
-	}
-	if count < 1 {
-		return fail(progress, state, fmt.Errorf("expected at least one bibliography entry, found %d", count))
+	entryIDs := []int{options.Entry}
+	if options.Entry < 1 {
+		state.Phase = "Counting entries"
+		emit(progress, state)
+		count, err := rt.Counter.CountBibliographyEntries(bibliography)
+		if err != nil {
+			return fail(progress, state, fmt.Errorf("count bibliography entries: %w", err))
+		}
+		if count < 1 {
+			return fail(progress, state, fmt.Errorf("expected at least one bibliography entry, found %d", count))
+		}
+
+		entryIDs = make([]int, count)
+		for i := range entryIDs {
+			entryIDs[i] = i + 1
+		}
 	}
 
-	state.Total = count
-	state.Entries = make([]EntryState, count)
-	for i := range state.Entries {
+	state.Total = len(entryIDs)
+	state.Entries = make([]EntryState, len(entryIDs))
+	for i, id := range entryIDs {
 		state.Entries[i] = EntryState{
-			ID:             fmt.Sprintf("%d", i+1),
+			ID:             fmt.Sprintf("%d", id),
 			TextStatus:     "pending",
 			AnalysisStatus: "pending",
 		}
@@ -162,7 +178,7 @@ func AnalyzePDF(ctx context.Context, rt *Runtime, pdf []byte, progress Progress)
 		state.Entries[i].TextStatus = "active"
 		emit(progress, state)
 
-		text, err := rt.Provider.EntryFromBibliography(bibliography, i+1)
+		text, err := rt.Provider.EntryFromBibliography(bibliography, entryIDs[i])
 		if err != nil {
 			state.Entries[i].TextStatus = "error"
 			state.Entries[i].Error = fmt.Sprintf("extract entry: %v", err)

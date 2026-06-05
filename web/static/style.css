@@ -70,6 +70,21 @@ p {
   color: #171b22;
 }
 
+.advanced-options {
+  border-top: 1px solid #d7dce4;
+  border-bottom: 1px solid #d7dce4;
+  padding: 12px 0;
+}
+
+.advanced-options summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.advanced-options .field {
+  margin-top: 12px;
+}
+
 .drop-target {
   min-height: 180px;
   border: 2px dashed #9aa4b3;
