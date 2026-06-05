@@ -18,8 +18,8 @@ RUN mkdir -p /out && \
     CGO_ENABLED=0 go build -o /out/bibcheck . && \
     GOOS=js GOARCH=wasm go build -o /out/app.wasm ./web/app && \
     cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" /out/wasm_exec.js && \
-    cp web/static/index.html web/static/style.css /out/ && \
-    for file in /out/app.wasm /out/wasm_exec.js /out/index.html /out/style.css; do gzip -k -f "$file" && brotli -k -f "$file"; done && \
+    cp web/static/index.html web/static/style.css web/static/footer.css /out/ && \
+    for file in /out/*.wasm /out/*.html /out/*.css /out/*.js; do gzip -k -f "$file" && brotli -k -f "$file"; done && \
     chmod -R g=u /out
 
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
@@ -29,6 +29,7 @@ COPY --from=build --chown=1001:0 /out/app.wasm* /opt/bibcheck/web/
 COPY --from=build --chown=1001:0 /out/wasm_exec.js* /opt/bibcheck/web/
 COPY --from=build --chown=1001:0 /out/index.html* /opt/bibcheck/web/
 COPY --from=build --chown=1001:0 /out/style.css* /opt/bibcheck/web/
+COPY --from=build --chown=1001:0 /out/footer.css* /opt/bibcheck/web/
 
 EXPOSE 8080
 

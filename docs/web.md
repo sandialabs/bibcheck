@@ -108,6 +108,7 @@ curl -I http://localhost:8080/
 curl -I http://localhost:8080/app.wasm
 curl -I http://localhost:8080/wasm_exec.js
 curl -I http://localhost:8080/style.css
+curl -I http://localhost:8080/footer.css
 curl -sS -D - "http://localhost:8080/api/fetch?url=https%3A%2F%2Fwww.hpcg-benchmark.org%2F" -o /tmp/bibcheck-fetch.html
 ```
 
@@ -117,5 +118,6 @@ Expected results:
 - `/app.wasm` returns `200 OK` and `application/wasm`.
 - `/wasm_exec.js` returns `200 OK` and JavaScript content.
 - `/style.css` returns `200 OK` and CSS content.
+- `/footer.css` returns `200 OK` and CSS content.
 - `/api/fetch?...` returns the upstream response when the server can reach the
   requested URL and the response is within the configured byte limit.
