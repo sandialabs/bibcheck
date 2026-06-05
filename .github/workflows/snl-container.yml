@@ -1,4 +1,4 @@
-name: SNL Container Build
+name: SNL Container
 
 on:
     pull_request:

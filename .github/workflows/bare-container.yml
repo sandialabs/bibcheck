@@ -1,4 +1,4 @@
-name: Deploy Container
+name: Bare Container
 
 on:
     push:
