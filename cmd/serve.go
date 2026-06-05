@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime"
 	"net/http"
 	"net/url"
+	"path"
+	"strings"
 	"time"
 
 	"github.com/sandialabs/bibcheck/config"
@@ -42,8 +45,124 @@ func init() {
 func serveMux(staticDir string, maxBytes int64) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/api/fetch", fetchHandler(maxBytes))
-	mux.Handle("/", http.FileServer(http.Dir(staticDir)))
+	mux.Handle("/", compressedFileServer(http.Dir(staticDir)))
 	return mux
+}
+
+type compressedStaticHandler struct {
+	root     http.Dir
+	fallback http.Handler
+}
+
+func compressedFileServer(root http.Dir) http.Handler {
+	return compressedStaticHandler{
+		root:     root,
+		fallback: http.FileServer(root),
+	}
+}
+
+func (h compressedStaticHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	addVary(w.Header(), "Accept-Encoding")
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		h.fallback.ServeHTTP(w, r)
+		return
+	}
+
+	name, ok := staticFileName(r.URL.Path)
+	if !ok {
+		h.fallback.ServeHTTP(w, r)
+		return
+	}
+	original, err := h.root.Open(name)
+	if err != nil {
+		h.fallback.ServeHTTP(w, r)
+		return
+	}
+	originalInfo, err := original.Stat()
+	original.Close()
+	if err != nil || originalInfo.IsDir() {
+		h.fallback.ServeHTTP(w, r)
+		return
+	}
+
+	encoding, suffix, ok := preferredEncoding(r.Header.Get("Accept-Encoding"))
+	if !ok {
+		h.fallback.ServeHTTP(w, r)
+		return
+	}
+	compressed, err := h.root.Open(name + suffix)
+	if err != nil {
+		h.fallback.ServeHTTP(w, r)
+		return
+	}
+	defer compressed.Close()
+	compressedInfo, err := compressed.Stat()
+	if err != nil || compressedInfo.IsDir() {
+		h.fallback.ServeHTTP(w, r)
+		return
+	}
+
+	if contentType := mime.TypeByExtension(path.Ext(name)); contentType != "" {
+		w.Header().Set("Content-Type", contentType)
+	}
+	w.Header().Set("Content-Encoding", encoding)
+	http.ServeContent(w, r, path.Base(name), originalInfo.ModTime(), compressed)
+}
+
+func staticFileName(urlPath string) (string, bool) {
+	if strings.Contains(urlPath, "\x00") {
+		return "", false
+	}
+	clean := path.Clean("/" + urlPath)
+	name := strings.TrimPrefix(clean, "/")
+	if strings.HasSuffix(urlPath, "/") {
+		name = path.Join(name, "index.html")
+	}
+	if name == "." || name == "" {
+		name = "index.html"
+	}
+	return name, true
+}
+
+func preferredEncoding(acceptEncoding string) (string, string, bool) {
+	if acceptsEncoding(acceptEncoding, "br") {
+		return "br", ".br", true
+	}
+	if acceptsEncoding(acceptEncoding, "gzip") {
+		return "gzip", ".gz", true
+	}
+	return "", "", false
+}
+
+func acceptsEncoding(acceptEncoding, encoding string) bool {
+	for _, part := range strings.Split(acceptEncoding, ",") {
+		fields := strings.Split(strings.TrimSpace(part), ";")
+		if len(fields) == 0 || !strings.EqualFold(strings.TrimSpace(fields[0]), encoding) {
+			continue
+		}
+		accepted := true
+		for _, field := range fields[1:] {
+			if strings.EqualFold(strings.TrimSpace(field), "q=0") || strings.EqualFold(strings.TrimSpace(field), "q=0.0") {
+				accepted = false
+				break
+			}
+		}
+		if accepted {
+			return true
+		}
+	}
+	return false
+}
+
+func addVary(header http.Header, value string) {
+	for _, existing := range header.Values("Vary") {
+		for _, part := range strings.Split(existing, ",") {
+			if strings.EqualFold(strings.TrimSpace(part), value) {
+				return
+			}
+		}
+	}
+	header.Add("Vary", value)
 }
 
 func fetchHandler(maxBytes int64) http.Handler {

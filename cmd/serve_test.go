@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -66,4 +68,135 @@ func TestFetchHandlerRejectsUnsupportedURL(t *testing.T) {
 	if resp.Code != http.StatusBadRequest {
 		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, resp.Code)
 	}
+}
+
+func TestCompressedFileServerServesBrotliWhenAvailable(t *testing.T) {
+	dir := staticTestDir(t)
+	writeStaticFile(t, dir, "app.wasm", "plain wasm")
+	writeStaticFile(t, dir, "app.wasm.br", "brotli wasm")
+
+	req := httptest.NewRequest(http.MethodGet, "/app.wasm", nil)
+	req.Header.Set("Accept-Encoding", "br")
+	resp := httptest.NewRecorder()
+
+	compressedFileServer(http.Dir(dir)).ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, resp.Code)
+	}
+	if got := resp.Header().Get("Content-Encoding"); got != "br" {
+		t.Fatalf("expected br content encoding, got %q", got)
+	}
+	if got := resp.Body.String(); got != "brotli wasm" {
+		t.Fatalf("unexpected body: %q", got)
+	}
+	assertVaryAcceptEncoding(t, resp.Header())
+}
+
+func TestCompressedFileServerServesGzipWhenAvailable(t *testing.T) {
+	dir := staticTestDir(t)
+	writeStaticFile(t, dir, "style.css", "plain css")
+	writeStaticFile(t, dir, "style.css.gz", "gzip css")
+
+	req := httptest.NewRequest(http.MethodGet, "/style.css", nil)
+	req.Header.Set("Accept-Encoding", "gzip")
+	resp := httptest.NewRecorder()
+
+	compressedFileServer(http.Dir(dir)).ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, resp.Code)
+	}
+	if got := resp.Header().Get("Content-Encoding"); got != "gzip" {
+		t.Fatalf("expected gzip content encoding, got %q", got)
+	}
+	if got := resp.Body.String(); got != "gzip css" {
+		t.Fatalf("unexpected body: %q", got)
+	}
+	assertVaryAcceptEncoding(t, resp.Header())
+}
+
+func TestCompressedFileServerPrefersBrotliOverGzip(t *testing.T) {
+	dir := staticTestDir(t)
+	writeStaticFile(t, dir, "wasm_exec.js", "plain js")
+	writeStaticFile(t, dir, "wasm_exec.js.br", "brotli js")
+	writeStaticFile(t, dir, "wasm_exec.js.gz", "gzip js")
+
+	req := httptest.NewRequest(http.MethodGet, "/wasm_exec.js", nil)
+	req.Header.Set("Accept-Encoding", "gzip, br")
+	resp := httptest.NewRecorder()
+
+	compressedFileServer(http.Dir(dir)).ServeHTTP(resp, req)
+
+	if got := resp.Header().Get("Content-Encoding"); got != "br" {
+		t.Fatalf("expected br content encoding, got %q", got)
+	}
+	if got := resp.Body.String(); got != "brotli js" {
+		t.Fatalf("unexpected body: %q", got)
+	}
+}
+
+func TestCompressedFileServerFallsBackToPlainFile(t *testing.T) {
+	dir := staticTestDir(t)
+	writeStaticFile(t, dir, "index.html", "<h1>plain</h1>")
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Accept-Encoding", "br, gzip")
+	resp := httptest.NewRecorder()
+
+	compressedFileServer(http.Dir(dir)).ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, resp.Code)
+	}
+	if got := resp.Header().Get("Content-Encoding"); got != "" {
+		t.Fatalf("expected no content encoding, got %q", got)
+	}
+	if got := strings.TrimSpace(resp.Body.String()); got != "<h1>plain</h1>" {
+		t.Fatalf("unexpected body: %q", got)
+	}
+	assertVaryAcceptEncoding(t, resp.Header())
+}
+
+func TestCompressedFileServerDoesNotServeOrphanedCompressedFile(t *testing.T) {
+	dir := staticTestDir(t)
+	writeStaticFile(t, dir, "missing.css.gz", "gzip css")
+
+	req := httptest.NewRequest(http.MethodGet, "/missing.css", nil)
+	req.Header.Set("Accept-Encoding", "gzip")
+	resp := httptest.NewRecorder()
+
+	compressedFileServer(http.Dir(dir)).ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusNotFound {
+		t.Fatalf("expected status %d, got %d", http.StatusNotFound, resp.Code)
+	}
+	if got := resp.Header().Get("Content-Encoding"); got != "" {
+		t.Fatalf("expected no content encoding, got %q", got)
+	}
+}
+
+func staticTestDir(t *testing.T) string {
+	t.Helper()
+	return t.TempDir()
+}
+
+func writeStaticFile(t *testing.T, dir, name, content string) {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write %s: %v", name, err)
+	}
+}
+
+func assertVaryAcceptEncoding(t *testing.T, header http.Header) {
+	t.Helper()
+	for _, vary := range header.Values("Vary") {
+		for _, part := range strings.Split(vary, ",") {
+			if strings.EqualFold(strings.TrimSpace(part), "Accept-Encoding") {
+				return
+			}
+		}
+	}
+	t.Fatalf("expected Vary header to include Accept-Encoding, got %q", header.Values("Vary"))
 }
