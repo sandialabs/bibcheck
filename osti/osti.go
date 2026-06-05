@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/sandialabs/bibcheck/config"
+	"github.com/sandialabs/bibcheck/internal/wasmhttp"
 )
 
 const (
@@ -110,6 +111,7 @@ func (c *Client) GetRecord(ostiID string) (*Record, error) {
 	// Set Accept header for JSON response
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", config.UserAgent())
+	wasmhttp.ConfigureRequest(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

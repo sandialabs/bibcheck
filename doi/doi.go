@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/sandialabs/bibcheck/config"
+	"github.com/sandialabs/bibcheck/internal/wasmhttp"
 )
 
 // DOIResponse represents the JSON response from the DOI REST API
@@ -127,6 +128,7 @@ func resolveDOIWithParams(doi string, params url.Values) (*DOIResponse, error) {
 
 	// Add headers
 	req.Header.Set("User-Agent", config.UserAgent())
+	wasmhttp.ConfigureRequest(req)
 
 	// Execute request
 	resp, err := client.Do(req)
