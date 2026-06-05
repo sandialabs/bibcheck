@@ -297,7 +297,7 @@ func (c *Client) ChatCompletion(req ChatRequest, baseURL string) (*ChatResponse,
 
 }
 
-func makeLlama3170BChatRequest(messages ...Message) ChatRequest {
+func makeLlama3170BChatRequest(rf *ResponseFormat, messages ...Message) ChatRequest {
 
 	temperature := new(int)
 	*temperature = 0
@@ -305,7 +305,7 @@ func makeLlama3170BChatRequest(messages ...Message) ChatRequest {
 	return ChatRequest{
 		Model:          ModelLlama3170BInstruct,
 		Messages:       messages,
-		ResponseFormat: NewBibliographyPageResponseFormat(),
+		ResponseFormat: rf,
 		Provider: Provider{
 			RequireParameters: true,
 		},
@@ -314,7 +314,7 @@ func makeLlama3170BChatRequest(messages ...Message) ChatRequest {
 
 }
 
-func makeGemini25FlashChatRequest(messages ...Message) ChatRequest {
+func makeGemini25FlashChatRequest(rf *ResponseFormat, messages ...Message) ChatRequest {
 
 	temperature := new(int)
 	*temperature = 0
@@ -322,7 +322,7 @@ func makeGemini25FlashChatRequest(messages ...Message) ChatRequest {
 	return ChatRequest{
 		Model:          ModelGemini25Flash,
 		Messages:       messages,
-		ResponseFormat: NewBibliographyPageResponseFormat(),
+		ResponseFormat: rf,
 		Provider: Provider{
 			RequireParameters: true,
 			Sort:              "price",

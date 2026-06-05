@@ -32,10 +32,10 @@ func (c *Client) EntryFromRaw(b64 string, i int) (string, error) {
 }
 
 func (c *Client) EntryFromBibliography(b *documents.Bibliography, i int) (string, error) {
-	req := ChatRequest{
-		Model: "google/gemini-2.5-pro",
-		Messages: []Message{
-			systemString(`Report whether the requested bibliography entry exists in the provided document.
+
+	req := makeLlama3170BChatRequest(
+		NewBibEntryTextResponseFormat(),
+		systemString(`Report whether the requested bibliography entry exists in the provided document.
 If so, extract ONLY THAT ENTRY from the bibliography of the provided document.
 - Focus on the bibliography or references section.
 - The user is not asking for a bibliography entry of the provided document itself.
@@ -43,14 +43,8 @@ If so, extract ONLY THAT ENTRY from the bibliography of the provided document.
 - Preserve any errors in the entry.
 - Omit the inline reference ID that the document uses, e.g. [1] or [Smith1997].
 Produce JSON.`),
-			userStringAndBase64File(fmt.Sprintf("Extract bibliography entry %d", i), base64.StdEncoding.EncodeToString(b.PDF)),
-		},
-		ResponseFormat: NewBibEntryTextResponseFormat(),
-		Provider: Provider{
-			RequireParameters: true,
-			Sort:              "price",
-		},
-	}
+		userStringAndBase64File(fmt.Sprintf("Extract bibliography entry %d", i), base64.StdEncoding.EncodeToString(b.PDF)),
+	)
 
 	result := struct {
 		EntryExists       bool   `json:"entry_exists"`

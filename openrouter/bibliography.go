@@ -86,6 +86,7 @@ func (c *Client) pageContainsBibliography(pagePDF []byte) (bool, error) {
 	*temperature = 0
 
 	req := makeLlama3170BChatRequest(
+		NewBibliographyPageResponseFormat(),
 		systemString(`Determine whether the provided PDF page contains any part of the paper's bibliography or references section.
 - True if the page contains a bibliography section heading, one or more bibliography entries, or a continuation of bibliography entries from another page.
 - False otherwise, i.e., for any page that DOES NOT contain any part of the bibliography.
