@@ -23,6 +23,8 @@
 }
 
 body {
+  display: flex;
+  flex-direction: column;
   margin: 0;
   min-height: 100vh;
 }
@@ -42,7 +44,13 @@ input {
 .boot,
 .shell,
 .analysis-shell {
-  min-height: 100vh;
+  flex: 1;
+  min-height: 0;
+}
+
+.boot {
+  display: grid;
+  place-items: center;
 }
 
 .shell {
