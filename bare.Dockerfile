@@ -5,6 +5,10 @@ WORKDIR /src
 ENV GOMODCACHE=/tmp/gomodcache
 ENV GOCACHE=/tmp/gocache
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends brotli && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY go.mod go.sum ./
 RUN go mod download
 
@@ -15,15 +19,16 @@ RUN mkdir -p /out && \
     GOOS=js GOARCH=wasm go build -o /out/app.wasm ./web/app && \
     cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" /out/wasm_exec.js && \
     cp web/static/index.html web/static/style.css /out/ && \
+    for file in /out/app.wasm /out/wasm_exec.js /out/index.html /out/style.css; do gzip -k -f "$file" && brotli -k -f "$file"; done && \
     chmod -R g=u /out
 
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 
 COPY --from=build --chown=1001:0 /out/bibcheck /usr/local/bin/bibcheck
-COPY --from=build --chown=1001:0 /out/app.wasm /opt/bibcheck/web/app.wasm
-COPY --from=build --chown=1001:0 /out/wasm_exec.js /opt/bibcheck/web/wasm_exec.js
-COPY --from=build --chown=1001:0 /out/index.html /opt/bibcheck/web/index.html
-COPY --from=build --chown=1001:0 /out/style.css /opt/bibcheck/web/style.css
+COPY --from=build --chown=1001:0 /out/app.wasm* /opt/bibcheck/web/
+COPY --from=build --chown=1001:0 /out/wasm_exec.js* /opt/bibcheck/web/
+COPY --from=build --chown=1001:0 /out/index.html* /opt/bibcheck/web/
+COPY --from=build --chown=1001:0 /out/style.css* /opt/bibcheck/web/
 
 EXPOSE 8080
 
