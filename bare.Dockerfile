@@ -24,6 +24,7 @@ RUN mkdir -p /out && \
     chmod -R g=u /out
 
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
+LABEL org.opencontainers.image.source https://github.com/sandialabs/bibcheck
 
 COPY --from=build --chown=1001:0 /out/bibcheck /usr/local/bin/bibcheck
 COPY --from=build --chown=1001:0 /out/app.wasm* /opt/bibcheck/web/
