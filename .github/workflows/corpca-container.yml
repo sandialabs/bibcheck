@@ -1,0 +1,28 @@
+name: Corp CA Container Build
+
+on:
+    pull_request:
+        branches: ["main"]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+            - name: Generate dummy corporate CA certificate
+              run: |
+                  openssl req -x509 -newkey rsa:2048 -sha256 -days 1 -nodes \
+                    -keyout /tmp/corpca-ci.key \
+                    -out corpca.crt \
+                    -subj "/CN=corpca-ci.invalid"
+                  openssl x509 -in corpca.crt -noout -subject
+
+            - name: Build corp CA container
+              uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+              with:
+                  context: .
+                  file: corpca.Dockerfile
+                  push: false
+                  tags: bibcheck-corpca:test
