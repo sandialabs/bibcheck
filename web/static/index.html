@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bibcheck</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/wasm_exec.js"></script>
+</head>
+<body>
+  <div class="boot">Loading Bibcheck...</div>
+  <script>
+    const go = new Go();
+    WebAssembly.instantiateStreaming(fetch("/app.wasm"), go.importObject).then((result) => {
+      go.run(result.instance);
+    }).catch((err) => {
+      document.body.innerHTML = '<main class="shell"><section class="landing"><h1>Bibcheck</h1><div class="error">Unable to load app.wasm: ' + err + '</div></section></main>';
+    });
+  </script>
+</body>
+</html>

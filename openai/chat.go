@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sandialabs/bibcheck/internal/wasmhttp"
 )
 
 type Message struct {
@@ -118,6 +120,7 @@ func (c *Client) Chat(req *ChatRequest) (*ChatResponse, error) {
 		// Set headers
 		httpReq.Header.Set("Content-Type", "application/json")
 		httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
+		wasmhttp.ConfigureRequest(httpReq)
 
 		// Make the request
 		start := time.Now()
