@@ -175,6 +175,7 @@ func (a *app) renderLanding() vecty.ComponentOrHTML {
 				),
 			),
 		),
+		renderFooter(),
 	)
 }
 
@@ -215,6 +216,7 @@ func (a *app) renderAnalysis() vecty.ComponentOrHTML {
 				a.renderEntries(),
 			),
 		),
+		renderFooter(),
 	)
 }
 
