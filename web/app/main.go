@@ -62,35 +62,39 @@ func (a *app) renderLanding() vecty.ComponentOrHTML {
 				elem.Heading1(vecty.Text("Bibcheck")),
 				elem.Div(
 					vecty.Markup(vecty.Class("form-grid")),
-					elem.Label(
-						vecty.Markup(vecty.Class("field")),
-						elem.Span(vecty.Text("Shirty API key")),
-						elem.Input(
-							vecty.Markup(
-								prop.Type(prop.TypePassword),
-								prop.Placeholder("Paste Shirty API key"),
-								prop.Value(a.shirtyKey),
-								event.Input(func(e *vecty.Event) {
-									a.shirtyKey = e.Target.Get("value").String()
-									a.errorMessage = ""
-									vecty.Rerender(a)
-								}),
+					vecty.If(showShirtyKey,
+						elem.Label(
+							vecty.Markup(vecty.Class("field")),
+							elem.Span(vecty.Text("Shirty API key")),
+							elem.Input(
+								vecty.Markup(
+									prop.Type(prop.TypePassword),
+									prop.Placeholder("Paste Shirty API key"),
+									prop.Value(a.shirtyKey),
+									event.Input(func(e *vecty.Event) {
+										a.shirtyKey = e.Target.Get("value").String()
+										a.errorMessage = ""
+										vecty.Rerender(a)
+									}),
+								),
 							),
 						),
 					),
-					elem.Label(
-						vecty.Markup(vecty.Class("field")),
-						elem.Span(vecty.Text("OpenRouter API key")),
-						elem.Input(
-							vecty.Markup(
-								prop.Type(prop.TypePassword),
-								prop.Placeholder("Paste OpenRouter API key"),
-								prop.Value(a.openRouterKey),
-								event.Input(func(e *vecty.Event) {
-									a.openRouterKey = e.Target.Get("value").String()
-									a.errorMessage = ""
-									vecty.Rerender(a)
-								}),
+					vecty.If(showOpenRouterKey,
+						elem.Label(
+							vecty.Markup(vecty.Class("field")),
+							elem.Span(vecty.Text("OpenRouter API key")),
+							elem.Input(
+								vecty.Markup(
+									prop.Type(prop.TypePassword),
+									prop.Placeholder("Paste OpenRouter API key"),
+									prop.Value(a.openRouterKey),
+									event.Input(func(e *vecty.Event) {
+										a.openRouterKey = e.Target.Get("value").String()
+										a.errorMessage = ""
+										vecty.Rerender(a)
+									}),
+								),
 							),
 						),
 					),
@@ -252,7 +256,7 @@ func (a *app) renderEntries() vecty.MarkupOrChild {
 }
 
 func (a *app) ready() bool {
-	return len(a.pdf) > 0 && (strings.TrimSpace(a.shirtyKey) != "" || strings.TrimSpace(a.openRouterKey) != "")
+	return len(a.pdf) > 0 && (shirtyKey(a) != "" || openRouterKey(a) != "")
 }
 
 func (a *app) start() {
@@ -264,8 +268,8 @@ func (a *app) start() {
 	}
 
 	rt, err := workflow.NewRuntime(workflow.Keys{
-		ShirtyAPIKey:     a.shirtyKey,
-		OpenRouterAPIKey: a.openRouterKey,
+		ShirtyAPIKey:     shirtyKey(a),
+		OpenRouterAPIKey: openRouterKey(a),
 	})
 	if err != nil {
 		a.errorMessage = err.Error()
@@ -284,6 +288,20 @@ func (a *app) start() {
 		a.state = state
 		vecty.Rerender(a)
 	})
+}
+
+func shirtyKey(a *app) string {
+	if !showShirtyKey {
+		return ""
+	}
+	return strings.TrimSpace(a.shirtyKey)
+}
+
+func openRouterKey(a *app) string {
+	if !showOpenRouterKey {
+		return ""
+	}
+	return strings.TrimSpace(a.openRouterKey)
 }
 
 func (a *app) reset() {

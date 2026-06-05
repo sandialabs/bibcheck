@@ -19,7 +19,7 @@ COPY . .
 
 RUN mkdir -p /out && \
     CGO_ENABLED=0 go build -o /out/bibcheck . && \
-    GOOS=js GOARCH=wasm go build -o /out/app.wasm ./web/app && \
+    GOOS=js GOARCH=wasm go build -tags sandia_web -o /out/app.wasm ./web/app && \
     cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" /out/wasm_exec.js && \
     cp web/static/*.html /out/ && \
     cp web/static/*.css /out/ && \

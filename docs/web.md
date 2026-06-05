@@ -1,8 +1,8 @@
 # Web UI Deployment
 
 The web UI is a Go WebAssembly app served by the `bibcheck serve` command.
-The browser reads the selected PDF locally and calls Shirty or OpenRouter
-directly with the API key the user pastes into the page.
+The default browser app reads the selected PDF locally and calls Shirty or
+OpenRouter directly with the API key the user pastes into the page.
 
 The server also exposes `GET /api/fetch?url=...` for online bibliography
 resources. This endpoint lets the wasm app fetch HTML or PDF resources through
@@ -26,6 +26,12 @@ Build the WASM bundle from the repo root:
 
 ```bash
 GOOS=js GOARCH=wasm go build -o web/static/app.wasm ./web/app
+```
+
+or build the Sandia web UI variant, which swaps the OpenRouter API key field for a Shirty API key field:
+
+```bash
+GOOS=js GOARCH=wasm go build -tags sandia_web -o web/static/app.wasm ./web/app
 ```
 
 Copy the `wasm_exec.js` file that matches the Go toolchain used for the build:
@@ -84,9 +90,13 @@ Use these defaults:
 podman build -f bare.Dockerfile -t bibcheck-wasm .
 ```
 
-If your environment requires some specific SSL certificate, you will need to provide that certificate as `corpca.crt`, and then build `corpca.Dockerfile` instead:
+If your environment requires a Sandia/SNL-specific SSL certificate and web UI,
+provide that certificate as `corpca.crt`, and then build `snl.Dockerfile`
+instead. This image builds the WASM app with the `sandia_web` tag, hiding the
+OpenRouter API key field.
+
 ```bash
-podman build -f corpca.Dockerfile -t bibcheck-wasm .
+podman build -f snl.Dockerfile -t bibcheck-wasm-snl .
 ```
 
 Run with the image's default user:
