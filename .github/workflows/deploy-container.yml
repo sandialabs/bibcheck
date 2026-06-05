@@ -3,6 +3,8 @@ name: Deploy Container
 on:
   push:
     branches: [ "main" ]
+    tags:
+      - 'v*'
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
@@ -22,9 +24,18 @@ jobs:
           username: sandialabs
           password: ${{ secrets.CR_PAT }}
 
+      - name: Set image tags
+        id: image-tags
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "tags=ghcr.io/sandialabs/bibcheck-wasm:${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tags=ghcr.io/sandialabs/bibcheck-wasm:latest" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build and push container
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/sandialabs/bibcheck-wasm:latest
+          tags: ${{ steps.image-tags.outputs.tags }}
