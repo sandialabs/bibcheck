@@ -84,12 +84,9 @@ Use these defaults:
 podman build -f bare.Dockerfile -t bibcheck-wasm .
 ```
 
-If your environment requires some specific SSL certificate, do this:
+If your environment requires some specific SSL certificate, you will need to provide that certificate as `corpca.crt`, and then build `corpca.Dockerfile` instead:
 ```bash
-
-# retrieve the certificate, name it `corpca.crt`
-
-podman build -f corpca.Dockerfile -t bibcheck-wasm
+podman build -f corpca.Dockerfile -t bibcheck-wasm .
 ```
 
 Run with the image's default user:
