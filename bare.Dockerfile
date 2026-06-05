@@ -18,7 +18,8 @@ RUN mkdir -p /out && \
     CGO_ENABLED=0 go build -o /out/bibcheck . && \
     GOOS=js GOARCH=wasm go build -o /out/app.wasm ./web/app && \
     cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" /out/wasm_exec.js && \
-    cp web/static/index.html web/static/style.css web/static/footer.css /out/ && \
+    cp web/static/*.html /out/ && \
+    cp web/static/*.css /out/ && \
     for file in /out/*.wasm /out/*.html /out/*.css /out/*.js; do gzip -k -f "$file" && brotli -k -f "$file"; done && \
     chmod -R g=u /out
 
