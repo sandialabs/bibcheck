@@ -84,6 +84,11 @@ Use these defaults:
 podman build -t bibcheck-wasm .
 ```
 
+If your environment requires some specific SSL certificates, try this:
+```bash
+podman build -t bibcheck-wasm --secret id=corpca,src=/etc/ssl/certs/<whatever>.pem
+```
+
 Run with the image's default user:
 
 ```bash

@@ -6,7 +6,14 @@ ENV GOMODCACHE=/tmp/gomodcache
 ENV GOCACHE=/tmp/gocache
 
 COPY go.mod go.sum ./
-RUN go mod download
+# RUN go mod download
+
+# if the user provided a corpca secret, then assume it's a certificate and try to use it before go mod download
+RUN --mount=type=secret,id=corpca,target=/usr/local/share/ca-certificates/corpca.crt,required=false \
+    if [ -f /usr/local/share/ca-certificates/corpca.crt ]; then \
+        update-ca-certificates; \
+    fi && \
+    go mod download
 
 COPY . .
 RUN mkdir -p /out
