@@ -7,3 +7,7 @@ package wasmhttp
 import "net/http"
 
 func ConfigureRequest(_ *http.Request) {}
+
+func FetchURL(rawURL string) string {
+	return rawURL
+}

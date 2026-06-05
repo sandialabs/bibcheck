@@ -102,8 +102,9 @@ func retrieveUrl(url string) ([]byte, string, error) {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
+	fetchURL := wasmhttp.FetchURL(url)
 	log.Println("GET", url)
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequest(http.MethodGet, fetchURL, nil)
 	if err != nil {
 		return nil, "", fmt.Errorf("http.NewRequest error: %w", err)
 	}

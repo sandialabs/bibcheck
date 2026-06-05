@@ -4,11 +4,18 @@
 
 package wasmhttp
 
-import "net/http"
+import (
+	"net/http"
+	"net/url"
+)
 
 func ConfigureRequest(req *http.Request) {
 	// Browsers may reject attempts to set User-Agent in fetch/CORS requests.
 	req.Header.Del("User-Agent")
 	// Go's wasm transport maps js.fetch:* pseudo-headers to browser fetch options.
 	req.Header.Add("js.fetch:mode", "cors")
+}
+
+func FetchURL(rawURL string) string {
+	return "/api/fetch?url=" + url.QueryEscape(rawURL)
 }

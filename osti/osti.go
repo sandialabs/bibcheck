@@ -174,6 +174,8 @@ func (c *Client) ListRecords(opts *ListRecordsOptions) (*RecordsResponse, error)
 	}
 
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", config.UserAgent())
+	wasmhttp.ConfigureRequest(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

@@ -1,10 +1,24 @@
 # Web UI Deployment
 
-The web UI is a static Go WebAssembly app: the browser reads the selected PDF locally and calls Shirty or OpenRouter directly with the API key the user pastes into the page.
+The web UI is a Go WebAssembly app served by the `bibcheck serve` command.
+The browser reads the selected PDF locally and calls Shirty or OpenRouter
+directly with the API key the user pastes into the page.
 
-The webapp is static-only.
-It does not persist PDF uploads or state, store API keys, or expose analysis API endpoints.
-All state is held in browser memory for the current page session.
+The server also exposes `GET /api/fetch?url=...` for online bibliography
+resources. This endpoint lets the wasm app fetch HTML or PDF resources through
+the same origin when the target website does not allow browser CORS requests.
+It does not persist PDF uploads or state, store API keys, or expose analysis API
+endpoints. All analysis state is held in browser memory for the current page
+session.
+
+## Network Exposure
+
+Do not expose `bibcheck serve` directly to the public internet.
+
+The `/api/fetch` endpoint is intentionally narrow, but it is still a server-side
+URL fetcher. If the service is reachable by untrusted users, they could use it as
+a free proxy. Deploy it only on trusted networks, behind authentication, or
+behind an ingress policy that restricts access to intended users.
 
 ## Local Build
 
@@ -20,7 +34,7 @@ Copy the `wasm_exec.js` file that matches the Go toolchain used for the build:
 cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" web/static/wasm_exec.js
 ```
 
-Serve the static directory locally:
+Serve the web UI locally:
 
 ```bash
 go run . serve
@@ -28,39 +42,43 @@ go run . serve
 
 Then open <http://localhost:8080>.
 
+By default, `/api/fetch` reads at most 25 MiB from an upstream response. Adjust
+that for larger PDFs if needed:
+
+```bash
+go run . serve --fetch-max-bytes 52428800
+```
+
 ## Container Image
 
 Uses a multi-stage container build:
 
-1. A Go builder stage compiles `./web/app` to `app.wasm`.
-2. The builder stage copies the matching Go `wasm_exec.js`.
-3. A runtime stage serves only static files with Red Hat's OpenShift-oriented nginx image.
+1. A Go builder stage compiles the native `bibcheck` server binary.
+2. The builder stage compiles `./web/app` to `app.wasm`.
+3. The builder stage copies the matching Go `wasm_exec.js`.
+4. A UBI minimal runtime stage runs `bibcheck serve` on port `8080`.
 
-For OpenShift, use the Red Hat UBI nginx image `registry.access.redhat.com/ubi9/nginx-124:latest`.
-This image is intended for OpenShift nginx applications and runs on port `8080`.
-
+The runtime container serves static web assets from `/opt/bibcheck/web` and
+handles `/api/fetch` in the same process.
 
 ## OpenShift Notes
 
 OpenShift commonly runs containers with an arbitrary non-root UID.
-The runtime image must not require a fixed UID, root-owned writable nginx paths, or binding to privileged ports.
+The runtime image must not require a fixed UID, root-owned writable application
+paths, or binding to privileged ports.
 
 Use these defaults:
 
 - Listen on `8080`, not `80`.
-- Serve static files from `/opt/app-root/src`.
+- Serve static files from `/opt/bibcheck/web`.
 - Do not write logs or cache files into application directories.
 - Keep static assets world-readable or group-readable.
 - Do not bake API keys into the image. Users paste keys into the browser at run
   time.
-- Do not add a backend proxy unless the browser-direct Shirty/OpenRouter access
-  model changes.
-
-The Red Hat nginx image also supports S2I, but this repository uses a Dockerfile
-because the WASM bundle must be compiled before nginx serves it.
+- Restrict access to the service. Do not publish `/api/fetch` as an unauthenticated
+  public endpoint.
 
 ## Local Container Development
-
 
 ```bash
 podman build -t bibcheck-wasm .
@@ -85,6 +103,7 @@ curl -I http://localhost:8080/
 curl -I http://localhost:8080/app.wasm
 curl -I http://localhost:8080/wasm_exec.js
 curl -I http://localhost:8080/style.css
+curl -sS -D - "http://localhost:8080/api/fetch?url=https%3A%2F%2Fwww.hpcg-benchmark.org%2F" -o /tmp/bibcheck-fetch.html
 ```
 
 Expected results:
@@ -93,3 +112,5 @@ Expected results:
 - `/app.wasm` returns `200 OK` and `application/wasm`.
 - `/wasm_exec.js` returns `200 OK` and JavaScript content.
 - `/style.css` returns `200 OK` and CSS content.
+- `/api/fetch?...` returns the upstream response when the server can reach the
+  requested URL and the response is within the configured byte limit.

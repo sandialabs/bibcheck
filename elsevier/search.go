@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/sandialabs/bibcheck/internal/wasmhttp"
 )
 
 type SearchQuery struct {
@@ -120,6 +122,7 @@ func (c *Client) Search(query *SearchQuery) (*SearchResponse, error) {
 	req.Header.Set("X-ELS-APIKey", c.apiKey)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "github.com/sandialabs/bibcheck")
+	wasmhttp.ConfigureRequest(req)
 
 	// Execute request
 	client := &http.Client{Timeout: c.timeout}
