@@ -11,6 +11,13 @@ import (
 	"time"
 )
 
+const (
+	ModelLlama3170BInstruct string = "meta-llama/llama-3.1-70b-instruct"
+	ModelGemini25Flash      string = "google/gemini-2.5-flash"
+
+	ProviderAmazonBedrock string = "amazon-bedrock"
+)
+
 // Client represents an OpenRouter API client
 type Client struct {
 	apiKey     string
@@ -154,8 +161,9 @@ func PDFParserPlugins(engine PDFEngine) []Plugin {
 
 // Provider represents provider configuration
 type Provider struct {
-	RequireParameters bool   `json:"require_parameters"`
-	Sort              string `json:"sort,omitempty"`
+	RequireParameters bool     `json:"require_parameters"`
+	Sort              string   `json:"sort,omitempty"`
+	Only              []string `json:"only,omitempty"`
 }
 
 type Reasoning struct {
@@ -286,5 +294,40 @@ func (c *Client) ChatCompletion(req ChatRequest, baseURL string) (*ChatResponse,
 	// log.Println(chatResp)
 
 	return &chatResp, nil
+
+}
+
+func makeLlama3170BChatRequest(messages ...Message) ChatRequest {
+
+	temperature := new(int)
+	*temperature = 0
+
+	return ChatRequest{
+		Model:          ModelLlama3170BInstruct,
+		Messages:       messages,
+		ResponseFormat: NewBibliographyPageResponseFormat(),
+		Provider: Provider{
+			RequireParameters: true,
+		},
+		Temperature: temperature,
+	}
+
+}
+
+func makeGemini25FlashChatRequest(messages ...Message) ChatRequest {
+
+	temperature := new(int)
+	*temperature = 0
+
+	return ChatRequest{
+		Model:          ModelGemini25Flash,
+		Messages:       messages,
+		ResponseFormat: NewBibliographyPageResponseFormat(),
+		Provider: Provider{
+			RequireParameters: true,
+			Sort:              "price",
+		},
+		Temperature: temperature,
+	}
 
 }

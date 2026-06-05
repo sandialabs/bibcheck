@@ -85,22 +85,13 @@ func (c *Client) pageContainsBibliography(pagePDF []byte) (bool, error) {
 	temperature := new(int)
 	*temperature = 0
 
-	req := ChatRequest{
-		Model: "google/gemini-2.5-flash",
-		Messages: []Message{
-			systemString(`Determine whether the provided PDF page contains any part of the paper's bibliography or references section.
-- Return true if the page contains a bibliography heading, one or more bibliography entries, or a continuation of bibliography entries from another page.
-- Return false otherwise, i.e., for any page that DOES NOT contain any part of a bibliography: body pages, appendices, acknowledgments, author bios, unrelated back matter, etc.
-- Produce JSON.`),
-			userBase64File(base64.StdEncoding.EncodeToString(pagePDF)),
-		},
-		ResponseFormat: NewBibliographyPageResponseFormat(),
-		Provider: Provider{
-			RequireParameters: true,
-			Sort:              "price",
-		},
-		Temperature: temperature,
-	}
+	req := makeLlama3170BChatRequest(
+		systemString(`Determine whether the provided PDF page contains any part of the paper's bibliography or references section.
+- True if the page contains a bibliography section heading, one or more bibliography entries, or a continuation of bibliography entries from another page.
+- False otherwise, i.e., for any page that DOES NOT contain any part of the bibliography.
+- Produce JSON adhereing to the schema.`),
+		userBase64File(base64.StdEncoding.EncodeToString(pagePDF)),
+	)
 
 	result := struct {
 		ContainsBibliography bool `json:"contains_bibliography"`
