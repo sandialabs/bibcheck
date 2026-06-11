@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func TestChatWritesReplayableAuditPair(t *testing.T) {
+func TestChatWritesReplayableAuditSet(t *testing.T) {
 	const apiKey = "secret-api-key"
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -39,12 +39,15 @@ func TestChatWritesReplayableAuditPair(t *testing.T) {
 	}
 
 	cfgPaths := auditFiles(t, dir, "*.cfg")
-	jsonPaths := auditFiles(t, dir, "*.json")
-	if len(cfgPaths) != 1 || len(jsonPaths) != 1 {
-		t.Fatalf("audit files = %v, %v; want one pair", cfgPaths, jsonPaths)
+	bodyPaths := auditFiles(t, dir, "*.body.json")
+	auditPaths := auditFiles(t, dir, "*.audit.json")
+	if len(cfgPaths) != 1 || len(bodyPaths) != 1 || len(auditPaths) != 1 {
+		t.Fatalf("audit files = %v, %v, %v; want one set", cfgPaths, bodyPaths, auditPaths)
 	}
-	if strings.TrimSuffix(cfgPaths[0], ".cfg") != strings.TrimSuffix(jsonPaths[0], ".json") {
-		t.Fatalf("audit pair stems differ: %q and %q", cfgPaths[0], jsonPaths[0])
+	stem := strings.TrimSuffix(cfgPaths[0], ".cfg")
+	if stem != strings.TrimSuffix(bodyPaths[0], ".body.json") ||
+		stem != strings.TrimSuffix(auditPaths[0], ".audit.json") {
+		t.Fatalf("audit set stems differ: %q, %q, and %q", cfgPaths[0], bodyPaths[0], auditPaths[0])
 	}
 	if filepath.Base(filepath.Dir(cfgPaths[0])) != "2026-06-11" {
 		t.Fatalf("audit day directory = %q", filepath.Dir(cfgPaths[0]))
@@ -61,8 +64,7 @@ func TestChatWritesReplayableAuditPair(t *testing.T) {
 		`request = "POST"`,
 		`url = "` + server.URL + `/chat/completions"`,
 		`header = "Content-Type: application/json"`,
-		`data-binary = "{\"model\":\"test-model\"`,
-		`quote: \\\"hello\\\"\\nnext`,
+		`data-binary = "@` + filepath.Base(bodyPaths[0]) + `"`,
 	} {
 		if !strings.Contains(cfg, want) {
 			t.Errorf("CURL config missing %q:\n%s", want, cfg)
@@ -71,9 +73,24 @@ func TestChatWritesReplayableAuditPair(t *testing.T) {
 	if strings.Contains(cfg, apiKey) {
 		t.Fatalf("CURL config contains API key:\n%s", cfg)
 	}
+	if strings.Contains(cfg, `"model":"test-model"`) {
+		t.Fatalf("CURL config contains inline request body:\n%s", cfg)
+	}
+
+	body, err := os.ReadFile(bodyPaths[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantBody, err := json.Marshal(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(body) != string(wantBody) {
+		t.Fatalf("body = %q, want %q", body, wantBody)
+	}
 
 	var record auditRecord
-	readAuditRecord(t, jsonPaths[0], &record)
+	readAuditRecord(t, auditPaths[0], &record)
 	if record.Outcome != "success" || record.Attempt != 1 {
 		t.Fatalf("audit record = %+v", record)
 	}
@@ -82,7 +99,7 @@ func TestChatWritesReplayableAuditPair(t *testing.T) {
 	}
 }
 
-func TestChatWritesAuditPairForEveryRetryAttempt(t *testing.T) {
+func TestChatWritesAuditSetForEveryRetryAttempt(t *testing.T) {
 	var requests atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if requests.Add(1) == 1 {
@@ -103,17 +120,18 @@ func TestChatWritesAuditPairForEveryRetryAttempt(t *testing.T) {
 	}
 
 	cfgPaths := auditFiles(t, dir, "*.cfg")
-	jsonPaths := auditFiles(t, dir, "*.json")
-	if len(cfgPaths) != 2 || len(jsonPaths) != 2 {
-		t.Fatalf("audit files = %v, %v; want two pairs", cfgPaths, jsonPaths)
+	bodyPaths := auditFiles(t, dir, "*.body.json")
+	auditPaths := auditFiles(t, dir, "*.audit.json")
+	if len(cfgPaths) != 2 || len(bodyPaths) != 2 || len(auditPaths) != 2 {
+		t.Fatalf("audit files = %v, %v, %v; want two sets", cfgPaths, bodyPaths, auditPaths)
 	}
 	if filepath.Base(cfgPaths[0]) >= filepath.Base(cfgPaths[1]) {
 		t.Fatalf("filenames are not ordered: %q, %q", cfgPaths[0], cfgPaths[1])
 	}
 
 	var first, second auditRecord
-	readAuditRecord(t, jsonPaths[0], &first)
-	readAuditRecord(t, jsonPaths[1], &second)
+	readAuditRecord(t, auditPaths[0], &first)
+	readAuditRecord(t, auditPaths[1], &second)
 	if first.Attempt != 1 || first.Outcome != "rate_limited" {
 		t.Fatalf("first audit record = %+v", first)
 	}
@@ -148,14 +166,57 @@ func TestAuditLoggersConcurrentAttemptsHaveUniqueOrderedStems(t *testing.T) {
 	wg.Wait()
 
 	cfgPaths := auditFiles(t, dir, "*.cfg")
-	jsonPaths := auditFiles(t, dir, "*.json")
-	if len(cfgPaths) != count || len(jsonPaths) != count {
-		t.Fatalf("audit file counts = %d cfg, %d json; want %d each", len(cfgPaths), len(jsonPaths), count)
+	bodyPaths := auditFiles(t, dir, "*.body.json")
+	auditPaths := auditFiles(t, dir, "*.audit.json")
+	if len(cfgPaths) != count || len(bodyPaths) != count || len(auditPaths) != count {
+		t.Fatalf(
+			"audit file counts = %d cfg, %d body, %d audit; want %d each",
+			len(cfgPaths),
+			len(bodyPaths),
+			len(auditPaths),
+			count,
+		)
 	}
 	for i := range cfgPaths {
-		if strings.TrimSuffix(cfgPaths[i], ".cfg") != strings.TrimSuffix(jsonPaths[i], ".json") {
-			t.Fatalf("audit pair %d stems differ: %q and %q", i, cfgPaths[i], jsonPaths[i])
+		stem := strings.TrimSuffix(cfgPaths[i], ".cfg")
+		if stem != strings.TrimSuffix(bodyPaths[i], ".body.json") ||
+			stem != strings.TrimSuffix(auditPaths[i], ".audit.json") {
+			t.Fatalf("audit set %d stems differ: %q, %q, and %q", i, cfgPaths[i], bodyPaths[i], auditPaths[i])
 		}
+	}
+}
+
+func TestAuditLoggerCleansBodyWhenConfigStemExists(t *testing.T) {
+	dir := t.TempDir()
+	now := time.Date(2026, time.June, 11, 12, 34, 56, 0, time.Local)
+	dayDir := filepath.Join(dir, "2026-06-11")
+	if err := os.Mkdir(dayDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	firstStem := "20260611T123456.000000000-0001"
+	if err := os.WriteFile(filepath.Join(dayDir, firstStem+".cfg"), []byte("existing"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	logger, err := newAuditLogger(auditLoggerConfig{
+		enabled: true,
+		dir:     dir,
+		now:     func() time.Time { return now },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	attempt := logger.begin(http.MethodPost, "https://example.com", []byte(`{}`))
+	attempt.finish(auditRecord{Outcome: "success"})
+
+	if _, err := os.Stat(filepath.Join(dayDir, firstStem+".body.json")); !os.IsNotExist(err) {
+		t.Fatalf("body for occupied config stem remains: %v", err)
+	}
+	if files := auditFiles(t, dir, "*.body.json"); len(files) != 1 {
+		t.Fatalf("body files = %v, want one", files)
+	}
+	if files := auditFiles(t, dir, "*.audit.json"); len(files) != 1 {
+		t.Fatalf("audit files = %v, want one", files)
 	}
 }
 
