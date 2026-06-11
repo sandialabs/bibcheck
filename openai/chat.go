@@ -96,6 +96,7 @@ func (c *Client) Chat(req *ChatRequest) (*ChatResponse, error) {
 		auditRecord := newAuditRecord(http.MethodPost, url, req, requestBytes, attempt+1)
 
 		// Create the HTTP request
+		log.Printf("POST %s (%dB)", url, requestBytes)
 		httpReq, err := http.NewRequest("POST", url, bytes.NewReader(jsonData))
 		if err != nil {
 			auditRecord.Outcome = "request_build_error"
@@ -176,7 +177,8 @@ func (c *Client) Chat(req *ChatRequest) (*ChatResponse, error) {
 			}
 			auditAttempt.finish(auditRecord)
 			log.Printf(
-				"openai: retrying upstream status=%d retry_after=%s attempt=%d/%d correlation_ids=%s",
+				"openai: retrying url=%s upstream status=%d retry_after=%s attempt=%d/%d correlation_ids=%s",
+				url,
 				resp.StatusCode,
 				waitFor,
 				attempt+1,

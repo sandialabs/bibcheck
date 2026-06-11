@@ -5,6 +5,7 @@ package shirty
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/openai"
@@ -12,15 +13,17 @@ import (
 )
 
 func (w *Workflow) NumBibEntries(b *documents.Bibliography) (int, error) {
+	log.Println("NumBibEntries(...)")
+
 	text, err := b.Content()
 	if err != nil {
 		return -1, err
 	}
 
-	temp := new(float64)
-	*temp = 0.1
+	// temp := new(float64)
+	// *temp = 0.1
 
-	model := "openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8"
+	model := "meta-llama/Llama-3.3-70B-Instruct"
 	req := &openai.ChatRequest{
 		Model: model,
 		Messages: []openai.Message{
@@ -28,7 +31,7 @@ func (w *Workflow) NumBibEntries(b *documents.Bibliography) (int, error) {
 Produce JSON.`),
 			openai.MakeUserMessage(fmt.Sprintf("DOCUMENT TEXT:\n%s", text)),
 		},
-		Temperature:    temp,
+		// Temperature:    temp,
 		ResponseFormat: openai.NewResponseFormat(schema.NumEntriesJSONSchema("num_bib_entries", "integer")),
 	}
 

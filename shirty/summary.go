@@ -15,7 +15,7 @@ import (
 
 var (
 	// gpt-oss-120b seems unable to consistently obey the response format
-	summaryModelLlama33_70BInstruct  = "openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8"
+	summaryModelLlama33_70BInstruct  = "meta-llama/Llama-3.3-70B-Instruct"
 	summaryPromptLlama33_70BInstruct = `The user will provide you with a bibliography entry, and some results for searching external databases for that entry. Determine whether the bibliography entry matches the search results.
 - Search results that conflict with the entry are almost certainly a mismatch
     - The author list must provide the same authors in the same order (allowing for "et al." at the end)

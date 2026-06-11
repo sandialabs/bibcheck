@@ -19,7 +19,8 @@ const (
 	KeyShirtyBaseURL     = "shirty_base_url"
 
 	DefaultOpenRouterBaseURL = "https://openrouter.ai/api/v1"
-	DefaultShirtyBaseURL     = "https://shirty.sandia.gov/api/v1"
+
+	DefaultShirtyBaseURL = "https://shirty.sandia.gov/api/v1"
 )
 
 type Settings struct {
