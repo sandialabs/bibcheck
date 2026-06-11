@@ -47,7 +47,7 @@ type auditRecord struct {
 }
 
 type auditAttempt struct {
-	jsonPath  string
+	auditPath string
 	timestamp string
 }
 
@@ -89,24 +89,39 @@ func (a *auditLogger) begin(method, url string, body []byte) *auditAttempt {
 		return nil
 	}
 
-	var cfgPath string
+	var auditPath string
 	for {
 		a.sequence++
-		stem := fmt.Sprintf("%s-%020d", now.Format("20060102T150405.000000000"), a.sequence)
-		cfgPath = filepath.Join(dir, stem+".cfg")
-		err := writeFileExclusive(cfgPath, curlConfig(filepath.Base(cfgPath), method, url, body))
+		stem := fmt.Sprintf("%s-%04d", now.Format("20060102T150405.000000000"), a.sequence)
+		bodyPath := filepath.Join(dir, stem+".body.json")
+		err := writeFileExclusive(bodyPath, body)
 		if errors.Is(err, os.ErrExist) {
 			continue
 		}
 		if err != nil {
-			log.Printf("openai audit: write failed path=%q err=%v", cfgPath, err)
+			log.Printf("openai audit: write failed path=%q err=%v", bodyPath, err)
 			return nil
 		}
+
+		cfgPath := filepath.Join(dir, stem+".cfg")
+		err = writeFileExclusive(cfgPath, curlConfig(filepath.Base(cfgPath), filepath.Base(bodyPath), method, url))
+		if err != nil {
+			log.Printf("openai audit: write failed path=%q err=%v", cfgPath, err)
+			if removeErr := os.Remove(bodyPath); removeErr != nil {
+				log.Printf("openai audit: cleanup failed path=%q err=%v", bodyPath, removeErr)
+			}
+			if errors.Is(err, os.ErrExist) {
+				continue
+			}
+			return nil
+		}
+
+		auditPath = filepath.Join(dir, stem+".audit.json")
 		break
 	}
 
 	return &auditAttempt{
-		jsonPath:  strings.TrimSuffix(cfgPath, ".cfg") + ".json",
+		auditPath: auditPath,
 		timestamp: now.Format(time.RFC3339Nano),
 	}
 }
@@ -124,8 +139,8 @@ func (a *auditAttempt) finish(record auditRecord) {
 	}
 	payload = append(payload, '\n')
 
-	if err := writeFileExclusive(a.jsonPath, payload); err != nil {
-		log.Printf("openai audit: write failed path=%q err=%v", a.jsonPath, err)
+	if err := writeFileExclusive(a.auditPath, payload); err != nil {
+		log.Printf("openai audit: write failed path=%q err=%v", a.auditPath, err)
 	}
 }
 
@@ -136,9 +151,14 @@ func writeFileExclusive(path string, payload []byte) error {
 	}
 	if _, err := f.Write(payload); err != nil {
 		_ = f.Close()
+		_ = os.Remove(path)
 		return err
 	}
-	return f.Close()
+	if err := f.Close(); err != nil {
+		_ = os.Remove(path)
+		return err
+	}
+	return nil
 }
 
 func (a *auditLogger) currentTime() time.Time {
@@ -148,7 +168,7 @@ func (a *auditLogger) currentTime() time.Time {
 	return time.Now()
 }
 
-func curlConfig(filename, method, url string, body []byte) []byte {
+func curlConfig(filename, bodyFilename, method, url string) []byte {
 	var b strings.Builder
 	b.WriteString("# Replay with:\n")
 	b.WriteString("# curl -K ")
@@ -158,7 +178,7 @@ func curlConfig(filename, method, url string, body []byte) []byte {
 	writeCurlOption(&b, "request", method)
 	writeCurlOption(&b, "url", url)
 	writeCurlOption(&b, "header", "Content-Type: application/json")
-	writeCurlOption(&b, "data-binary", string(body))
+	writeCurlOption(&b, "data-binary", "@"+bodyFilename)
 	return []byte(b.String())
 }
 
