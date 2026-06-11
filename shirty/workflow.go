@@ -19,10 +19,10 @@ type WorkflowOpt func(*Workflow)
 func NewWorkflow(apiKey string, options ...WorkflowOpt) *Workflow {
 	c := &Workflow{
 		apiKey:  apiKey,
-		baseUrl: "https://shirty.sandia.gov/api/v1",
+		baseUrl: "https://shirty-qual.apps.openshift.sandia.gov/api/v1",
 		oaiClient: openai.NewClient(
 			apiKey,
-			openai.WithBaseUrl("https://shirty.sandia.gov/api/v1"),
+			openai.WithBaseUrl("https://shirty-qual.apps.openshift.sandia.gov/api/v1"),
 			openai.WithTimeout(60*time.Second),
 		),
 	}

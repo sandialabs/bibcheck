@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -28,6 +29,7 @@ type TextractResponse struct {
 
 func (w *Workflow) textractImpl(requestBody io.Reader, contentType string) (*TextractResponse, error) {
 	// Create the request
+	log.Printf("POST %s", w.baseUrl+"/extract/textract/create")
 	req, err := http.NewRequest("POST", w.baseUrl+"/extract/textract/create", requestBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)

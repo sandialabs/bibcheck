@@ -18,7 +18,7 @@ func NewParseTitleRF() *openai.ResponseFormat {
 }
 
 func (w *Workflow) ParseTitle(text string) (string, error) {
-	model := "openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8"
+	model := "meta-llama/Llama-3.3-70B-Instruct"
 
 	temp := new(float64)
 	*temp = 0
