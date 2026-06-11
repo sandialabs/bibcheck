@@ -4,9 +4,12 @@ package openai
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -20,10 +23,11 @@ type auditLoggerConfig struct {
 }
 
 type auditLogger struct {
-	enabled bool
-	dir     string
-	now     func() time.Time
-	mu      sync.Mutex
+	enabled  bool
+	dir      string
+	now      func() time.Time
+	mu       sync.Mutex
+	sequence uint64
 }
 
 type auditRecord struct {
@@ -40,6 +44,11 @@ type auditRecord struct {
 	Outcome        string   `json:"outcome"`
 	CorrelationIDs []string `json:"correlation_ids,omitempty"`
 	Error          string   `json:"error,omitempty"`
+}
+
+type auditAttempt struct {
+	jsonPath  string
+	timestamp string
 }
 
 func newAuditLogger(cfg auditLoggerConfig) (*auditLogger, error) {
@@ -64,34 +73,50 @@ func newAuditLogger(cfg auditLoggerConfig) (*auditLogger, error) {
 	}, nil
 }
 
-func (a *auditLogger) write(record auditRecord) {
+func (a *auditLogger) begin(method, url string, body []byte) *auditAttempt {
 	if a == nil || !a.enabled {
-		return
+		return nil
 	}
 
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	now := a.now
-	if now == nil {
-		now = time.Now
+	now := a.currentTime()
+	dir := filepath.Join(a.dir, now.Format("2006-01-02"))
+
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		log.Printf("openai audit: mkdir failed dir=%q err=%v", dir, err)
+		return nil
 	}
 
-	record.Timestamp = now().Format(time.RFC3339Nano)
+	var cfgPath string
+	for {
+		a.sequence++
+		stem := fmt.Sprintf("%s-%020d", now.Format("20060102T150405.000000000"), a.sequence)
+		cfgPath = filepath.Join(dir, stem+".cfg")
+		err := writeFileExclusive(cfgPath, curlConfig(filepath.Base(cfgPath), method, url, body))
+		if errors.Is(err, os.ErrExist) {
+			continue
+		}
+		if err != nil {
+			log.Printf("openai audit: write failed path=%q err=%v", cfgPath, err)
+			return nil
+		}
+		break
+	}
 
-	if err := os.MkdirAll(a.dir, 0o700); err != nil {
-		log.Printf("openai audit: mkdir failed dir=%q err=%v", a.dir, err)
+	return &auditAttempt{
+		jsonPath:  strings.TrimSuffix(cfgPath, ".cfg") + ".json",
+		timestamp: now.Format(time.RFC3339Nano),
+	}
+}
+
+func (a *auditAttempt) finish(record auditRecord) {
+	if a == nil {
 		return
 	}
 
-	path := filepath.Join(a.dir, now().Format("2006-01-02")+".ndjson")
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
-	if err != nil {
-		log.Printf("openai audit: open failed path=%q err=%v", path, err)
-		return
-	}
-	defer f.Close()
-
+	record.Timestamp = a.timestamp
 	payload, err := json.Marshal(record)
 	if err != nil {
 		log.Printf("openai audit: marshal failed err=%v", err)
@@ -99,10 +124,60 @@ func (a *auditLogger) write(record auditRecord) {
 	}
 	payload = append(payload, '\n')
 
-	if _, err := f.Write(payload); err != nil {
-		log.Printf("openai audit: write failed path=%q err=%v", path, err)
-		return
+	if err := writeFileExclusive(a.jsonPath, payload); err != nil {
+		log.Printf("openai audit: write failed path=%q err=%v", a.jsonPath, err)
 	}
+}
+
+func writeFileExclusive(path string, payload []byte) error {
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err
+	}
+	if _, err := f.Write(payload); err != nil {
+		_ = f.Close()
+		return err
+	}
+	return f.Close()
+}
+
+func (a *auditLogger) currentTime() time.Time {
+	if a.now != nil {
+		return a.now()
+	}
+	return time.Now()
+}
+
+func curlConfig(filename, method, url string, body []byte) []byte {
+	var b strings.Builder
+	b.WriteString("# Replay with:\n")
+	b.WriteString("# curl -K ")
+	b.WriteString(filename)
+	b.WriteString(" \\\n")
+	b.WriteString("#   -H \"Authorization: Bearer $TOKEN\"\n\n")
+	writeCurlOption(&b, "request", method)
+	writeCurlOption(&b, "url", url)
+	writeCurlOption(&b, "header", "Content-Type: application/json")
+	writeCurlOption(&b, "data-binary", string(body))
+	return []byte(b.String())
+}
+
+func writeCurlOption(b *strings.Builder, name, value string) {
+	b.WriteString(name)
+	b.WriteString(" = \"")
+	b.WriteString(escapeCurlConfig(value))
+	b.WriteString("\"\n")
+}
+
+func escapeCurlConfig(value string) string {
+	return strings.NewReplacer(
+		`\`, `\\`,
+		`"`, `\"`,
+		"\t", `\t`,
+		"\n", `\n`,
+		"\r", `\r`,
+		"\v", `\v`,
+	).Replace(value)
 }
 
 func newAuditRecord(method, url string, req *ChatRequest, requestBytes int, attempt int) auditRecord {
