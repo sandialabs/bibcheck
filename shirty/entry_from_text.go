@@ -50,7 +50,7 @@ func (w *Workflow) EntryFromBibliography(b *documents.Bibliography, id int) (str
 	// - openai/gpt-oss-120b: seems to work the best
 	temp := new(float64)
 	*temp = 0.0
-	model := llama_33_70B_Model
+	model := w.model
 	req := &openai.ChatRequest{
 		Model: model,
 		Messages: []openai.Message{

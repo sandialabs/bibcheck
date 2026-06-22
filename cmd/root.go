@@ -75,6 +75,7 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 			shirtyProvider = shirty.NewWorkflow(
 				settings.ShirtyAPIKey,
 				settings.ShirtyBaseURL,
+				shirty.WithModel(settings.ShirtyModel),
 			)
 		}
 
@@ -212,6 +213,7 @@ func init() {
 	rootCmd.PersistentFlags().String("openrouter-base-url", config.DefaultOpenRouterBaseURL, "Openrouter-compatible API url")
 	rootCmd.PersistentFlags().String("shirty-api-key", "", "shirty.sandia.gov API key")
 	rootCmd.PersistentFlags().String("shirty-base-url", config.DefaultShirtyBaseURL, "Shirty base URL")
+	rootCmd.PersistentFlags().String("shirty-model", config.DefaultShirtyModel, "Default Shirty model")
 	if err := config.BindFlags(rootCmd.PersistentFlags()); err != nil {
 		panic(err)
 	}

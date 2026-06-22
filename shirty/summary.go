@@ -57,7 +57,7 @@ func (w *Workflow) Summarize(lr *lookup.Result) (bool, string, error) {
 	}
 
 	req := &openai.ChatRequest{
-		Model: summaryModelLlama33_70BInstruct,
+		Model: w.model,
 		Messages: []openai.Message{
 			openai.MakeSystemMessage(summaryPromptLlama33_70BInstruct),
 			openai.MakeUserMessage(

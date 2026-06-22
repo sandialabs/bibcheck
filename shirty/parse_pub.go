@@ -19,7 +19,7 @@ func NewParsePubRF() *openai.ResponseFormat {
 
 // ParsePub returns the title of a journal or a book from a bibliography entry
 func (w *Workflow) ParsePub(text string) (string, error) {
-	model := "meta-llama/Llama-3.3-70B-Instruct"
+	model := w.model
 
 	temp := new(float64)
 	*temp = 0

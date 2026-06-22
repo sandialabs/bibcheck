@@ -94,7 +94,7 @@ func (w *Workflow) PrepareBibliographyContent(pdf []byte) (*documents.Bibliograp
 
 func (w *Workflow) pageContainsBibliography(text string) (bool, error) {
 	req := &openai.ChatRequest{
-		Model: "meta-llama/Llama-3.3-70B-Instruct",
+		Model: w.model,
 		Messages: []openai.Message{
 			openai.MakeSystemMessage(`Determine whether the provided page text contains any part of the paper's bibliography or references section.
 - Return true if the page contains a bibliography heading, one or more bibliography entries, or a continuation of bibliography entries from another page.
