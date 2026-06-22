@@ -16,9 +16,7 @@ func NewExtractDocumentMetadataRF() *openai.ResponseFormat {
 	return openai.NewResponseFormat(schema.DocumentMetadataJSONSchema())
 }
 
-func newFromTextRequest(text string) *openai.ChatRequest {
-	model := "meta-llama/Llama-3.3-70B-Instruct"
-
+func newFromTextRequest(model, text string) *openai.ChatRequest {
 	return &openai.ChatRequest{
 		Model: model,
 		Messages: []openai.Message{
@@ -39,9 +37,7 @@ Use the following guidelines:
 	}
 }
 
-func newFromHtmlRequest(html string) *openai.ChatRequest {
-	model := "meta-llama/Llama-3.3-70B-Instruct"
-
+func newFromHtmlRequest(model, html string) *openai.ChatRequest {
 	// model has a limit of 128k tokens
 	// in one example, a string of 1158716 symbols -> 353591 tokens
 	if len(html) > 300_000 {
@@ -71,11 +67,11 @@ Use the following guidelines:
 }
 
 func (c *Workflow) HTMLMetadata(html []byte) (*documents.Metadata, error) {
-	return c.extractDocumentMetadataImpl(newFromHtmlRequest(string(html)))
+	return c.extractDocumentMetadataImpl(newFromHtmlRequest(c.model, string(html)))
 }
 
 func (c *Workflow) TextMetadata(text string) (*documents.Metadata, error) {
-	return c.extractDocumentMetadataImpl(newFromTextRequest(text))
+	return c.extractDocumentMetadataImpl(newFromTextRequest(c.model, text))
 }
 
 func (w *Workflow) PDFMetadata(content []byte) (*documents.Metadata, error) {

@@ -19,7 +19,7 @@ func NewParseAuthorsRF() *openai.ResponseFormat {
 }
 
 func (w *Workflow) ParseAuthors(text string) (*entries.Authors, error) {
-	model := "meta-llama/Llama-3.3-70B-Instruct"
+	model := w.model
 
 	temp := new(float64)
 	*temp = 0

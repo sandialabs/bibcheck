@@ -17,7 +17,7 @@ func NewParseSoftwareRF() *openai.ResponseFormat {
 }
 
 func (w *Workflow) ParseSoftware(text string) (*entries.Software, error) {
-	model := "meta-llama/Llama-3.3-70B-Instruct"
+	model := w.model
 
 	req := &openai.ChatRequest{
 		Model: model,

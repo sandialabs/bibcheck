@@ -8,8 +8,12 @@ import (
 	"github.com/sandialabs/bibcheck/openai"
 )
 
+// DefaultModel is the model used for requests unless overridden via WithModel.
+const DefaultModel = "meta-llama/Llama-3.3-70B-Instruct"
+
 type Workflow struct {
 	apiKey    string
+	model     string
 	oaiClient *openai.Client
 }
 
@@ -18,6 +22,7 @@ type WorkflowOpt func(*Workflow)
 func NewWorkflow(apiKey, baseUrl string, options ...WorkflowOpt) *Workflow {
 	c := &Workflow{
 		apiKey: apiKey,
+		model:  DefaultModel,
 		oaiClient: openai.NewClient(
 			apiKey,
 			openai.WithBaseUrl(baseUrl),
@@ -28,6 +33,16 @@ func NewWorkflow(apiKey, baseUrl string, options ...WorkflowOpt) *Workflow {
 		o(c)
 	}
 	return c
+}
+
+// WithModel overrides the default model used for requests. An empty string
+// leaves the default in place.
+func WithModel(model string) WorkflowOpt {
+	return func(w *Workflow) {
+		if model != "" {
+			w.model = model
+		}
+	}
 }
 
 func WithAuditEnabled(enabled bool) WorkflowOpt {

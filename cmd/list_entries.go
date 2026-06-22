@@ -26,6 +26,7 @@ var listEntriesCmd = &cobra.Command{
 			shirtyWorkflow := shirty.NewWorkflow(
 				settings.ShirtyAPIKey,
 				settings.ShirtyBaseURL,
+				shirty.WithModel(settings.ShirtyModel),
 			)
 
 			bibliography, err := shirtyWorkflow.PrepareBibliography(filePath)
