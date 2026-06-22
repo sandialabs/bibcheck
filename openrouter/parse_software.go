@@ -19,7 +19,7 @@ func NewParseSoftwareRF() *ResponseFormat {
 
 func (c *Client) ParseSoftware(text string) (*entries.Software, error) {
 	baseURL := c.baseUrl
-	model := "google/gemini-2.5-flash"
+	model := c.model
 
 	req := ChatRequest{
 		Model: model,

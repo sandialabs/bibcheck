@@ -27,7 +27,8 @@ var textractCmd = &cobra.Command{
 
 		filePath := args[0]
 		client := shirty.NewWorkflow(settings.ShirtyAPIKey,
-			shirty.WithBaseUrl(settings.ShirtyBaseURL))
+			shirty.WithBaseUrl(settings.ShirtyBaseURL),
+			shirty.WithModel(settings.ShirtyModel))
 		resp, err := client.Textract(filePath)
 		if err != nil {
 			log.Fatal(err)

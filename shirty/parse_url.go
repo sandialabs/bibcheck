@@ -15,7 +15,7 @@ func NewParseURLRF() *openai.ResponseFormat {
 }
 
 func (w *Workflow) ParseURL(text string) (string, error) {
-	model := "openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8"
+	model := w.model
 
 	req := &openai.ChatRequest{
 		Model: model,

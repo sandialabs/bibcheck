@@ -16,7 +16,7 @@ func NewParseOnlineRF() *openai.ResponseFormat {
 }
 
 func (w *Workflow) ParseOnline(text string) (*entries.Online, error) {
-	model := "openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8"
+	model := w.model
 
 	req := &openai.ChatRequest{
 		Model: model,

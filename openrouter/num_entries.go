@@ -33,7 +33,7 @@ func (c *Client) NumEntries(b64 string) (int, error) {
 
 func (c *Client) NumBibliographyEntries(b *documents.Bibliography) (int, error) {
 	req := ChatRequest{
-		Model: "google/gemini-2.5-flash",
+		Model: c.model,
 		Messages: []Message{
 			systemString(`Determine the number of entries in the bibliography or references section of the provided document.
 - Count bibliography entries only.

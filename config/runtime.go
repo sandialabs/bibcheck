@@ -15,11 +15,15 @@ const (
 	KeyOpenAIAuditEnable = "openai_audit_enabled"
 	KeyOpenRouterAPIKey  = "openrouter_api_key"
 	KeyOpenRouterBaseURL = "openrouter_base_url"
+	KeyOpenRouterModel   = "openrouter_model"
 	KeyShirtyAPIKey      = "shirty_api_key"
 	KeyShirtyBaseURL     = "shirty_base_url"
+	KeyShirtyModel       = "shirty_model"
 
 	DefaultOpenRouterBaseURL = "https://openrouter.ai/api/v1"
+	DefaultOpenRouterModel   = "google/gemini-2.5-flash"
 	DefaultShirtyBaseURL     = "https://shirty.sandia.gov/api/v1"
+	DefaultShirtyModel       = "openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8"
 )
 
 type Settings struct {
@@ -28,8 +32,10 @@ type Settings struct {
 	OpenAIAuditEnable bool
 	OpenRouterAPIKey  string
 	OpenRouterBaseURL string
+	OpenRouterModel   string
 	ShirtyAPIKey      string
 	ShirtyBaseURL     string
+	ShirtyModel       string
 }
 
 var runtimeConfig = viper.New()
@@ -39,7 +45,9 @@ func init() {
 	runtimeConfig.AutomaticEnv()
 	runtimeConfig.SetDefault(KeyOpenAIAuditEnable, true)
 	runtimeConfig.SetDefault(KeyOpenRouterBaseURL, DefaultOpenRouterBaseURL)
+	runtimeConfig.SetDefault(KeyOpenRouterModel, DefaultOpenRouterModel)
 	runtimeConfig.SetDefault(KeyShirtyBaseURL, DefaultShirtyBaseURL)
+	runtimeConfig.SetDefault(KeyShirtyModel, DefaultShirtyModel)
 }
 
 func BindFlags(flags *pflag.FlagSet) error {
@@ -49,8 +57,10 @@ func BindFlags(flags *pflag.FlagSet) error {
 		KeyOpenAIAuditEnable: "openai-audit-enabled",
 		KeyOpenRouterAPIKey:  "openrouter-api-key",
 		KeyOpenRouterBaseURL: "openrouter-base-url",
+		KeyOpenRouterModel:   "openrouter-model",
 		KeyShirtyAPIKey:      "shirty-api-key",
 		KeyShirtyBaseURL:     "shirty-base-url",
+		KeyShirtyModel:       "shirty-model",
 	} {
 		if err := runtimeConfig.BindPFlag(key, flags.Lookup(flagName)); err != nil {
 			return err
@@ -63,8 +73,10 @@ func BindFlags(flags *pflag.FlagSet) error {
 		KeyOpenAIAuditEnable: "OPENAI_AUDIT_ENABLED",
 		KeyOpenRouterAPIKey:  "OPENROUTER_API_KEY",
 		KeyOpenRouterBaseURL: "OPENROUTER_BASE_URL",
+		KeyOpenRouterModel:   "OPENROUTER_MODEL",
 		KeyShirtyAPIKey:      "SHIRTY_API_KEY",
 		KeyShirtyBaseURL:     "SHIRTY_BASE_URL",
+		KeyShirtyModel:       "SHIRTY_MODEL",
 	} {
 		if err := runtimeConfig.BindEnv(key, envName); err != nil {
 			return err
@@ -81,7 +93,9 @@ func Runtime() Settings {
 		OpenAIAuditEnable: runtimeConfig.GetBool(KeyOpenAIAuditEnable),
 		OpenRouterAPIKey:  runtimeConfig.GetString(KeyOpenRouterAPIKey),
 		OpenRouterBaseURL: runtimeConfig.GetString(KeyOpenRouterBaseURL),
+		OpenRouterModel:   runtimeConfig.GetString(KeyOpenRouterModel),
 		ShirtyAPIKey:      runtimeConfig.GetString(KeyShirtyAPIKey),
 		ShirtyBaseURL:     runtimeConfig.GetString(KeyShirtyBaseURL),
+		ShirtyModel:       runtimeConfig.GetString(KeyShirtyModel),
 	}
 }

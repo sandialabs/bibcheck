@@ -16,7 +16,7 @@ func NewClassifyEntryRF() *openai.ResponseFormat {
 }
 
 func (w *Workflow) Classify(text string) (string, error) {
-	model := "openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8"
+	model := w.model
 
 	temp := new(float64)
 	*temp = 0

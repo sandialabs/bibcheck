@@ -16,7 +16,7 @@ func NewParseTitleRF() *ResponseFormat {
 }
 
 func (c *Client) ParseTitle(text string) (string, error) {
-	model := "google/gemini-2.5-flash"
+	model := c.model
 	temperature := new(int)
 	*temperature = 0
 

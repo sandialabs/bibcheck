@@ -24,6 +24,7 @@ const (
 type Client struct {
 	apiKey     string
 	baseUrl    string
+	model      string
 	httpClient *http.Client
 }
 
@@ -34,6 +35,7 @@ func NewClient(apiKey string, options ...Opt) *Client {
 	c := &Client{
 		apiKey:  apiKey,
 		baseUrl: "https://openrouter.ai/api/v1",
+		model:   ModelGemini25Flash,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -47,6 +49,16 @@ func NewClient(apiKey string, options ...Opt) *Client {
 func WithBaseURL(baseURL string) Opt {
 	return func(c *Client) {
 		c.baseUrl = baseURL
+	}
+}
+
+// WithModel overrides the default model used for requests. An empty string
+// leaves the default in place.
+func WithModel(model string) Opt {
+	return func(c *Client) {
+		if model != "" {
+			c.model = model
+		}
 	}
 }
 

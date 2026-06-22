@@ -69,12 +69,14 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 			openrouterClient = openrouter.NewClient(
 				settings.OpenRouterAPIKey,
 				openrouter.WithBaseURL(settings.OpenRouterBaseURL),
+				openrouter.WithModel(settings.OpenRouterModel),
 			)
 		}
 		if settings.ShirtyAPIKey != "" && settings.ShirtyBaseURL != "" {
 			shirtyProvider = shirty.NewWorkflow(
 				settings.ShirtyAPIKey,
-				shirty.WithBaseUrl(settings.ShirtyBaseURL))
+				shirty.WithBaseUrl(settings.ShirtyBaseURL),
+				shirty.WithModel(settings.ShirtyModel))
 		}
 
 		var elsevierClient *elsevier.Client
@@ -209,8 +211,10 @@ func init() {
 	rootCmd.PersistentFlags().Bool("openai-audit-enabled", true, "Enable OpenAI API audit logging")
 	rootCmd.PersistentFlags().String("openrouter-api-key", "", "OpenRouter API key")
 	rootCmd.PersistentFlags().String("openrouter-base-url", config.DefaultOpenRouterBaseURL, "Openrouter-compatible API url")
+	rootCmd.PersistentFlags().String("openrouter-model", config.DefaultOpenRouterModel, "Default OpenRouter model")
 	rootCmd.PersistentFlags().String("shirty-api-key", "", "shirty.sandia.gov API key")
 	rootCmd.PersistentFlags().String("shirty-base-url", config.DefaultShirtyBaseURL, "Shirty base URL")
+	rootCmd.PersistentFlags().String("shirty-model", config.DefaultShirtyModel, "Default Shirty model")
 	if err := config.BindFlags(rootCmd.PersistentFlags()); err != nil {
 		panic(err)
 	}
