@@ -17,7 +17,7 @@ func NewParsePubRF() *ResponseFormat {
 
 // ParsePub returns the title of a journal or a book from a bibliography entry
 func (c *Client) ParsePub(text string) (string, error) {
-	model := "google/gemini-2.5-flash"
+	model := c.model
 	temperature := new(int)
 	*temperature = 0
 

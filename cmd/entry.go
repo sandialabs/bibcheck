@@ -30,6 +30,7 @@ var entryCmd = &cobra.Command{
 			shirtyClient := shirty.NewWorkflow(
 				settings.ShirtyAPIKey,
 				shirty.WithBaseUrl(settings.ShirtyBaseURL),
+				shirty.WithModel(settings.ShirtyModel),
 			)
 
 			bibliography, err := shirtyClient.PrepareBibliography(filePath)
@@ -47,6 +48,7 @@ var entryCmd = &cobra.Command{
 			client := openrouter.NewClient(
 				settings.OpenRouterAPIKey,
 				openrouter.WithBaseURL(settings.OpenRouterBaseURL),
+				openrouter.WithModel(settings.OpenRouterModel),
 			)
 
 			bibliography, err := client.PrepareBibliography(filePath)

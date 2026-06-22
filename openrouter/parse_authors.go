@@ -17,7 +17,7 @@ func NewParseAuthorsRF() *ResponseFormat {
 }
 
 func (c *Client) ParseAuthors(text string) (*entries.Authors, error) {
-	model := "google/gemini-2.5-flash"
+	model := c.model
 	temperature := new(int)
 	*temperature = 0
 

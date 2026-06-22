@@ -70,13 +70,13 @@ Use the following guidelines:
 }
 
 func (c *Client) HTMLMetadata(html []byte) (*documents.Metadata, error) {
-	model := "google/gemini-2.5-flash"
+	model := c.model
 	// model := "mistralai/mistral-medium-3"
 	return c.extractDocumentMetadataImpl(htmlRequest(model, string(html)))
 }
 
 func (c *Client) PDFMetadata(raw []byte) (*documents.Metadata, error) {
-	model := "google/gemini-2.5-flash"
+	model := c.model
 	// model := "mistralai/mistral-medium-3"
 	encoded := base64.StdEncoding.EncodeToString(raw)
 	return c.extractDocumentMetadataImpl(encodedPdfRequest(model, encoded))
@@ -113,7 +113,7 @@ func (c *Client) extractDocumentMetadataImpl(req *ChatRequest) (*documents.Metad
 
 func (c *Client) ExtractDocumentMetadata(encoded string) (*documents.Metadata, error) {
 	baseURL := c.baseUrl
-	model := "google/gemini-2.5-flash"
+	model := c.model
 
 	req := ChatRequest{
 		Model: model,

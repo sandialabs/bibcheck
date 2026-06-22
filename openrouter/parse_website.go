@@ -19,7 +19,7 @@ func NewParseOnlineRF() *ResponseFormat {
 
 func (c *Client) ParseOnline(text string) (*entries.Online, error) {
 	baseURL := c.baseUrl
-	model := "google/gemini-2.5-flash"
+	model := c.model
 
 	req := ChatRequest{
 		Model: model,

@@ -26,7 +26,7 @@ func NewBibIDFormatResponseFormat() *ResponseFormat {
 
 func (c *Client) BibIdFormat(b *documents.Bibliography) (string, error) {
 	req := ChatRequest{
-		Model: "google/gemini-2.5-flash",
+		Model: c.model,
 		Messages: []Message{
 			systemString(`Determine the bibliography cross-reference format in the provided document.
 - numeric (for example [1])

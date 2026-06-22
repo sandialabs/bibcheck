@@ -27,7 +27,7 @@ func (w *Workflow) BibIdFormat(b *documents.Bibliography) (string, error) {
 	temp := new(float64)
 	*temp = 0.1
 
-	model := "openai/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8"
+	model := w.model
 	req := &openai.ChatRequest{
 		Model: model,
 		Messages: []openai.Message{

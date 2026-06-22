@@ -20,7 +20,7 @@ func NewClassifyEntryResponseFormat() *ResponseFormat {
 
 func (c *Client) Classify(text string) (string, error) {
 	baseURL := c.baseUrl
-	model := "google/gemini-2.5-flash"
+	model := c.model
 
 	temperature := new(int)
 	*temperature = 0
