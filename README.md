@@ -202,4 +202,9 @@ https://scholar.google.com/scholar?hl=en&as_sdt=0%2C32&q=Quantum+information&btn
     * Display version/SHA
         * if versioned, only show that
         * version links to release, sha links to commit
+    * preserve SHIRTY_API_KEY in local storage
+    * Change styling so ready PDF is a bit less subtle.
+    * Footer: change sandialabs/bibcheck to "contribute at <sandialabs/bibcheck>"
+    * Shows "URL:" before analysis results.
 * Version / SHA in CLI
+* scale shirty timeout with request size: 60s is too short for 300KiB
