@@ -21,7 +21,7 @@ func NewWorkflow(apiKey, baseUrl string, options ...WorkflowOpt) *Workflow {
 		oaiClient: openai.NewClient(
 			apiKey,
 			openai.WithBaseUrl(baseUrl),
-			openai.WithTimeout(60*time.Second),
+			openai.WithTimeout(120*time.Second),
 		),
 	}
 	for _, o := range options {
