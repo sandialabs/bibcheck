@@ -86,7 +86,7 @@ func parse_authors_impl(t *testing.T, entry string, expected entries.Authors) {
 
 	client := NewWorkflow(
 		apiKey,
-		WithBaseUrl("https://shirty.sandia.gov/api/v1"),
+		"https://shirty.sandia.gov/api/v1",
 	)
 
 	actual, err := client.ParseAuthors(entry)

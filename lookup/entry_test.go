@@ -12,7 +12,7 @@ import (
 
 func shirtyWorkflowFromEnv() *shirty.Workflow {
 	if apiKey, ok := os.LookupEnv("SHIRTY_API_KEY"); ok {
-		return shirty.NewWorkflow(apiKey)
+		return shirty.NewWorkflow(apiKey, "https://shirty.sandia.gov/api/v1")
 	}
 	return nil
 }

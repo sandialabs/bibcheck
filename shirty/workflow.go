@@ -10,19 +10,17 @@ import (
 
 type Workflow struct {
 	apiKey    string
-	baseUrl   string
 	oaiClient *openai.Client
 }
 
 type WorkflowOpt func(*Workflow)
 
-func NewWorkflow(apiKey string, options ...WorkflowOpt) *Workflow {
+func NewWorkflow(apiKey, baseUrl string, options ...WorkflowOpt) *Workflow {
 	c := &Workflow{
-		apiKey:  apiKey,
-		baseUrl: "https://shirty-qual.apps.openshift.sandia.gov/api/v1",
+		apiKey: apiKey,
 		oaiClient: openai.NewClient(
 			apiKey,
-			openai.WithBaseUrl("https://shirty-qual.apps.openshift.sandia.gov/api/v1"),
+			openai.WithBaseUrl(baseUrl),
 			openai.WithTimeout(60*time.Second),
 		),
 	}
@@ -30,13 +28,6 @@ func NewWorkflow(apiKey string, options ...WorkflowOpt) *Workflow {
 		o(c)
 	}
 	return c
-}
-
-func WithBaseUrl(baseUrl string) WorkflowOpt {
-	return func(w *Workflow) {
-		w.baseUrl = baseUrl
-		openai.WithBaseUrl(baseUrl)(w.oaiClient)
-	}
 }
 
 func WithAuditEnabled(enabled bool) WorkflowOpt {

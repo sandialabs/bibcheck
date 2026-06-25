@@ -29,7 +29,7 @@ var entryCmd = &cobra.Command{
 		if settings.ShirtyAPIKey != "" && settings.ShirtyBaseURL != "" {
 			shirtyClient := shirty.NewWorkflow(
 				settings.ShirtyAPIKey,
-				shirty.WithBaseUrl(settings.ShirtyBaseURL),
+				settings.ShirtyBaseURL,
 			)
 
 			bibliography, err := shirtyClient.PrepareBibliography(filePath)
