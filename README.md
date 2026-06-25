@@ -223,3 +223,4 @@ https://scholar.google.com/scholar?hl=en&as_sdt=0%2C32&q=Quantum+information&btn
 * Add a WebUI quick start via docker/podman to the readme
 * Add funding blurb somewhere on WebUI
 * Add funding blurb in CLI
+* `bibcheck serve` logs ip addresses it serves the wasm bundle to
