@@ -34,6 +34,17 @@ chmod +x bibcheck-linux-amd64
 ./bibcheck-linux-amd64
 ```
 
+## Quick Start (Windows)
+
+Download the appropriate binary from the [latest release](https://github.com/sandialabs/bibcheck/releases/latest)
+
+1. Open the command prompt
+
+```bat
+cd %USERPROFILE%\Downloads
+bibcheck-windows-amd64.exe
+```
+
 ## Quick Start (Build from Source)
 
 1. Install Go >= 1.25.0
@@ -209,3 +220,4 @@ https://scholar.google.com/scholar?hl=en&as_sdt=0%2C32&q=Quantum+information&btn
 * Version / SHA in CLI
 * scale shirty timeout with request size: 60s is too short for 300KiB
 * Add a wasm build to the CI before docker builds
+*
