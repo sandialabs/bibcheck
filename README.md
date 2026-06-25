@@ -196,8 +196,10 @@ https://scholar.google.com/scholar?hl=en&as_sdt=0%2C32&q=Quantum+information&btn
 * Allow user to provide email address (for crossref.org API)
 * DBLP search
 * OpenAlex search
-* Elsevier API key in Web UI
-* Version / SHA in WebUI
-    * if versioned, only show that
-    * version links to release, sha links to commit
+* WebUI:
+    * Elsevier API
+    * Shirty Base URL
+    * Display version/SHA
+        * if versioned, only show that
+        * version links to release, sha links to commit
 * Version / SHA in CLI
