@@ -92,7 +92,8 @@ func NewRuntime(keys Keys) (*Runtime, error) {
 	openRouterKey := strings.TrimSpace(keys.OpenRouterAPIKey)
 
 	if shirtyKey != "" {
-		client := shirty.NewWorkflow(shirtyKey, shirty.WithAuditEnabled(false))
+		// TODO: make this hard-coded shirty URL configurable under thge extra options
+		client := shirty.NewWorkflow(shirtyKey, "https://shirty.sandia.gov/api/v1", shirty.WithAuditEnabled(false))
 		return &Runtime{
 			Kind:     ProviderShirty,
 			Provider: client,

@@ -85,7 +85,7 @@ func impl(t *testing.T, path string, id int, expected []string) {
 
 	client := NewWorkflow(
 		apiKey,
-		WithBaseUrl("https://shirty.sandia.gov/api/v1"),
+		"https://shirty.sandia.gov/api/v1",
 	)
 
 	bibliography, err := client.PrepareBibliography(path)

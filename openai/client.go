@@ -89,3 +89,7 @@ func (c *Client) auditEnabledOrDefault() bool {
 	}
 	return true
 }
+
+func (c *Client) BaseUrl() string {
+	return c.baseUrl
+}

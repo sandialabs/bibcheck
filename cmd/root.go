@@ -74,7 +74,8 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 		if settings.ShirtyAPIKey != "" && settings.ShirtyBaseURL != "" {
 			shirtyProvider = shirty.NewWorkflow(
 				settings.ShirtyAPIKey,
-				shirty.WithBaseUrl(settings.ShirtyBaseURL))
+				settings.ShirtyBaseURL,
+			)
 		}
 
 		var elsevierClient *elsevier.Client

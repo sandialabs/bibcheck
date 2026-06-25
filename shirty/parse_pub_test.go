@@ -46,7 +46,7 @@ func parse_pub_impl(t *testing.T, entry, expected string) {
 
 	client := NewWorkflow(
 		apiKey,
-		WithBaseUrl("https://shirty.sandia.gov/api/v1"),
+		"https://shirty.sandia.gov/api/v1",
 	)
 
 	actual, err := client.ParsePub(entry)

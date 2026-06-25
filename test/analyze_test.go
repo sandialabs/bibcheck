@@ -43,7 +43,7 @@ func impl(t *testing.T, path string, id int, expected bool) {
 
 		client := shirty.NewWorkflow(
 			apiKey,
-			shirty.WithBaseUrl("https://shirty.sandia.gov/api/v1"),
+			"https://shirty.sandia.gov/api/v1",
 		)
 
 		var bibliography *documents.Bibliography
