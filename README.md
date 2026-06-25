@@ -220,4 +220,6 @@ https://scholar.google.com/scholar?hl=en&as_sdt=0%2C32&q=Quantum+information&btn
 * Version / SHA in CLI
 * scale shirty timeout with request size: 60s is too short for 300KiB
 * Add a wasm build to the CI before docker builds
-*
+* Add a WebUI quick start via docker/podman to the readme
+* Add funding blurb somewhere on WebUI
+* Add funding blurb in CLI
