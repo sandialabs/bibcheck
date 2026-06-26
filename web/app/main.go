@@ -15,13 +15,17 @@ import (
 	"github.com/hexops/vecty/elem"
 	"github.com/hexops/vecty/event"
 	"github.com/hexops/vecty/prop"
+	"github.com/sandialabs/bibcheck/config"
 	"github.com/sandialabs/bibcheck/web/workflow"
 )
+
+const shirtyKeyStorageKey = "bibcheck.shirty_api_key"
 
 type app struct {
 	vecty.Core
 
 	shirtyKey     string
+	shirtyBaseURL string
 	openRouterKey string
 	entry         string
 	filename      string
@@ -34,8 +38,16 @@ type app struct {
 
 func main() {
 	vecty.SetTitle("Bibcheck")
-	vecty.RenderBody(&app{})
+	vecty.RenderBody(newApp())
 	select {}
+}
+
+func newApp() *app {
+	a := &app{shirtyBaseURL: config.DefaultShirtyBaseURL}
+	if showShirtyKey {
+		a.shirtyKey = loadLocalStorage(shirtyKeyStorageKey)
+	}
+	return a
 }
 
 func (a *app) Render() vecty.ComponentOrHTML {
@@ -73,6 +85,7 @@ func (a *app) renderLanding() vecty.ComponentOrHTML {
 									prop.Value(a.shirtyKey),
 									event.Input(func(e *vecty.Event) {
 										a.shirtyKey = e.Target.Get("value").String()
+										saveLocalStorage(shirtyKeyStorageKey, strings.TrimSpace(a.shirtyKey))
 										a.errorMessage = ""
 										vecty.Rerender(a)
 									}),
@@ -117,6 +130,24 @@ func (a *app) renderLanding() vecty.ComponentOrHTML {
 									a.errorMessage = ""
 									vecty.Rerender(a)
 								}),
+							),
+						),
+					),
+					vecty.If(showShirtyKey,
+						elem.Label(
+							vecty.Markup(vecty.Class("field")),
+							elem.Span(vecty.Text("Shirty base URL")),
+							elem.Input(
+								vecty.Markup(
+									prop.Type(prop.TypeText),
+									prop.Placeholder(config.DefaultShirtyBaseURL),
+									prop.Value(a.shirtyBaseURL),
+									event.Input(func(e *vecty.Event) {
+										a.shirtyBaseURL = e.Target.Get("value").String()
+										a.errorMessage = ""
+										vecty.Rerender(a)
+									}),
+								),
 							),
 						),
 					),
@@ -269,6 +300,7 @@ func (a *app) start() {
 
 	rt, err := workflow.NewRuntime(workflow.Keys{
 		ShirtyAPIKey:     shirtyKey(a),
+		ShirtyBaseURL:    shirtyBaseURL(a),
 		OpenRouterAPIKey: openRouterKey(a),
 	})
 	if err != nil {
@@ -297,11 +329,48 @@ func shirtyKey(a *app) string {
 	return strings.TrimSpace(a.shirtyKey)
 }
 
+func shirtyBaseURL(a *app) string {
+	if !showShirtyKey {
+		return ""
+	}
+	return strings.TrimSpace(a.shirtyBaseURL)
+}
+
 func openRouterKey(a *app) string {
 	if !showOpenRouterKey {
 		return ""
 	}
 	return strings.TrimSpace(a.openRouterKey)
+}
+
+func loadLocalStorage(key string) string {
+	defer func() {
+		_ = recover()
+	}()
+	storage := js.Global().Get("localStorage")
+	if !storage.Truthy() {
+		return ""
+	}
+	value := storage.Call("getItem", key)
+	if value.IsNull() || value.IsUndefined() {
+		return ""
+	}
+	return value.String()
+}
+
+func saveLocalStorage(key, value string) {
+	defer func() {
+		_ = recover()
+	}()
+	storage := js.Global().Get("localStorage")
+	if !storage.Truthy() {
+		return
+	}
+	if value == "" {
+		storage.Call("removeItem", key)
+		return
+	}
+	storage.Call("setItem", key, value)
 }
 
 func (a *app) reset() {
