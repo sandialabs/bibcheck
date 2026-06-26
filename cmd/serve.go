@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"mime"
+	"net"
 	"net/http"
 	"net/url"
 	"path"
@@ -45,8 +46,61 @@ func init() {
 func serveMux(staticDir string, maxBytes int64) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/api/fetch", fetchHandler(maxBytes))
-	mux.Handle("/", compressedFileServer(http.Dir(staticDir)))
+	mux.Handle("/", wasmBundleLogHandler(compressedFileServer(http.Dir(staticDir))))
 	return mux
+}
+
+type responseLogRecorder struct {
+	http.ResponseWriter
+	status int
+	bytes  int64
+}
+
+func (r *responseLogRecorder) WriteHeader(status int) {
+	if r.status != 0 {
+		return
+	}
+	r.status = status
+	r.ResponseWriter.WriteHeader(status)
+}
+
+func (r *responseLogRecorder) Write(body []byte) (int, error) {
+	if r.status == 0 {
+		r.status = http.StatusOK
+	}
+	n, err := r.ResponseWriter.Write(body)
+	r.bytes += int64(n)
+	return n, err
+}
+
+func (r *responseLogRecorder) Unwrap() http.ResponseWriter {
+	return r.ResponseWriter
+}
+
+func (r *responseLogRecorder) Status() int {
+	if r.status == 0 {
+		return http.StatusOK
+	}
+	return r.status
+}
+
+func wasmBundleLogHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		recorder := &responseLogRecorder{ResponseWriter: w}
+		next.ServeHTTP(recorder, r)
+
+		name, ok := staticFileName(r.URL.Path)
+		if !ok || name != "app.wasm" || recorder.Status() < 200 || recorder.Status() >= 300 {
+			return
+		}
+		log.Printf("wasm bundle served method=%s path=%q status=%d bytes=%d %s",
+			r.Method,
+			r.URL.Path,
+			recorder.Status(),
+			recorder.bytes,
+			clientAddressLogFields(r),
+		)
+	})
 }
 
 type compressedStaticHandler struct {
@@ -199,7 +253,7 @@ func fetchHandler(maxBytes int64) http.Handler {
 			return
 		}
 
-		log.Println("proxy GET", targetURL.String())
+		log.Printf("proxy GET url=%q %s", targetURL.String(), clientAddressLogFields(r))
 		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, targetURL.String(), nil)
 		if err != nil {
 			http.Error(w, "create upstream request failed", http.StatusInternalServerError)
@@ -234,6 +288,21 @@ func fetchHandler(maxBytes int64) http.Handler {
 			log.Printf("write proxied response failed: %v", err)
 		}
 	})
+}
+
+func clientAddressLogFields(r *http.Request) string {
+	remoteIP := r.RemoteAddr
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		remoteIP = host
+	}
+
+	return fmt.Sprintf("remote_addr=%q remote_ip=%q x_forwarded_for=%q x_real_ip=%q forwarded=%q",
+		r.RemoteAddr,
+		remoteIP,
+		r.Header.Get("X-Forwarded-For"),
+		r.Header.Get("X-Real-IP"),
+		r.Header.Get("Forwarded"),
+	)
 }
 
 func validateFetchURL(u *url.URL) error {
