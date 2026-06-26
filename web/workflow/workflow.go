@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/sandialabs/bibcheck/config"
 	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/entries"
 	"github.com/sandialabs/bibcheck/lookup"
@@ -25,6 +26,7 @@ const (
 
 type Keys struct {
 	ShirtyAPIKey     string
+	ShirtyBaseURL    string
 	OpenRouterAPIKey string
 }
 
@@ -89,11 +91,14 @@ func (c openRouterCounter) CountBibliographyEntries(b *documents.Bibliography) (
 
 func NewRuntime(keys Keys) (*Runtime, error) {
 	shirtyKey := strings.TrimSpace(keys.ShirtyAPIKey)
+	shirtyBaseURL := strings.TrimSpace(keys.ShirtyBaseURL)
 	openRouterKey := strings.TrimSpace(keys.OpenRouterAPIKey)
 
 	if shirtyKey != "" {
-		// TODO: make this hard-coded shirty URL configurable under thge extra options
-		client := shirty.NewWorkflow(shirtyKey, "https://shirty.sandia.gov/api/v1", shirty.WithAuditEnabled(false))
+		if shirtyBaseURL == "" {
+			shirtyBaseURL = config.DefaultShirtyBaseURL
+		}
+		client := shirty.NewWorkflow(shirtyKey, shirtyBaseURL, shirty.WithAuditEnabled(false))
 		return &Runtime{
 			Kind:     ProviderShirty,
 			Provider: client,

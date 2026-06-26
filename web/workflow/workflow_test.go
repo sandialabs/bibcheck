@@ -6,7 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sandialabs/bibcheck/config"
 	"github.com/sandialabs/bibcheck/lookup"
+	"github.com/sandialabs/bibcheck/shirty"
 )
 
 func TestNewRuntimeRequiresKey(t *testing.T) {
@@ -25,6 +27,32 @@ func TestNewRuntimePrefersShirty(t *testing.T) {
 	}
 	if rt.Kind != ProviderShirty {
 		t.Fatalf("kind = %q, want %q", rt.Kind, ProviderShirty)
+	}
+}
+
+func TestNewRuntimeUsesDefaultShirtyBaseURL(t *testing.T) {
+	rt, err := NewRuntime(Keys{ShirtyAPIKey: "shirty"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := rt.Provider.(*shirty.Workflow)
+	if got := client.OpenAIClient().BaseUrl(); got != config.DefaultShirtyBaseURL {
+		t.Fatalf("Shirty base URL = %q, want %q", got, config.DefaultShirtyBaseURL)
+	}
+}
+
+func TestNewRuntimeUsesCustomShirtyBaseURL(t *testing.T) {
+	const baseURL = "https://example.invalid/api/v1"
+	rt, err := NewRuntime(Keys{
+		ShirtyAPIKey:  "shirty",
+		ShirtyBaseURL: " " + baseURL + " ",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := rt.Provider.(*shirty.Workflow)
+	if got := client.OpenAIClient().BaseUrl(); got != baseURL {
+		t.Fatalf("Shirty base URL = %q, want %q", got, baseURL)
 	}
 }
 
