@@ -13,6 +13,8 @@
   --snl-blue-gray-700: #586370;
   --snl-blue-gray-900: #323940;
   --snl-red: #ad0000;
+  --snl-amber: #b36b00;
+  --snl-amber-50: #fff8eb;
   font-family: "Open Sans", "Segoe UI", Tahoma, sans-serif;
   background: var(--snl-blue-gray-50);
   color: var(--snl-blue-gray-900);
@@ -312,7 +314,7 @@ progress {
 
 .entry-columns {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 1.25fr) minmax(240px, 0.9fr);
   gap: 1px;
   background: var(--snl-blue-gray-100);
 }
@@ -323,11 +325,127 @@ progress {
   background: #ffffff;
 }
 
+.entry-pane.state-error,
+.summary-card.summary-error,
+.lookup-card.lookup-error {
+  border-color: #e06666;
+  background: #fcf2f2;
+}
+
+.summary-card.summary-review,
+.lookup-card.lookup-no-match,
+.lookup-card.lookup-not-found {
+  border-color: #e8bd78;
+  background: var(--snl-amber-50);
+}
+
+.summary-card.summary-ok,
+.lookup-card.lookup-found,
+.lookup-card.lookup-matched {
+  border-color: #8bc8bd;
+  background: #f2f9f8;
+}
+
+.summary-card.summary-active,
+.summary-card.summary-pending,
+.summary-card.summary-unknown,
+.lookup-card.lookup-unknown {
+  border-color: var(--snl-blue-gray-200);
+  background: var(--snl-blue-gray-25);
+}
+
 .entry-pane h3 {
   margin-bottom: 8px;
   font-size: 0.85rem;
   color: var(--snl-blue-gray-700);
   text-transform: uppercase;
+}
+
+.lookup-pane,
+.summary-pane {
+  display: grid;
+  align-content: start;
+}
+
+.lookup-cards {
+  display: grid;
+  gap: 10px;
+}
+
+.lookup-card,
+.summary-card,
+.empty-card {
+  min-width: 0;
+  border: 1px solid var(--snl-blue-gray-100);
+  border-left: 4px solid var(--snl-medium-blue);
+  border-radius: 4px;
+  padding: 10px;
+  background: #ffffff;
+}
+
+.lookup-card.lookup-error,
+.summary-card.summary-error {
+  border-left-color: var(--snl-red);
+}
+
+.lookup-card.lookup-found,
+.lookup-card.lookup-matched,
+.summary-card.summary-ok {
+  border-left-color: var(--snl-teal);
+}
+
+.lookup-card.lookup-no-match,
+.lookup-card.lookup-not-found,
+.summary-card.summary-review {
+  border-left-color: var(--snl-amber);
+}
+
+.lookup-card-header,
+.summary-card-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.lookup-card strong,
+.summary-card strong {
+  color: var(--snl-dark-blue);
+  font-size: 0.92rem;
+}
+
+.lookup-status {
+  flex: 0 0 auto;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 2px 7px;
+  color: var(--snl-blue-gray-700);
+  font-size: 0.72rem;
+  line-height: 1.3;
+  text-transform: capitalize;
+}
+
+.lookup-error .lookup-status,
+.summary-error .lookup-status {
+  color: var(--snl-red);
+}
+
+.lookup-found .lookup-status,
+.lookup-matched .lookup-status,
+.summary-ok .lookup-status {
+  color: var(--snl-teal);
+}
+
+.lookup-no-match .lookup-status,
+.lookup-not-found .lookup-status,
+.summary-review .lookup-status {
+  color: var(--snl-amber);
+}
+
+.empty-card {
+  color: var(--snl-blue-gray-700);
+  background: var(--snl-blue-gray-25);
 }
 
 pre {
