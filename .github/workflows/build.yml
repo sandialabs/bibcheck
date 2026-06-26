@@ -43,4 +43,6 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-        run: go build -v -ldflags "-X version.gitSha=$GIT_SHA -X version.buildDate=$BUILD_DATE" -o "${{ matrix.artifact_name }}" main.go
+          GIT_REF_NAME: ${{ github.ref_name }}
+          GIT_SHA: ${{ github.sha }}
+        run: go build -v -ldflags "-X github.com/sandialabs/bibcheck/version.gitSha=$GIT_SHA -X github.com/sandialabs/bibcheck/version.buildDate=$BUILD_DATE -X github.com/sandialabs/bibcheck/version.gitRefName=$GIT_REF_NAME" -o "${{ matrix.artifact_name }}" main.go

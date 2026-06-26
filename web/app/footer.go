@@ -8,6 +8,7 @@ import (
 	"github.com/hexops/vecty"
 	"github.com/hexops/vecty/elem"
 	"github.com/hexops/vecty/prop"
+	"github.com/sandialabs/bibcheck/version"
 )
 
 func renderFooter() vecty.ComponentOrHTML {
@@ -31,6 +32,10 @@ func renderFooter() vecty.ComponentOrHTML {
 		elem.Div(
 			vecty.Markup(vecty.Class("footer-item")),
 			vecty.Text("Point of contact: Carl Pearson <cwpears@sandia.gov>"),
+		),
+		elem.Div(
+			vecty.Markup(vecty.Class("footer-item")),
+			vecty.Text(version.String()),
 		),
 	)
 }
