@@ -35,8 +35,20 @@ type EntryState struct {
 	TextStatus     string
 	Text           string
 	AnalysisStatus string
-	Analysis       string
+	LookupCards    []LookupCard
+	Summary        SummaryView
 	Error          string
+}
+
+type LookupCard struct {
+	Name   string
+	Status string
+	Detail string
+}
+
+type SummaryView struct {
+	Status  string
+	Comment string
 }
 
 type State struct {
@@ -171,6 +183,7 @@ func AnalyzePDFWithOptions(ctx context.Context, rt *Runtime, pdf []byte, options
 			ID:             fmt.Sprintf("%d", id),
 			TextStatus:     "pending",
 			AnalysisStatus: "pending",
+			Summary:        SummaryView{Status: "pending"},
 		}
 	}
 	state.Phase = "Extracting entries"
@@ -208,17 +221,26 @@ func AnalyzePDFWithOptions(ctx context.Context, rt *Runtime, pdf []byte, options
 			if state.Entries[i].Error == "" {
 				state.Entries[i].Error = "entry text was not extracted"
 			}
+			state.Entries[i].Summary = SummaryView{
+				Status:  "error",
+				Comment: state.Entries[i].Error,
+			}
 			emit(progress, state)
 			continue
 		}
 
 		state.Entries[i].AnalysisStatus = "active"
+		state.Entries[i].Summary = SummaryView{Status: "active"}
 		emit(progress, state)
 
 		result, err := lookup.Entry(state.Entries[i].Text, "auto", rt.Provider, rt.Provider, rt.Provider, nil)
 		if err != nil {
 			state.Entries[i].AnalysisStatus = "error"
 			state.Entries[i].Error = fmt.Sprintf("analyze entry: %v", err)
+			state.Entries[i].Summary = SummaryView{
+				Status:  "error",
+				Comment: state.Entries[i].Error,
+			}
 			emit(progress, state)
 			continue
 		}
@@ -233,7 +255,8 @@ func AnalyzePDFWithOptions(ctx context.Context, rt *Runtime, pdf []byte, options
 		}
 
 		state.Entries[i].AnalysisStatus = "completed"
-		state.Entries[i].Analysis = FormatAnalysis(result)
+		state.Entries[i].LookupCards = BuildLookupCards(result)
+		state.Entries[i].Summary = BuildSummaryView(result)
 		state.Completed++
 		emit(progress, state)
 	}
@@ -241,6 +264,50 @@ func AnalyzePDFWithOptions(ctx context.Context, rt *Runtime, pdf []byte, options
 	state.Phase = "Done"
 	emit(progress, state)
 	return state
+}
+
+func BuildLookupCards(result *lookup.Result) []LookupCard {
+	if result == nil {
+		return nil
+	}
+
+	cards := make([]LookupCard, 0, 6)
+	appendCard := func(card LookupCard, ok bool) {
+		if ok {
+			cards = append(cards, card)
+		}
+	}
+
+	appendCard(buildDOILookupCard(result), result.DOIOrg.Found || result.DOIOrg.Error != nil || result.DOIOrg.ID != "")
+	appendCard(buildOSTILookupCard(result), result.OSTI.Record != nil || result.OSTI.Error != nil || result.OSTI.ID != "")
+	appendCard(buildArxivLookupCard(result), result.Arxiv.Entry != nil || result.Arxiv.Error != nil || result.Arxiv.ID != "")
+	appendCard(buildElsevierLookupCard(result), result.Elsevier.Result != nil || result.Elsevier.Error != nil || result.Elsevier.Status == lookup.SearchStatusDone)
+	appendCard(buildCrossrefLookupCard(result), result.Crossref.Work != nil || result.Crossref.Error != nil || result.Crossref.Status == lookup.SearchStatusDone || result.Crossref.Comment != "")
+	appendCard(buildOnlineLookupCard(result), result.Online.Metadata != nil || result.Online.Error != nil || result.Online.Status == lookup.SearchStatusDone)
+
+	return cards
+}
+
+func BuildSummaryView(result *lookup.Result) SummaryView {
+	if result == nil {
+		return SummaryView{Status: "unknown"}
+	}
+	if result.Summary.Status == lookup.SearchStatusDone {
+		if result.Summary.Matches {
+			return SummaryView{Status: "ok", Comment: result.Summary.Comment}
+		}
+		return SummaryView{Status: "review", Comment: result.Summary.Comment}
+	}
+	if result.Summary.Error != nil {
+		return SummaryView{Status: "error", Comment: result.Summary.Error.Error()}
+	}
+	if hasLookupError(result) {
+		return SummaryView{Status: "error", Comment: "One or more lookup methods returned an error."}
+	}
+	if hasLookupMatch(result) {
+		return SummaryView{Status: "unknown"}
+	}
+	return SummaryView{Status: "review", Comment: "No matching metadata found."}
 }
 
 func FormatAnalysis(result *lookup.Result) string {
@@ -284,6 +351,96 @@ func FormatAnalysis(result *lookup.Result) string {
 	return strings.TrimSpace(b.String())
 }
 
+func buildDOILookupCard(result *lookup.Result) LookupCard {
+	card := LookupCard{Name: "DOI", Status: "not-found", Detail: result.DOIOrg.ID}
+	if result.DOIOrg.Found {
+		card.Status = "found"
+		card.Detail = "exists"
+	} else if result.DOIOrg.Error != nil {
+		card.Status = "error"
+		card.Detail = result.DOIOrg.Error.Error()
+	}
+	return card
+}
+
+func buildOSTILookupCard(result *lookup.Result) LookupCard {
+	card := LookupCard{Name: "OSTI", Status: "not-found", Detail: result.OSTI.ID}
+	if result.OSTI.Record != nil {
+		card.Status = "found"
+		card.Detail = result.OSTI.Record.ToString()
+	} else if result.OSTI.Error != nil {
+		card.Status = "error"
+		card.Detail = result.OSTI.Error.Error()
+	}
+	return card
+}
+
+func buildArxivLookupCard(result *lookup.Result) LookupCard {
+	card := LookupCard{Name: "arXiv", Status: "not-found", Detail: result.Arxiv.ID}
+	if result.Arxiv.Entry != nil {
+		card.Status = "found"
+		card.Detail = result.Arxiv.Entry.ToString()
+	} else if result.Arxiv.Error != nil {
+		card.Status = "error"
+		card.Detail = result.Arxiv.Error.Error()
+	}
+	return card
+}
+
+func buildElsevierLookupCard(result *lookup.Result) LookupCard {
+	card := LookupCard{Name: "Elsevier", Status: "no-match"}
+	if result.Elsevier.Result != nil {
+		card.Status = "matched"
+		card.Detail = result.Elsevier.Result.ToString()
+	} else if result.Elsevier.Error != nil {
+		card.Status = "error"
+		card.Detail = result.Elsevier.Error.Error()
+	}
+	return card
+}
+
+func buildCrossrefLookupCard(result *lookup.Result) LookupCard {
+	card := LookupCard{Name: "Crossref", Status: "no-match", Detail: result.Crossref.Comment}
+	if result.Crossref.Work != nil {
+		card.Status = "matched"
+		card.Detail = result.Crossref.Work.ToString()
+	} else if result.Crossref.Error != nil {
+		card.Status = "error"
+		card.Detail = result.Crossref.Error.Error()
+	}
+	return card
+}
+
+func buildOnlineLookupCard(result *lookup.Result) LookupCard {
+	card := LookupCard{Name: "Online", Status: "not-found"}
+	if result.Online.Metadata != nil {
+		card.Status = "found"
+		card.Detail = result.Online.Metadata.ToString()
+	} else if result.Online.Error != nil {
+		card.Status = "error"
+		card.Detail = result.Online.Error.Error()
+	}
+	return card
+}
+
+func hasLookupError(result *lookup.Result) bool {
+	return result.DOIOrg.Error != nil ||
+		result.OSTI.Error != nil ||
+		result.Arxiv.Error != nil ||
+		result.Elsevier.Error != nil ||
+		result.Crossref.Error != nil ||
+		result.Online.Error != nil
+}
+
+func hasLookupMatch(result *lookup.Result) bool {
+	return result.DOIOrg.Found ||
+		result.OSTI.Record != nil ||
+		result.Arxiv.Entry != nil ||
+		result.Elsevier.Result != nil ||
+		result.Crossref.Work != nil ||
+		result.Online.Metadata != nil
+}
+
 func emit(progress Progress, state State) {
 	if progress != nil {
 		progress(cloneState(state))
@@ -300,6 +457,9 @@ func fail(progress Progress, state State, err error) State {
 func cloneState(state State) State {
 	entries := make([]EntryState, len(state.Entries))
 	copy(entries, state.Entries)
+	for i := range entries {
+		entries[i].LookupCards = append([]LookupCard(nil), entries[i].LookupCards...)
+	}
 	state.Entries = entries
 	return state
 }
