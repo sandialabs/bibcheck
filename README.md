@@ -209,11 +209,6 @@ https://scholar.google.com/scholar?hl=en&as_sdt=0%2C32&q=Quantum+information&btn
 * OpenAlex search
 * WebUI:
     * Elsevier API
-    * Shirty Base URL
-    * Display version/SHA
-        * if versioned, only show that
-        * version links to release, sha links to commit
-    * preserve SHIRTY_API_KEY in local storage
     * Change styling so ready PDF is a bit less subtle.
     * Footer: change sandialabs/bibcheck to "contribute at <sandialabs/bibcheck>"
     * Shows "URL:" before analysis results.
