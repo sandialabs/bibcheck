@@ -4,6 +4,7 @@ package version
 
 var gitSha string
 var buildDate string
+var gitRefName string
 
 func GitSha() string {
 	if gitSha == "" {
@@ -21,6 +22,25 @@ func BuildDate() string {
 	}
 }
 
+func GitRefName() string {
+	if gitRefName == "" {
+		return "[git ref not provided]"
+	} else {
+		return gitRefName
+	}
+}
+
 func String() string {
-	return "0.3.0"
+	return GitRefName() + " (" + shortGitSha() + ")"
+}
+
+func shortGitSha() string {
+	if gitSha == "" {
+		return GitSha()
+	}
+	sha := gitSha
+	if len(sha) <= 7 {
+		return sha
+	}
+	return sha[:7]
 }
