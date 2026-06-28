@@ -4,7 +4,9 @@
 graph LR
 
     subgraph Web Browser
-        B[Analysis Engine]
+        subgraph javascript
+            B[Analysis Engine]
+        end
     end
 
     subgraph Sandia Infrastructure
@@ -12,15 +14,20 @@ graph LR
     end
 
     subgraph Public Internet
-        C[arXiv]
+        subgraph metadata[Metadata Providers]
+           direction TB
+           C[arXiv]
+           F[Crossref]
+           G[OSTI]
+        end
         E[Website]
     end
 
     A[User] -->|PDF| B[Analysis Engine]
-    B -->|API| C
+    B <-->|API| metadata
     B <-->|Resource Request| D
     D <-->|HTTP GET| E
-    B --x|"blocked (CORS)"| E
+    B --x|"Resource Request typically blocked (CORS)"| E
 
-linkStyle 4 stroke:red,stroke-width:2px,color:red
+    linkStyle 4 stroke:red,stroke-width:2px,color:red
 ```
