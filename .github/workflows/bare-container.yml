@@ -5,8 +5,12 @@ on:
         branches: ["main"]
         tags:
             - "v*"
+        paths-ignore:
+            - "docs/**"
     pull_request:
         branches: ["main"]
+        paths-ignore:
+            - "docs/**"
     workflow_dispatch:
 
 jobs:
