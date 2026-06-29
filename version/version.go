@@ -3,7 +3,6 @@
 package version
 
 var gitSha string
-var buildDate string
 var gitRefName string
 
 func GitSha() string {
@@ -11,14 +10,6 @@ func GitSha() string {
 		return "[git SHA not provided]"
 	} else {
 		return gitSha
-	}
-}
-
-func BuildDate() string {
-	if buildDate == "" {
-		return "[build date not provided]"
-	} else {
-		return buildDate
 	}
 }
 
