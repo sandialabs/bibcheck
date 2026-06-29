@@ -12,6 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/sandialabs/bibcheck/internal/wasmhttp"
 )
 
 func TestFetchHandlerFetchesUpstreamResponse(t *testing.T) {
@@ -37,6 +40,55 @@ func TestFetchHandlerFetchesUpstreamResponse(t *testing.T) {
 	}
 	if got := resp.Body.String(); got != "<title>ok</title>" {
 		t.Fatalf("unexpected body: %q", got)
+	}
+	if got := resp.Header().Get(wasmhttp.FetchResultHeader); got != wasmhttp.FetchResultUpstream {
+		t.Fatalf("expected fetch result %q, got %q", wasmhttp.FetchResultUpstream, got)
+	}
+}
+
+func TestFetchHandlerPreservesUpstreamError(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusBadGateway)
+		_, _ = w.Write([]byte("upstream says no"))
+	}))
+	defer upstream.Close()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/fetch?url="+url.QueryEscape(upstream.URL), nil)
+	resp := httptest.NewRecorder()
+
+	fetchHandler(1024).ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusBadGateway {
+		t.Fatalf("expected status %d, got %d", http.StatusBadGateway, resp.Code)
+	}
+	if got := resp.Body.String(); got != "upstream says no" {
+		t.Fatalf("unexpected body: %q", got)
+	}
+	if got := resp.Header().Get(wasmhttp.FetchResultHeader); got != wasmhttp.FetchResultUpstream {
+		t.Fatalf("expected fetch result %q, got %q", wasmhttp.FetchResultUpstream, got)
+	}
+}
+
+func TestFetchHandlerMarksUpstreamTimeoutAsProxyError(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	defer upstream.Close()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/fetch?url="+url.QueryEscape(upstream.URL), nil)
+	resp := httptest.NewRecorder()
+
+	fetchHandlerWithTimeout(1024, 10*time.Millisecond).ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusGatewayTimeout {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusGatewayTimeout, resp.Code, resp.Body.String())
+	}
+	if got := resp.Header().Get(wasmhttp.FetchResultHeader); got != wasmhttp.FetchResultProxyError {
+		t.Fatalf("expected fetch result %q, got %q", wasmhttp.FetchResultProxyError, got)
+	}
+	if !strings.Contains(resp.Body.String(), "upstream request timed out after 10ms") {
+		t.Fatalf("unexpected response body: %q", resp.Body.String())
 	}
 }
 
@@ -99,6 +151,9 @@ func TestFetchHandlerRejectsUnsupportedURL(t *testing.T) {
 
 	if resp.Code != http.StatusBadRequest {
 		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, resp.Code)
+	}
+	if got := resp.Header().Get(wasmhttp.FetchResultHeader); got != wasmhttp.FetchResultProxyError {
+		t.Fatalf("expected fetch result %q, got %q", wasmhttp.FetchResultProxyError, got)
 	}
 }
 

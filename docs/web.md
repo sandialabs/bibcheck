@@ -55,6 +55,13 @@ that for larger PDFs if needed:
 go run . serve --fetch-max-bytes 52428800
 ```
 
+The endpoint adds `X-Bibcheck-Fetch-Result` to distinguish responses:
+
+- `upstream` everything came from the requested URL, including non-success HTTP responses.
+- `proxy-error` means `/api/fetch` could not complete the request. It returns a plain-text error with an appropriate status code. This includes if the upstream requested timed out.
+
+If the web app receives neither value, it reports `/api/fetch` as unavailable or misconfigured
+
 ## Container Image
 
 Uses a multi-stage container build:
@@ -149,4 +156,5 @@ Expected results:
 - `/style.css` returns `200 OK` and CSS content.
 - `/footer.css` returns `200 OK` and CSS content.
 - `/api/fetch?...` returns the upstream response when the server can reach the
-  requested URL and the response is within the configured byte limit.
+  requested URL and the response is within the configured byte limit. Its
+  `X-Bibcheck-Fetch-Result` response header is `upstream`.

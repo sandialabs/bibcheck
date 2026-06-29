@@ -19,3 +19,7 @@ func ConfigureRequest(req *http.Request) {
 func FetchURL(rawURL string) string {
 	return "/api/fetch?url=" + url.QueryEscape(rawURL)
 }
+
+func UsesFetchProxy() bool {
+	return true
+}

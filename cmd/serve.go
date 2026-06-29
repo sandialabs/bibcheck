@@ -3,6 +3,8 @@
 package cmd
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -15,8 +17,11 @@ import (
 	"time"
 
 	"github.com/sandialabs/bibcheck/config"
+	"github.com/sandialabs/bibcheck/internal/wasmhttp"
 	"github.com/spf13/cobra"
 )
+
+const fetchUpstreamTimeout = 15 * time.Second
 
 var (
 	serveAddr     string
@@ -220,8 +225,12 @@ func addVary(header http.Header, value string) {
 }
 
 func fetchHandler(maxBytes int64) http.Handler {
+	return fetchHandlerWithTimeout(maxBytes, fetchUpstreamTimeout)
+}
+
+func fetchHandlerWithTimeout(maxBytes int64, timeout time.Duration) http.Handler {
 	client := &http.Client{
-		Timeout: 15 * time.Second,
+		Timeout: timeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if err := validateFetchURL(req.URL); err != nil {
 				return err
@@ -231,6 +240,8 @@ func fetchHandler(maxBytes int64) http.Handler {
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set(wasmhttp.FetchResultHeader, wasmhttp.FetchResultProxyError)
+
 		if r.Method != http.MethodGet {
 			w.Header().Set("Allow", http.MethodGet)
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -263,13 +274,23 @@ func fetchHandler(maxBytes int64) http.Handler {
 
 		resp, err := client.Do(req)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("upstream request failed: %v", err), http.StatusBadGateway)
+			log.Printf("proxy GET failed url=%q: %v", targetURL.String(), err)
+			if isTimeoutError(err) {
+				http.Error(w, fmt.Sprintf("upstream request timed out after %s", timeout), http.StatusGatewayTimeout)
+				return
+			}
+			http.Error(w, "upstream request failed", http.StatusBadGateway)
 			return
 		}
 		defer resp.Body.Close()
 
 		body, tooLarge, err := readLimited(resp.Body, maxBytes)
 		if err != nil {
+			log.Printf("proxy GET read failed url=%q: %v", targetURL.String(), err)
+			if isTimeoutError(err) {
+				http.Error(w, fmt.Sprintf("upstream response timed out after %s", timeout), http.StatusGatewayTimeout)
+				return
+			}
 			http.Error(w, "read upstream response failed", http.StatusBadGateway)
 			return
 		}
@@ -283,11 +304,20 @@ func fetchHandler(maxBytes int64) http.Handler {
 		} else if len(body) > 0 {
 			w.Header().Set("Content-Type", http.DetectContentType(body))
 		}
+		w.Header().Set(wasmhttp.FetchResultHeader, wasmhttp.FetchResultUpstream)
 		w.WriteHeader(resp.StatusCode)
 		if _, err := w.Write(body); err != nil {
 			log.Printf("write proxied response failed: %v", err)
 		}
 	})
+}
+
+func isTimeoutError(err error) bool {
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var netErr net.Error
+	return errors.As(err, &netErr) && netErr.Timeout()
 }
 
 func clientAddressLogFields(r *http.Request) string {

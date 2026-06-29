@@ -24,6 +24,8 @@ import (
 const (
 	SearchStatusNotAttempted string = ""
 	SearchStatusDone         string = "done"
+	retrieveTimeout                 = 20 * time.Second
+	maxFetchErrorBytes       int64  = 4 * 1024
 )
 
 type Search struct {
@@ -100,7 +102,7 @@ type EntryConfig struct {
 
 func retrieveUrl(url string) ([]byte, string, error) {
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: retrieveTimeout,
 	}
 	fetchURL := wasmhttp.FetchURL(url)
 	log.Println("GET", url)
@@ -116,9 +118,8 @@ func retrieveUrl(url string) ([]byte, string, error) {
 	}
 	defer resp.Body.Close()
 
-	// Check for HTTP error status codes
-	if resp.StatusCode >= 400 {
-		return nil, "", fmt.Errorf("HTTP error: %d %s", resp.StatusCode, resp.Status)
+	if err := fetchResponseError(resp, wasmhttp.UsesFetchProxy()); err != nil {
+		return nil, "", err
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -135,6 +136,42 @@ func retrieveUrl(url string) ([]byte, string, error) {
 	}
 
 	return body, contentType, nil
+}
+
+func fetchResponseError(resp *http.Response, usingProxy bool) error {
+	if usingProxy {
+		switch resp.Header.Get(wasmhttp.FetchResultHeader) {
+		case wasmhttp.FetchResultProxyError:
+			detail, err := io.ReadAll(io.LimitReader(resp.Body, maxFetchErrorBytes+1))
+			if err != nil {
+				return fmt.Errorf("/api/fetch returned %s and its error body could not be read: %w", resp.Status, err)
+			}
+			truncated := int64(len(detail)) > maxFetchErrorBytes
+			if truncated {
+				detail = detail[:maxFetchErrorBytes]
+			}
+			message := strings.TrimSpace(string(detail))
+			if message == "" {
+				message = resp.Status
+			} else if truncated {
+				message += "..."
+			}
+			return fmt.Errorf("/api/fetch error: %s", message)
+		case wasmhttp.FetchResultUpstream:
+			// The status and body came from the requested URL.
+		default:
+			return fmt.Errorf("/api/fetch returned %s without a valid %s header; the endpoint may be unavailable or misconfigured",
+				resp.Status, wasmhttp.FetchResultHeader)
+		}
+	}
+
+	if resp.StatusCode >= 400 {
+		if usingProxy {
+			return fmt.Errorf("upstream HTTP error: %s", resp.Status)
+		}
+		return fmt.Errorf("HTTP error: %s", resp.Status)
+	}
+	return nil
 }
 
 // analyze bib entry `text`
