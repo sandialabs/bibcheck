@@ -1,5 +1,8 @@
 FROM golang:1.25 AS build
 
+ARG GIT_SHA
+ARG GIT_REF_NAME
+
 WORKDIR /src
 
 ENV GOMODCACHE=/tmp/gomodcache
@@ -15,8 +18,12 @@ RUN go mod download
 COPY . .
 
 RUN mkdir -p /out && \
-    CGO_ENABLED=0 go build -o /out/bibcheck . && \
-    GOOS=js GOARCH=wasm go build -o /out/app.wasm ./web/app && \
+    CGO_ENABLED=0 go build \
+      -ldflags "-X github.com/sandialabs/bibcheck/version.gitSha=${GIT_SHA} -X github.com/sandialabs/bibcheck/version.gitRefName=${GIT_REF_NAME}" \
+      -o /out/bibcheck . && \
+    GOOS=js GOARCH=wasm go build \
+      -ldflags "-X github.com/sandialabs/bibcheck/version.gitSha=${GIT_SHA} -X github.com/sandialabs/bibcheck/version.gitRefName=${GIT_REF_NAME}" \
+      -o /out/app.wasm ./web/app && \
     cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" /out/wasm_exec.js && \
     cp web/static/*.html /out/ && \
     cp web/static/*.css /out/ && \

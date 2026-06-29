@@ -26,5 +26,8 @@ jobs:
               with:
                   context: .
                   file: snl.Dockerfile
+                  build-args: |
+                      GIT_SHA=${{ github.sha }}
+                      GIT_REF_NAME=${{ github.ref_name }}
                   push: false
                   tags: bibcheck-snl:test

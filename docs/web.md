@@ -86,9 +86,24 @@ Use these defaults:
 
 ## Local Container Development
 
+The Dockerfiles accept `GIT_SHA` and `GIT_REF_NAME` build arguments. These
+values are embedded in both the server and WASM binaries and are displayed in
+their version information. Set them from the current checkout before building:
+
 ```bash
-podman build -f bare.Dockerfile -t bibcheck-wasm .
+GIT_SHA="$(git rev-parse HEAD)"
+GIT_REF_NAME="$(git describe --tags --exact-match 2>/dev/null || git branch --show-current)"
+
+podman build \
+  --build-arg GIT_SHA="$GIT_SHA" \
+  --build-arg GIT_REF_NAME="$GIT_REF_NAME" \
+  -f bare.Dockerfile \
+  -t bibcheck-wasm .
 ```
+
+For a detached commit that is not tagged, `GIT_REF_NAME` may be empty. Supply a
+meaningful name explicitly if the image needs one, for example
+`GIT_REF_NAME=release-candidate`.
 
 If your environment requires a Sandia/SNL-specific SSL certificate and web UI,
 provide that certificate as `corpca.crt`, and then build `snl.Dockerfile`
@@ -96,7 +111,11 @@ instead. This image builds the WASM app with the `sandia_web` tag, hiding the
 OpenRouter API key field.
 
 ```bash
-podman build -f snl.Dockerfile -t bibcheck-wasm-snl .
+podman build \
+  --build-arg GIT_SHA="$GIT_SHA" \
+  --build-arg GIT_REF_NAME="$GIT_REF_NAME" \
+  -f snl.Dockerfile \
+  -t bibcheck-wasm-snl .
 ```
 
 Run with the image's default user:
