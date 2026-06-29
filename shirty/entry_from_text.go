@@ -12,7 +12,6 @@ import (
 )
 
 var (
-	llama_33_70B_Model  = "meta-llama/Llama-3.3-70B-Instruct"
 	llama_33_70B_Prompt = `Extract the requested bibliography entry from the document's bibliography.
 - Only extract the requested entry.
 - Do not create a bibliography reference for the provided document, extract the entry from the bibliography.
