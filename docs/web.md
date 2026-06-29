@@ -11,6 +11,10 @@ It does not persist PDF uploads or state, store API keys, or expose analysis API
 endpoints. All analysis state is held in browser memory for the current page
 session.
 
+For deployment liveness probes, the server exposes `GET` and `HEAD /livez`.
+The endpoint returns a plain-text `200 OK` response with
+`Cache-Control: no-store` while the server process can handle requests.
+
 ## Network Exposure
 
 Do not expose `bibcheck serve` directly to the public internet.
@@ -145,6 +149,7 @@ curl -I http://localhost:8080/app.wasm
 curl -I http://localhost:8080/wasm_exec.js
 curl -I http://localhost:8080/style.css
 curl -I http://localhost:8080/footer.css
+curl -i http://localhost:8080/livez
 curl -sS -D - "http://localhost:8080/api/fetch?url=https%3A%2F%2Fwww.hpcg-benchmark.org%2F" -o /tmp/bibcheck-fetch.html
 ```
 
@@ -155,6 +160,7 @@ Expected results:
 - `/wasm_exec.js` returns `200 OK` and JavaScript content.
 - `/style.css` returns `200 OK` and CSS content.
 - `/footer.css` returns `200 OK` and CSS content.
+- `/livez` returns `200 OK` and `ok`.
 - `/api/fetch?...` returns the upstream response when the server can reach the
   requested URL and the response is within the configured byte limit. Its
   `X-Bibcheck-Fetch-Result` response header is `upstream`.

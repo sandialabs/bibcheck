@@ -23,6 +23,8 @@ import (
 
 const fetchUpstreamTimeout = 15 * time.Second
 
+const livenessPath = "/livez"
+
 var (
 	serveAddr     string
 	serveDir      string
@@ -50,9 +52,28 @@ func init() {
 
 func serveMux(staticDir string, maxBytes int64) http.Handler {
 	mux := http.NewServeMux()
+	mux.Handle(livenessPath, livenessHandler())
 	mux.Handle("/api/fetch", fetchHandler(maxBytes))
 	mux.Handle("/", wasmBundleLogHandler(compressedFileServer(http.Dir(staticDir))))
 	return mux
+}
+
+func livenessHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			w.Header().Set("Allow", "GET, HEAD")
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Content-Length", "3")
+		if r.Method == http.MethodHead {
+			return
+		}
+		_, _ = io.WriteString(w, "ok\n")
+	})
 }
 
 type responseLogRecorder struct {
