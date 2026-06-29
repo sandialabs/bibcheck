@@ -11,3 +11,7 @@ func ConfigureRequest(_ *http.Request) {}
 func FetchURL(rawURL string) string {
 	return rawURL
 }
+
+func UsesFetchProxy() bool {
+	return false
+}
