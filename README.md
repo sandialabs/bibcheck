@@ -215,7 +215,6 @@ https://scholar.google.com/scholar?hl=en&as_sdt=0%2C32&q=Quantum+information&btn
     * Elsevier API
     * Change styling so ready PDF is a bit less subtle.
     * Footer: change sandialabs/bibcheck to "contribute at <sandialabs/bibcheck>"
-    * Shows "URL:" before analysis results.
 * Understand if there is a better approach for setting the SHirty timeout: 60s is too short for 300KiB, but do we need to set 120s globally? Does the latency depend on how busy the endpoint is?
 * Add a wasm build to the CI before docker builds
 * Add a WebUI quick start via docker/podman to the readme
