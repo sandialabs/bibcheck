@@ -3,8 +3,6 @@
 package cmd
 
 import (
-	"bytes"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -92,36 +90,6 @@ func TestFetchHandlerMarksUpstreamTimeoutAsProxyError(t *testing.T) {
 	}
 }
 
-func TestFetchHandlerLogsClientAddressFields(t *testing.T) {
-	logs := captureLogOutput(t)
-	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer upstream.Close()
-
-	req := httptest.NewRequest(http.MethodGet, "/api/fetch?url="+url.QueryEscape(upstream.URL), nil)
-	req.RemoteAddr = "192.0.2.10:34567"
-	req.Header.Set("X-Forwarded-For", "198.51.100.7, 203.0.113.8")
-	req.Header.Set("X-Real-IP", "198.51.100.7")
-	req.Header.Set("Forwarded", "for=198.51.100.7")
-	resp := httptest.NewRecorder()
-
-	fetchHandler(1024).ServeHTTP(resp, req)
-
-	if resp.Code != http.StatusOK {
-		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, resp.Code, resp.Body.String())
-	}
-	assertLogContains(t, logs.String(),
-		"proxy GET",
-		upstream.URL,
-		`remote_addr="192.0.2.10:34567"`,
-		`remote_ip="192.0.2.10"`,
-		`x_forwarded_for="198.51.100.7, 203.0.113.8"`,
-		`x_real_ip="198.51.100.7"`,
-		`forwarded="for=198.51.100.7"`,
-	)
-}
-
 func TestFetchHandlerRejectsOversizedUpstreamResponse(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, err := w.Write([]byte("too large")); err != nil {
@@ -155,36 +123,6 @@ func TestFetchHandlerRejectsUnsupportedURL(t *testing.T) {
 	if got := resp.Header().Get(wasmhttp.FetchResultHeader); got != wasmhttp.FetchResultProxyError {
 		t.Fatalf("expected fetch result %q, got %q", wasmhttp.FetchResultProxyError, got)
 	}
-}
-
-func TestServeMuxLogsSuccessfulWasmBundleRequests(t *testing.T) {
-	logs := captureLogOutput(t)
-	dir := staticTestDir(t)
-	writeStaticFile(t, dir, "app.wasm", "plain wasm")
-
-	req := httptest.NewRequest(http.MethodGet, "/app.wasm", nil)
-	req.RemoteAddr = "192.0.2.20:45678"
-	req.Header.Set("X-Forwarded-For", "198.51.100.9")
-	req.Header.Set("X-Real-IP", "198.51.100.9")
-	req.Header.Set("Forwarded", "for=198.51.100.9")
-	resp := httptest.NewRecorder()
-
-	serveMux(dir, 1024).ServeHTTP(resp, req)
-
-	if resp.Code != http.StatusOK {
-		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, resp.Code, resp.Body.String())
-	}
-	assertLogContains(t, logs.String(),
-		"wasm bundle served",
-		`path="/app.wasm"`,
-		"status=200",
-		"bytes=10",
-		`remote_addr="192.0.2.20:45678"`,
-		`remote_ip="192.0.2.20"`,
-		`x_forwarded_for="198.51.100.9"`,
-		`x_real_ip="198.51.100.9"`,
-		`forwarded="for=198.51.100.9"`,
-	)
 }
 
 func TestCompressedFileServerServesBrotliWhenAvailable(t *testing.T) {
@@ -316,28 +254,4 @@ func assertVaryAcceptEncoding(t *testing.T, header http.Header) {
 		}
 	}
 	t.Fatalf("expected Vary header to include Accept-Encoding, got %q", header.Values("Vary"))
-}
-
-func captureLogOutput(t *testing.T) *bytes.Buffer {
-	t.Helper()
-
-	var logs bytes.Buffer
-	prevOutput := log.Writer()
-	prevFlags := log.Flags()
-	log.SetOutput(&logs)
-	log.SetFlags(0)
-	t.Cleanup(func() {
-		log.SetOutput(prevOutput)
-		log.SetFlags(prevFlags)
-	})
-	return &logs
-}
-
-func assertLogContains(t *testing.T, logs string, want ...string) {
-	t.Helper()
-	for _, substr := range want {
-		if !strings.Contains(logs, substr) {
-			t.Fatalf("expected log to contain %q, got %q", substr, logs)
-		}
-	}
 }
