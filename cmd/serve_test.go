@@ -15,6 +15,51 @@ import (
 	"github.com/sandialabs/bibcheck/internal/wasmhttp"
 )
 
+func TestServeMuxLiveness(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, livenessPath, nil)
+	resp := httptest.NewRecorder()
+
+	serveMux(t.TempDir(), 1024).ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, resp.Code, resp.Body.String())
+	}
+	if got := resp.Body.String(); got != "ok\n" {
+		t.Fatalf("unexpected body: %q", got)
+	}
+	if got := resp.Header().Get("Cache-Control"); got != "no-store" {
+		t.Fatalf("expected Cache-Control no-store, got %q", got)
+	}
+}
+
+func TestServeMuxLivenessSupportsHead(t *testing.T) {
+	req := httptest.NewRequest(http.MethodHead, livenessPath, nil)
+	resp := httptest.NewRecorder()
+
+	serveMux(t.TempDir(), 1024).ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, resp.Code, resp.Body.String())
+	}
+	if resp.Body.Len() != 0 {
+		t.Fatalf("expected empty body, got %q", resp.Body.String())
+	}
+}
+
+func TestServeMuxLivenessRejectsOtherMethods(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, livenessPath, nil)
+	resp := httptest.NewRecorder()
+
+	serveMux(t.TempDir(), 1024).ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusMethodNotAllowed, resp.Code, resp.Body.String())
+	}
+	if got := resp.Header().Get("Allow"); got != "GET, HEAD" {
+		t.Fatalf("expected Allow GET, HEAD, got %q", got)
+	}
+}
+
 func TestFetchHandlerFetchesUpstreamResponse(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
