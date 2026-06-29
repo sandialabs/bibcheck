@@ -93,7 +93,7 @@ func (a *app) renderLanding() vecty.ComponentOrHTML {
 					vecty.If(showShirtyKey,
 						elem.Label(
 							vecty.Markup(vecty.Class("field")),
-							elem.Span(vecty.Text("Shirty base URL")),
+							elem.Span(vecty.Text("Shirty base URL (e.g. https://shirty.sandia.gov/api/v1)")),
 							elem.Input(
 								vecty.Markup(
 									prop.Type(prop.TypeText),
