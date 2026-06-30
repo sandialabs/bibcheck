@@ -81,7 +81,6 @@ func renderSummary(entry workflow.EntryState) vecty.ComponentOrHTML {
 			elem.Div(
 				vecty.Markup(vecty.Class("summary-card-header")),
 				elem.Strong(vecty.Text(summaryTitle(summary.Status))),
-				elem.Span(vecty.Markup(vecty.Class("lookup-status")), vecty.Text(statusLabel(summary.Status))),
 			),
 			elem.Preformatted(vecty.Text(nonEmpty(summary.Comment, summaryFallback(entry, summary.Status)))),
 		),

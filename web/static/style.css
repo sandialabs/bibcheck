@@ -426,20 +426,17 @@ progress {
   text-transform: capitalize;
 }
 
-.lookup-error .lookup-status,
-.summary-error .lookup-status {
+.lookup-error .lookup-status {
   color: var(--snl-red);
 }
 
 .lookup-found .lookup-status,
-.lookup-matched .lookup-status,
-.summary-ok .lookup-status {
+.lookup-matched .lookup-status {
   color: var(--snl-teal);
 }
 
 .lookup-no-match .lookup-status,
-.lookup-not-found .lookup-status,
-.summary-review .lookup-status {
+.lookup-not-found .lookup-status {
   color: var(--snl-amber);
 }
 
