@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	analysisrunner "github.com/sandialabs/bibcheck/analysis"
 	"github.com/sandialabs/bibcheck/config"
 	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/entries"
@@ -63,7 +64,8 @@ type State struct {
 type Progress func(State)
 
 type Options struct {
-	Entry int
+	Entry   int
+	Workers int
 }
 
 type Provider interface {
@@ -177,93 +179,80 @@ func AnalyzePDFWithOptions(ctx context.Context, rt *Runtime, pdf []byte, options
 	}
 
 	state.Total = len(entryIDs)
-	state.Entries = make([]EntryState, len(entryIDs))
-	for i, id := range entryIDs {
-		state.Entries[i] = EntryState{
-			ID:             fmt.Sprintf("%d", id),
-			TextStatus:     "pending",
-			AnalysisStatus: "pending",
-			Summary:        SummaryView{Status: "pending"},
-		}
-	}
-	state.Phase = "Extracting entries"
-	emit(progress, state)
-
-	for i := range state.Entries {
-		if err := ctx.Err(); err != nil {
-			return fail(progress, state, err)
-		}
-
-		state.Entries[i].TextStatus = "active"
-		emit(progress, state)
-
-		text, err := rt.Provider.EntryFromBibliography(bibliography, entryIDs[i])
-		if err != nil {
-			state.Entries[i].TextStatus = "error"
-			state.Entries[i].Error = fmt.Sprintf("extract entry: %v", err)
+	state.Phase = "Processing entries"
+	runnerResult, err := analysisrunner.Run(ctx, analysisrunner.Config{
+		EntryIDs: entryIDs,
+		Workers:  options.Workers,
+		Extract: func(id int) (string, error) {
+			return rt.Provider.EntryFromBibliography(bibliography, id)
+		},
+		Lookup: func(text string) (*lookup.Result, error) {
+			return lookup.Entry(text, "auto", rt.Provider, rt.Provider, rt.Provider, nil)
+		},
+		Summarize: func(result *lookup.Result) (analysisrunner.Summary, error) {
+			mismatch, comment, err := rt.Provider.Summarize(result)
+			return analysisrunner.Summary{Mismatch: mismatch, Comment: comment}, err
+		},
+		Progress: func(snapshot analysisrunner.Snapshot) {
+			state = stateFromSnapshot(state, snapshot)
 			emit(progress, state)
-			continue
-		}
-
-		state.Entries[i].TextStatus = "completed"
-		state.Entries[i].Text = text
-		emit(progress, state)
-	}
-
-	state.Phase = "Analyzing entries"
-	emit(progress, state)
-	for i := range state.Entries {
-		if err := ctx.Err(); err != nil {
-			return fail(progress, state, err)
-		}
-		if state.Entries[i].TextStatus != "completed" {
-			state.Entries[i].AnalysisStatus = "error"
-			if state.Entries[i].Error == "" {
-				state.Entries[i].Error = "entry text was not extracted"
-			}
-			state.Entries[i].Summary = SummaryView{
-				Status:  "error",
-				Comment: state.Entries[i].Error,
-			}
-			emit(progress, state)
-			continue
-		}
-
-		state.Entries[i].AnalysisStatus = "active"
-		state.Entries[i].Summary = SummaryView{Status: "active"}
-		emit(progress, state)
-
-		result, err := lookup.Entry(state.Entries[i].Text, "auto", rt.Provider, rt.Provider, rt.Provider, nil)
-		if err != nil {
-			state.Entries[i].AnalysisStatus = "error"
-			state.Entries[i].Error = fmt.Sprintf("analyze entry: %v", err)
-			state.Entries[i].Summary = SummaryView{
-				Status:  "error",
-				Comment: state.Entries[i].Error,
-			}
-			emit(progress, state)
-			continue
-		}
-
-		mismatch, comment, summaryErr := rt.Provider.Summarize(result)
-		if summaryErr != nil {
-			result.Summary.Error = summaryErr
-		} else {
-			result.Summary.Status = lookup.SearchStatusDone
-			result.Summary.Matches = !mismatch
-			result.Summary.Comment = comment
-		}
-
-		state.Entries[i].AnalysisStatus = "completed"
-		state.Entries[i].LookupCards = BuildLookupCards(result)
-		state.Entries[i].Summary = BuildSummaryView(result)
-		state.Completed++
-		emit(progress, state)
+		},
+	})
+	state = stateFromSnapshot(state, runnerResult)
+	if err != nil {
+		return fail(progress, state, err)
 	}
 
 	state.Phase = "Done"
 	emit(progress, state)
 	return state
+}
+
+func stateFromSnapshot(state State, snapshot analysisrunner.Snapshot) State {
+	state.Completed = snapshot.Completed
+	state.Entries = make([]EntryState, len(snapshot.Entries))
+	for i, entry := range snapshot.Entries {
+		view := EntryState{
+			ID:             fmt.Sprintf("%d", entry.ID),
+			TextStatus:     webStatus(entry.ExtractionStatus),
+			Text:           entry.Text,
+			AnalysisStatus: webStatus(entry.LookupStatus),
+			Summary:        SummaryView{Status: webStatus(entry.SummaryStatus)},
+		}
+		if entry.ExtractionError != nil {
+			view.Error = fmt.Sprintf("extract entry: %v", entry.ExtractionError)
+			view.Summary = SummaryView{Status: "error", Comment: view.Error}
+		} else if entry.LookupError != nil {
+			view.Error = fmt.Sprintf("analyze entry: %v", entry.LookupError)
+			view.Summary = SummaryView{Status: "error", Comment: view.Error}
+		} else if entry.SummaryError != nil && entry.Result != nil {
+			entry.Result.Summary.Error = entry.SummaryError
+		}
+		if entry.Result != nil {
+			if entry.SummaryStatus == analysisrunner.StatusCompleted {
+				entry.Result.Summary.Status = lookup.SearchStatusDone
+				entry.Result.Summary.Matches = !entry.Summary.Mismatch
+				entry.Result.Summary.Comment = entry.Summary.Comment
+			}
+			view.LookupCards = BuildLookupCards(entry.Result)
+			view.Summary = BuildSummaryView(entry.Result)
+		}
+		state.Entries[i] = view
+	}
+	return state
+}
+
+func webStatus(status analysisrunner.Status) string {
+	switch status {
+	case analysisrunner.StatusActive:
+		return "active"
+	case analysisrunner.StatusCompleted:
+		return "completed"
+	case analysisrunner.StatusError:
+		return "error"
+	default:
+		return "pending"
+	}
 }
 
 func BuildLookupCards(result *lookup.Result) []LookupCard {
