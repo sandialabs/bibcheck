@@ -3,13 +3,13 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
 
 	"github.com/spf13/cobra"
 
+	analysisrunner "github.com/sandialabs/bibcheck/analysis"
 	"github.com/sandialabs/bibcheck/config"
 	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/elsevier"
@@ -24,6 +24,7 @@ var (
 	carelessHideOK bool
 	format         outputFormat
 	pipeline       string
+	workers        int
 )
 
 const (
@@ -31,6 +32,7 @@ const (
 	FlagEntry          string = "entry"
 	FlagFormat         string = "format"
 	FlagPipeline       string = "pipeline"
+	FlagWorkers        string = "workers"
 )
 
 type outputFormat string
@@ -119,7 +121,7 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 				}
 
 			} else {
-				return errors.New("need shirty or openrouter config")
+				return fmt.Errorf("need shirty or openrouter config")
 			}
 		}
 
@@ -156,34 +158,52 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 			summarizer = shirtyProvider
 		}
 
+		entryIDs := make([]int, entryCount)
+		for i := range entryIDs {
+			entryIDs[i] = entryStart + i
+		}
+		if docBibliographyExtract == nil || bibliography == nil {
+			return fmt.Errorf("requires something that can extract a bib entry from a pdf")
+		}
+
+		run, err := analysisrunner.Run(cmd.Context(), analysisrunner.Config{
+			EntryIDs: entryIDs,
+			Workers:  workers,
+			Extract: func(id int) (string, error) {
+				return docBibliographyExtract.EntryFromBibliography(bibliography, id)
+			},
+			Lookup: func(text string) (*lookup.Result, error) {
+				return lookup.Entry(text, pipeline, class, docMeta, entryParser, cfg)
+			},
+			Summarize: func(result *lookup.Result) (analysisrunner.Summary, error) {
+				if summarizer == nil {
+					return analysisrunner.Summary{}, nil
+				}
+				mismatch, comment, err := summarizer.Summarize(result)
+				return analysisrunner.Summary{Mismatch: mismatch, Comment: comment}, err
+			},
+		})
+		if err != nil {
+			return err
+		}
+
 		views := []entryView{}
 		singleEntry := cmd.Flags().Changed(FlagEntry)
-
-		for i := entryStart; i < entryStart+entryCount; i++ {
-			var lr *lookup.Result
-			if docBibliographyExtract != nil && bibliography != nil {
-				lr, err = lookup.EntryFromBibliography(bibliography, i, pipeline, class, docBibliographyExtract, docMeta, entryParser, cfg)
-			} else {
-				return errors.New("requires something that can extract a bib entry from a pdf")
-			}
-
-			if err != nil {
-				log.Printf("entry analysis error: %v", err)
+		for _, entry := range run.Entries {
+			if entry.Result == nil {
+				if entry.ExtractionError != nil {
+					log.Printf("entry %d extraction error: %v", entry.ID, entry.ExtractionError)
+				} else if entry.LookupError != nil {
+					log.Printf("entry %d analysis error: %v", entry.ID, entry.LookupError)
+				}
 				continue
 			}
-
-			outcome := summaryOutcome{}
-			if summarizer != nil {
-				mismatch, comment, err := summarizer.Summarize(lr)
-				outcome.mismatch = mismatch
-				outcome.comment = comment
-				outcome.err = err
-				if err != nil {
-					log.Printf("summarizer error: %v", err)
-				}
+			outcome := summaryOutcome{
+				mismatch: entry.Summary.Mismatch,
+				comment:  entry.Summary.Comment,
+				err:      entry.SummaryError,
 			}
-
-			views = append(views, buildEntryView(i, lr, outcome))
+			views = append(views, buildEntryView(entry.ID, entry.Result, outcome))
 		}
 
 		doc := buildDocumentView(views, carelessHideOK)
@@ -221,6 +241,7 @@ func init() {
 	rootCmd.Flags().Int(FlagEntry, -1, "Analyze a single entry")
 	rootCmd.Flags().Var(newOutputFormatValue(&format), FlagFormat, "Output format: text or json")
 	rootCmd.Flags().StringVar(&pipeline, FlagPipeline, "auto", "Analysis pipeline to use")
+	rootCmd.Flags().IntVar(&workers, FlagWorkers, analysisrunner.DefaultWorkers, "Number of bibliography workers")
 
 	rootCmd.AddCommand(bibCmd)
 	rootCmd.AddCommand(doiCmd)
