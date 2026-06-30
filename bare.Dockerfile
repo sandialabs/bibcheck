@@ -27,6 +27,7 @@ RUN mkdir -p /out && \
     cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" /out/wasm_exec.js && \
     cp web/static/*.html /out/ && \
     cp web/static/*.css /out/ && \
+    cp web/static/*.svg /out/ && \
     for file in /out/*.wasm /out/*.html /out/*.css /out/*.js; do gzip -k -f "$file" && brotli -k -f "$file"; done && \
     chmod -R g=u /out
 
@@ -37,6 +38,7 @@ COPY --from=build --chown=1001:0 /out/bibcheck /usr/local/bin/bibcheck
 COPY --from=build --chown=1001:0 /out/app.wasm* /opt/bibcheck/web/
 COPY --from=build --chown=1001:0 /out/wasm_exec.js* /opt/bibcheck/web/
 COPY --from=build --chown=1001:0 /out/index.html* /opt/bibcheck/web/
+COPY --from=build --chown=1001:0 /out/favicon.svg /opt/bibcheck/web/
 COPY --from=build --chown=1001:0 /out/style.css* /opt/bibcheck/web/
 COPY --from=build --chown=1001:0 /out/footer.css* /opt/bibcheck/web/
 
