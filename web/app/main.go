@@ -32,6 +32,8 @@ type app struct {
 	pdf           []byte
 	dragging      bool
 	running       bool
+	cancelRun     context.CancelFunc
+	runID         uint64
 	errorMessage  string
 	state         workflow.State
 }
@@ -310,13 +312,23 @@ func (a *app) start() {
 	}
 
 	a.running = true
+	if a.cancelRun != nil {
+		a.cancelRun()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	a.cancelRun = cancel
+	a.runID++
+	runID := a.runID
 	a.errorMessage = ""
 	a.state = workflow.State{Provider: rt.Kind, Phase: "Starting"}
 	vecty.Rerender(a)
 
 	pdf := append([]byte(nil), a.pdf...)
 	options := workflow.Options{Entry: entry}
-	go workflow.AnalyzePDFWithOptions(context.Background(), rt, pdf, options, func(state workflow.State) {
+	go workflow.AnalyzePDFWithOptions(ctx, rt, pdf, options, func(state workflow.State) {
+		if runID != a.runID {
+			return
+		}
 		a.state = state
 		vecty.Rerender(a)
 	})
@@ -374,6 +386,11 @@ func saveLocalStorage(key, value string) {
 }
 
 func (a *app) reset() {
+	if a.cancelRun != nil {
+		a.cancelRun()
+		a.cancelRun = nil
+	}
+	a.runID++
 	a.filename = ""
 	a.pdf = nil
 	a.running = false
@@ -478,6 +495,9 @@ func valueProgress(state workflow.State) int {
 }
 
 func statusText(entry workflow.EntryState) string {
+	if entry.SummaryStatus != "pending" {
+		return entry.SummaryStatus
+	}
 	if entry.AnalysisStatus != "pending" {
 		return entry.AnalysisStatus
 	}
