@@ -82,6 +82,7 @@ input {
   border-top: 5px solid var(--snl-blue);
   background: var(--snl-dark-blue-800);
   box-shadow: 0 10px 24px rgb(0 0 0 / 25%);
+  text-align: center;
 }
 
 .warning-page h1 {
