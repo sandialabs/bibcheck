@@ -116,8 +116,6 @@ func summaryFallback(entry workflow.EntryState, status string) string {
 	switch status {
 	case "active":
 		return "Building the aggregate summary."
-	case "pending":
-		return "Waiting for analysis."
 	case "error":
 		return nonEmpty(entry.Error, "Analysis did not complete.")
 	case "ok":

@@ -383,7 +383,6 @@ progress {
 }
 
 .summary-card.summary-active,
-.summary-card.summary-pending,
 .summary-card.summary-unknown,
 .lookup-card.lookup-unknown {
   border-color: var(--snl-blue-gray-200);
