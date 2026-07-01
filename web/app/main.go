@@ -31,6 +31,7 @@ type app struct {
 	running       bool
 	errorMessage  string
 	state         workflow.State
+	warningRead   bool
 }
 
 func main() {
@@ -40,7 +41,10 @@ func main() {
 }
 
 func newApp() *app {
-	a := &app{shirtyBaseURL: config.DefaultShirtyBaseURL}
+	a := &app{
+		shirtyBaseURL: config.DefaultShirtyBaseURL,
+		warningRead:   !showWarningPage,
+	}
 	if showShirtyKey {
 		a.shirtyKey = loadLocalStorage(shirtyKeyStorageKey)
 	}
@@ -48,6 +52,9 @@ func newApp() *app {
 }
 
 func (a *app) Render() vecty.ComponentOrHTML {
+	if !a.warningRead {
+		return a.renderWarning()
+	}
 	if a.running || a.state.Phase != "" {
 		return a.renderAnalysis()
 	}
