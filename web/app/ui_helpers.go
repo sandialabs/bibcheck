@@ -39,11 +39,17 @@ func valueProgress(state workflow.State) int {
 	return state.Completed
 }
 
-func statusText(entry workflow.EntryState) string {
-	if entry.AnalysisStatus != "pending" {
-		return entry.AnalysisStatus
+func entryStatus(entry workflow.EntryState) string {
+	if entry.TextStatus == "error" || entry.AnalysisStatus == "error" {
+		return "error"
 	}
-	return entry.TextStatus
+	if entry.AnalysisStatus == "completed" {
+		return "completed"
+	}
+	if entry.TextStatus == "active" || entry.AnalysisStatus == "active" {
+		return "active"
+	}
+	return "pending"
 }
 
 func statusCopy(status string) string {

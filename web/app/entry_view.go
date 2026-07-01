@@ -11,11 +11,12 @@ import (
 )
 
 func renderEntry(entry workflow.EntryState) vecty.ComponentOrHTML {
+	status := entryStatus(entry)
 	return elem.Article(
 		vecty.Markup(vecty.Class("entry-card")),
 		elem.Header(
 			elem.Heading2(vecty.Text("Entry "+entry.ID)),
-			elem.Span(vecty.Markup(vecty.Class("status", statusClass(entry.AnalysisStatus))), vecty.Text(statusText(entry))),
+			elem.Span(vecty.Markup(vecty.Class("status", statusClass(status))), vecty.Text(status)),
 		),
 		elem.Div(
 			vecty.Markup(vecty.Class("entry-columns")),
