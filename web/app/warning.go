@@ -25,7 +25,7 @@ func (a *app) renderWarning() vecty.ComponentOrHTML {
 			vecty.Markup(vecty.Class("warning-shell")),
 			elem.Section(
 				vecty.Markup(vecty.Class("warning-page")),
-				elem.Heading1(vecty.Text("!! Upload UUI/UUR Documents Only!! ")),
+				elem.Heading1(vecty.Text("!! UUI/UUR Only!! ")),
 				elem.Paragraph(vecty.Text("This application communicates with external resources. Any uploaded document must be UUI or UUR.")),
 				elem.Paragraph(
 					vecty.Markup(vecty.Class("warning-prompt")),
