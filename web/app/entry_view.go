@@ -76,13 +76,21 @@ func renderSummary(entry workflow.EntryState) vecty.ComponentOrHTML {
 	return elem.Div(
 		vecty.Markup(vecty.Class("entry-pane", "summary-pane", summaryStatusClass(summary.Status))),
 		elem.Heading3(vecty.Text("Analysis summary")),
+		renderSummaryCard(entry, summary),
+	)
+}
+
+func renderSummaryCard(entry workflow.EntryState, summary workflow.SummaryView) vecty.ComponentOrHTML {
+	if summary.Status == "pending" {
+		return elem.Div(vecty.Markup(vecty.Class("empty-card")), vecty.Text(statusCopy(summary.Status)))
+	}
+
+	return elem.Div(
+		vecty.Markup(vecty.Class("summary-card", summaryStatusClass(summary.Status))),
 		elem.Div(
-			vecty.Markup(vecty.Class("summary-card", summaryStatusClass(summary.Status))),
-			elem.Div(
-				vecty.Markup(vecty.Class("summary-card-header")),
-				elem.Strong(vecty.Text(summaryTitle(summary.Status))),
-			),
-			elem.Preformatted(vecty.Text(nonEmpty(summary.Comment, summaryFallback(entry, summary.Status)))),
+			vecty.Markup(vecty.Class("summary-card-header")),
+			elem.Strong(vecty.Text(summaryTitle(summary.Status))),
 		),
+		elem.Preformatted(vecty.Text(nonEmpty(summary.Comment, summaryFallback(entry, summary.Status)))),
 	)
 }
