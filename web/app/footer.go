@@ -24,6 +24,7 @@ func renderFooter() vecty.ComponentOrHTML {
 				),
 				vecty.Text("sandialabs/bibcheck"),
 			),
+			vecty.Text(" · "+version.String()),
 		),
 		elem.Div(
 			vecty.Markup(vecty.Class("footer-item")),
@@ -32,10 +33,6 @@ func renderFooter() vecty.ComponentOrHTML {
 		elem.Div(
 			vecty.Markup(vecty.Class("footer-item")),
 			vecty.Text("Point of contact: Carl Pearson <cwpears@sandia.gov>"),
-		),
-		elem.Div(
-			vecty.Markup(vecty.Class("footer-item")),
-			vecty.Text(version.String()),
 		),
 	)
 }
