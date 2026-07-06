@@ -3,6 +3,7 @@
 package lookup
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -13,12 +14,14 @@ const (
 	CrossrefMatchThreshold float64 = 99 // determined empirically
 )
 
-// CrossrefQueryBibliographic
-func CrossrefQueryBibliographic(entry string) (*crossref.CrossrefWork, string, error) {
+func crossrefQueryBibliographic(client *crossref.Client, entry string) (*crossref.CrossrefWork, string, error) {
+	if client == nil {
+		return nil, "", fmt.Errorf("crossref client is required")
+	}
 
 	// search for 2 results
 	log.Print("query crossref.org...")
-	crossrefResp, err := crossref.QueryBibliographic(entry, 2)
+	crossrefResp, err := client.QueryBibliographic(context.Background(), entry, 2)
 	if err != nil {
 		return nil, "", fmt.Errorf("crossref API error: %w", err)
 	}

@@ -11,6 +11,7 @@ import (
 
 	analysisrunner "github.com/sandialabs/bibcheck/analysis"
 	"github.com/sandialabs/bibcheck/config"
+	"github.com/sandialabs/bibcheck/crossref"
 	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/elsevier"
 	"github.com/sandialabs/bibcheck/entries"
@@ -148,6 +149,7 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 
 		cfg := &lookup.EntryConfig{
 			ElsevierClient: elsevierClient,
+			CrossrefClient: crossref.NewClient(),
 		}
 
 		var summarizer summarizer

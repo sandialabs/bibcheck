@@ -10,6 +10,7 @@ import (
 
 	analysisrunner "github.com/sandialabs/bibcheck/analysis"
 	"github.com/sandialabs/bibcheck/config"
+	"github.com/sandialabs/bibcheck/crossref"
 	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/entries"
 	"github.com/sandialabs/bibcheck/lookup"
@@ -82,9 +83,10 @@ type Counter interface {
 }
 
 type Runtime struct {
-	Kind     ProviderKind
-	Provider Provider
-	Counter  Counter
+	Kind           ProviderKind
+	Provider       Provider
+	Counter        Counter
+	CrossrefClient *crossref.Client
 }
 
 type shirtyCounter struct {
@@ -114,18 +116,20 @@ func NewRuntime(keys Keys) (*Runtime, error) {
 		}
 		client := shirty.NewWorkflow(shirtyKey, shirtyBaseURL, shirty.WithAuditEnabled(false))
 		return &Runtime{
-			Kind:     ProviderShirty,
-			Provider: client,
-			Counter:  shirtyCounter{client: client},
+			Kind:           ProviderShirty,
+			Provider:       client,
+			Counter:        shirtyCounter{client: client},
+			CrossrefClient: crossref.NewClient(),
 		}, nil
 	}
 
 	if openRouterKey != "" {
 		client := openrouter.NewClient(openRouterKey)
 		return &Runtime{
-			Kind:     ProviderOpenRouter,
-			Provider: client,
-			Counter:  openRouterCounter{client: client},
+			Kind:           ProviderOpenRouter,
+			Provider:       client,
+			Counter:        openRouterCounter{client: client},
+			CrossrefClient: crossref.NewClient(),
 		}, nil
 	}
 
@@ -187,7 +191,9 @@ func AnalyzePDFWithOptions(ctx context.Context, rt *Runtime, pdf []byte, options
 			return rt.Provider.EntryFromBibliography(bibliography, id)
 		},
 		Lookup: func(text string) (*lookup.Result, error) {
-			return lookup.Entry(text, "auto", rt.Provider, rt.Provider, rt.Provider, nil)
+			return lookup.Entry(text, "auto", rt.Provider, rt.Provider, rt.Provider, &lookup.EntryConfig{
+				CrossrefClient: rt.CrossrefClient,
+			})
 		},
 		Summarize: func(result *lookup.Result) (analysisrunner.Summary, error) {
 			mismatch, comment, err := rt.Provider.Summarize(result)

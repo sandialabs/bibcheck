@@ -31,6 +31,9 @@ func TestNewRuntimePrefersShirty(t *testing.T) {
 	if rt.Kind != ProviderShirty {
 		t.Fatalf("kind = %q, want %q", rt.Kind, ProviderShirty)
 	}
+	if rt.CrossrefClient == nil {
+		t.Fatal("missing Crossref client")
+	}
 }
 
 func TestNewRuntimeUsesDefaultShirtyBaseURL(t *testing.T) {
