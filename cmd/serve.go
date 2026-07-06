@@ -291,7 +291,11 @@ func fetchHandlerWithTimeout(maxBytes int64, timeout time.Duration) http.Handler
 			http.Error(w, "create upstream request failed", http.StatusInternalServerError)
 			return
 		}
-		req.Header.Set("User-Agent", config.UserAgent())
+		userAgent := r.UserAgent()
+		if userAgent == "" {
+			userAgent = config.UserAgent()
+		}
+		req.Header.Set("User-Agent", userAgent)
 
 		resp, err := client.Do(req)
 		if err != nil {
