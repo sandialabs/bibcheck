@@ -312,7 +312,7 @@ func Entry(text string, mode string,
 	// otherwise, let's try to treat this as a generic online resource
 	if online, err := entryParser.ParseOnline(text); err != nil {
 		EA.Online.Error = fmt.Errorf("ParseOnline error: %v", err)
-	} else if _, err := url.Parse(online.URL); err != nil {
+	} else if parsedURL, err := url.Parse(online.URL); err != nil {
 		EA.Online.Error = fmt.Errorf("ParseOnline provided a URL that did not parse: %v", err)
 	} else if online.URL != "" {
 		log.Printf("Online:\n  URL:     %s\n  Title:   %s\n  Authors: %s",
@@ -328,15 +328,19 @@ func Entry(text string, mode string,
 			EA.Online.Error = fmt.Errorf("retrieve url error: %w", err)
 		} else {
 			log.Println("retrieved URL content type:", contentType)
+			contentTypeLower := strings.ToLower(contentType)
 
-			if strings.Contains(contentType, "application/pdf") {
+			if strings.HasSuffix(strings.ToLower(parsedURL.Path), ".pdf") &&
+				!strings.Contains(contentTypeLower, "application/pdf") {
+				EA.Online.Error = fmt.Errorf("URL ending in .pdf returned non-PDF content type: %s", contentType)
+			} else if strings.Contains(contentTypeLower, "application/pdf") {
 				if meta, err := extract.PDFMetadata(body); err != nil {
 					EA.Online.Error = fmt.Errorf("extract.PDFMetadata error: %w", err)
 				} else {
 					EA.Online.Metadata = meta
 					EA.Online.Status = SearchStatusDone
 				}
-			} else if strings.Contains(contentType, "text/html") {
+			} else if strings.Contains(contentTypeLower, "text/html") {
 				if meta, err := extract.HTMLMetadata(body); err != nil {
 					EA.Online.Error = fmt.Errorf("extract.HTMLMetadata error: %w", err)
 				} else {
