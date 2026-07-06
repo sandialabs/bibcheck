@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/sandialabs/bibcheck/documentmetadata"
 	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/schema"
 )
@@ -48,18 +49,8 @@ func htmlRequest(model, html string) *ChatRequest {
 	return &ChatRequest{
 		Model: model,
 		Messages: []Message{
-			systemString(`Extract the following from the provided website HTML:
-- Title (string)
-- Authors (array of string)
-- Publication Date (string, prefering YYYY-MM-DD, but YYYY-MM or YYYY okay)
-
-Use the following guidelines:
-- Prefer user-visible data to embedded metadata
-- The user wants data about the document itself: don't provide information external links or references.
-- Provide empty values when information is not present.
-- Produce JSON.
-`),
-			userString(html),
+			systemString(documentmetadata.HTMLPrompt),
+			userString(documentmetadata.PrepareHTML([]byte(html), documentmetadata.DefaultConfig())),
 		},
 		ResponseFormat: NewExtractDocumentMetadataRF(),
 		Provider: Provider{
