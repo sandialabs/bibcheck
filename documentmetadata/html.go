@@ -45,10 +45,11 @@ type excerpt struct {
 }
 
 type visibleBlock struct {
-	tag    string
-	attrs  string
-	text   strings.Builder
-	markup strings.Builder
+	tag       string
+	attrs     string
+	container *visibleBlock
+	text      strings.Builder
+	markup    strings.Builder
 }
 
 var blockTags = map[string]bool{
@@ -158,6 +159,12 @@ func PrepareHTML(raw []byte, config Config) (prepared string) {
 			}
 			if blockTags[tag] && tt == xhtml.StartTagToken {
 				b := &visibleBlock{tag: tag, attrs: attrs}
+				for i := len(active) - 1; i >= 0; i-- {
+					if active[i].tag == "section" {
+						b.container = active[i]
+						break
+					}
+				}
 				b.markup.WriteString(t.String())
 				active = append(active, b)
 			} else if len(active) > 0 && tag != "title" && tag != "meta" {
@@ -250,6 +257,9 @@ func PrepareHTML(raw []byte, config Config) (prepared string) {
 		if candidate && (text != "" || blocks[i].attrs != "") {
 			for j := max(0, i-1); j <= min(len(blocks)-1, i+1); j++ {
 				if j != i && (blocks[j].tag == "pre" || blocks[j].tag == "code") {
+					continue
+				}
+				if j != i && blocks[j].container != blocks[i].container {
 					continue
 				}
 				selected[j] = true
