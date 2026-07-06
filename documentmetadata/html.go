@@ -129,7 +129,7 @@ func PrepareHTML(raw []byte, config Config) (prepared string) {
 			}
 			switch tag {
 			// Drop these elements, usually irrelevant
-			case "style", "noscript", "svg", "template":
+			case "aside", "nav", "style", "noscript", "svg", "template":
 				if tt == xhtml.StartTagToken {
 					skipDepth = 1
 				}
@@ -249,6 +249,9 @@ func PrepareHTML(raw []byte, config Config) (prepared string) {
 		candidate := blocks[i].tag == "h1" || blocks[i].tag == "h2" || blocks[i].tag == "h3" || blocks[i].tag == "time" || blocks[i].tag == "address" || containsAny(combined, evidenceTerms)
 		if candidate && (text != "" || blocks[i].attrs != "") {
 			for j := max(0, i-1); j <= min(len(blocks)-1, i+1); j++ {
+				if j != i && (blocks[j].tag == "pre" || blocks[j].tag == "code") {
+					continue
+				}
 				selected[j] = true
 			}
 			useful = true
