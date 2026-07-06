@@ -246,7 +246,7 @@ func PrepareHTML(raw []byte, config Config) (prepared string) {
 	for i := range blocks {
 		text := normalize(blocks[i].text.String())
 		combined := strings.ToLower(blocks[i].attrs + " " + text)
-		candidate := strings.HasPrefix(blocks[i].tag, "h") || blocks[i].tag == "time" || blocks[i].tag == "address" || containsAny(combined, evidenceTerms)
+		candidate := blocks[i].tag == "h1" || blocks[i].tag == "h2" || blocks[i].tag == "h3" || blocks[i].tag == "time" || blocks[i].tag == "address" || containsAny(combined, evidenceTerms)
 		if candidate && (text != "" || blocks[i].attrs != "") {
 			for j := max(0, i-1); j <= min(len(blocks)-1, i+1); j++ {
 				selected[j] = true
