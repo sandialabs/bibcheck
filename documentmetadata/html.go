@@ -33,9 +33,8 @@ Use the following guidelines:
 - Produce JSON.
 `
 
-// Config controls how much selected and fallback HTML PrepareHTML returns.
+// Config controls how much raw fallback HTML PrepareHTML returns.
 type Config struct {
-	SelectedTextBytes  int
 	FallbackStartBytes int
 	FallbackEndBytes   int
 }
@@ -75,7 +74,6 @@ var metadataTerms = []string{
 // DefaultConfig returns the payload limits used by the metadata extraction clients.
 func DefaultConfig() Config {
 	return Config{
-		SelectedTextBytes:  30_000,
 		FallbackStartBytes: 20_000,
 		FallbackEndBytes:   10_000,
 	}
@@ -242,14 +240,15 @@ func PrepareHTML(raw []byte, config Config) (prepared string) {
 	}
 	blocks = nonempty
 
-	// Find blocks that seem likely to contain useful data, plus two neighbors.
+	// Find blocks that seem likely to contain useful data, plus one neighbor on
+	// each side.
 	selected := make(map[int]bool)
 	for i := range blocks {
 		text := normalize(blocks[i].text.String())
 		combined := strings.ToLower(blocks[i].attrs + " " + text)
 		candidate := strings.HasPrefix(blocks[i].tag, "h") || blocks[i].tag == "time" || blocks[i].tag == "address" || containsAny(combined, evidenceTerms)
 		if candidate && (text != "" || blocks[i].attrs != "") {
-			for j := max(0, i-2); j <= min(len(blocks)-1, i+2); j++ {
+			for j := max(0, i-1); j <= min(len(blocks)-1, i+1); j++ {
 				selected[j] = true
 			}
 			useful = true
@@ -267,7 +266,7 @@ func PrepareHTML(raw []byte, config Config) (prepared string) {
 	if !useful {
 		return rawFallback(raw, config.FallbackStartBytes, config.FallbackEndBytes)
 	}
-	return render(config.SelectedTextBytes, excerpts)
+	return render(excerpts)
 }
 
 // appendTextPrefix appends text without allowing b to exceed limit bytes.
@@ -363,11 +362,8 @@ func jsonLDEvidence(raw string) string {
 	return strings.Join(found, "\n")
 }
 
-// render formats unique HTML excerpts in discovery order and returns the first limit bytes.
-func render(limit int, excerpts []excerpt) string {
-	if limit <= 0 {
-		return ""
-	}
+// render formats unique HTML excerpts in discovery order.
+func render(excerpts []excerpt) string {
 	var b strings.Builder
 	seen := make(map[string]bool)
 	for _, e := range excerpts {
@@ -381,11 +377,7 @@ func render(limit int, excerpts []excerpt) string {
 		}
 		seen[key] = true
 		line := "<!-- " + e.label + " -->\n" + text + "\n\n"
-		remaining := limit - b.Len()
-		if remaining <= 0 {
-			break
-		}
-		b.WriteString(validPrefix(line, remaining))
+		b.WriteString(line)
 	}
 	return b.String()
 }
