@@ -3,19 +3,21 @@
 package crossref
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/sandialabs/bibcheck/config"
 	"github.com/sandialabs/bibcheck/internal/wasmhttp"
 )
 
-// CrossrefWork represents a work item from the Crossref API
+const baseURL = "https://api.crossref.org/v1/works"
+
+// CrossrefWork represents a work item from the Crossref API.
 type CrossrefWork struct {
 	DOI    string   `json:"DOI"`
 	Title  []string `json:"title"`
@@ -30,7 +32,6 @@ type CrossrefWork struct {
 	ContainerTitle []string `json:"container-title"`
 }
 
-// CrossrefResponse represents the API response structure
 type CrossrefResponse struct {
 	Status  string `json:"status"`
 	Message struct {
@@ -39,7 +40,6 @@ type CrossrefResponse struct {
 	} `json:"message"`
 }
 
-// ReferenceMatchResult contains the matching results
 type ReferenceMatchResult struct {
 	BestMatch    *CrossrefWork
 	SecondMatch  *CrossrefWork
@@ -59,76 +59,60 @@ func (w *CrossrefWork) ToString() string {
 	if len(w.Title) > 0 {
 		s += "\"" + w.Title[0] + "\", "
 	}
-
 	if len(w.ContainerTitle) > 0 {
 		s += w.ContainerTitle[0] + ", "
 	}
-
 	if len(w.Published.DateParts) > 0 {
-		dp := w.Published.DateParts[0]
 		dps := []string{}
-		for _, x := range dp {
+		for _, x := range w.Published.DateParts[0] {
 			dps = append(dps, fmt.Sprintf("%d", x))
 		}
 		s += strings.Join(dps, "-") + ". "
 	}
-
 	if w.DOI != "" {
 		s += "doi:" + w.DOI + ". "
 	}
-
 	return s
 }
 
-// QueryBibliographic queries the Crossref API for reference matching
-func QueryBibliographic(reference string, rows int) (*CrossrefResponse, error) {
-	// Build the API URL
-	baseURL := "https://api.crossref.org/v1/works"
+// QueryBibliographic queries Crossref for reference matching.
+func (c *Client) QueryBibliographic(ctx context.Context, reference string, rows int) (*CrossrefResponse, error) {
+	return queryBibliographic(ctx, reference, rows, c.Do)
+}
+
+func queryBibliographic(
+	ctx context.Context,
+	reference string,
+	rows int,
+	do func(*http.Request) (*http.Response, error),
+) (*CrossrefResponse, error) {
 	params := url.Values{}
 	params.Add("query.bibliographic", reference)
-	params.Add("rows", fmt.Sprintf("%d", rows)) // Get only 2 results to check for ties
-
+	params.Add("rows", fmt.Sprintf("%d", rows))
 	if config.UserEmail() != "" {
-		params.Add("mailto", config.UserEmail()) // Use polite pool
+		params.Add("mailto", config.UserEmail()) // puts us in the polite pool
 	}
-
-	fullURL := fmt.Sprintf("%s?%s", baseURL, encodeQuery(params))
-	requestURL := wasmhttp.FetchURL(fullURL)
-
-	// Create HTTP client with timeout
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-	}
-
-	// Create request
-	req, err := http.NewRequest("GET", requestURL, nil)
+	requestURL := baseURL + "?" + encodeQuery(params)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-
-	// Set headers
 	req.Header.Set("User-Agent", config.UserAgent())
 	wasmhttp.ConfigureRequest(req)
-
-	// Make the request
-	resp, err := client.Do(req)
+	resp, err := do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
 	defer resp.Body.Close()
-
-	// Check status code
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(body))
 	}
-
-	// Parse response
-	var crossrefResp CrossrefResponse
-	if err := json.NewDecoder(resp.Body).Decode(&crossrefResp); err != nil {
+	var result CrossrefResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
-	return &crossrefResp, nil
+	return &result, nil
 }
 
 // encodeQuery leaves the @ in Crossref's mailto parameter unescaped, matching

@@ -98,6 +98,7 @@ type Result struct {
 
 type EntryConfig struct {
 	ElsevierClient *elsevier.Client
+	CrossrefClient *crossref.Client
 }
 
 func retrieveUrl(url string) ([]byte, string, error) {
@@ -293,7 +294,11 @@ func Entry(text string, mode string,
 	}
 
 	// crossref search
-	if work, comment, err := CrossrefQueryBibliographic(text); err != nil {
+	var crossrefClient *crossref.Client
+	if cfg != nil {
+		crossrefClient = cfg.CrossrefClient
+	}
+	if work, comment, err := crossrefQueryBibliographic(crossrefClient, text); err != nil {
 		EA.Crossref.Error = err
 	} else {
 		if work == nil {
