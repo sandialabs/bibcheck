@@ -93,6 +93,7 @@ func QueryBibliographic(reference string, rows int) (*CrossrefResponse, error) {
 	}
 
 	fullURL := fmt.Sprintf("%s?%s", baseURL, params.Encode())
+	requestURL := wasmhttp.FetchURL(fullURL)
 
 	// Create HTTP client with timeout
 	client := &http.Client{
@@ -100,7 +101,7 @@ func QueryBibliographic(reference string, rows int) (*CrossrefResponse, error) {
 	}
 
 	// Create request
-	req, err := http.NewRequest("GET", fullURL, nil)
+	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
