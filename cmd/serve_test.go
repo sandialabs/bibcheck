@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sandialabs/bibcheck/config"
 	"github.com/sandialabs/bibcheck/internal/wasmhttp"
 )
 
@@ -86,6 +87,48 @@ func TestFetchHandlerFetchesUpstreamResponse(t *testing.T) {
 	}
 	if got := resp.Header().Get(wasmhttp.FetchResultHeader); got != wasmhttp.FetchResultUpstream {
 		t.Fatalf("expected fetch result %q, got %q", wasmhttp.FetchResultUpstream, got)
+	}
+}
+
+func TestFetchHandlerForwardsUserAgent(t *testing.T) {
+	const userAgent = "test-browser/1.0"
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.UserAgent(); got != userAgent {
+			t.Errorf("expected User-Agent %q, got %q", userAgent, got)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer upstream.Close()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/fetch?url="+url.QueryEscape(upstream.URL), nil)
+	req.Header.Set("User-Agent", userAgent)
+	resp := httptest.NewRecorder()
+
+	fetchHandler(1024).ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusNoContent {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusNoContent, resp.Code, resp.Body.String())
+	}
+}
+
+func TestFetchHandlerUsesDefaultUserAgentWhenMissing(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.UserAgent(); got != config.UserAgent() {
+			t.Errorf("expected User-Agent %q, got %q", config.UserAgent(), got)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer upstream.Close()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/fetch?url="+url.QueryEscape(upstream.URL), nil)
+	req.Header.Del("User-Agent")
+	resp := httptest.NewRecorder()
+
+	fetchHandler(1024).ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusNoContent {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusNoContent, resp.Code, resp.Body.String())
 	}
 }
 
