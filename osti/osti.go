@@ -103,7 +103,7 @@ func (c *Client) GetRecord(ostiID string) (*Record, error) {
 	endpoint := fmt.Sprintf("%s/records/%s", c.baseURL, ostiID)
 	log.Printf("retrieve OSTI record %s: %s", ostiID, endpoint)
 
-	req, err := http.NewRequest("GET", endpoint, nil)
+	req, err := http.NewRequest("GET", wasmhttp.FetchURL(endpoint), nil)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
@@ -168,7 +168,7 @@ func (c *Client) ListRecords(opts *ListRecordsOptions) (*RecordsResponse, error)
 		endpoint = fmt.Sprintf("%s?%s", endpoint, params.Encode())
 	}
 
-	req, err := http.NewRequest("GET", endpoint, nil)
+	req, err := http.NewRequest("GET", wasmhttp.FetchURL(endpoint), nil)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
