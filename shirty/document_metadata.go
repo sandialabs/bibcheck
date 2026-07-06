@@ -5,8 +5,8 @@ package shirty
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
+	"github.com/sandialabs/bibcheck/documentmetadata"
 	"github.com/sandialabs/bibcheck/documents"
 	"github.com/sandialabs/bibcheck/openai"
 	"github.com/sandialabs/bibcheck/schema"
@@ -38,29 +38,11 @@ Use the following guidelines:
 }
 
 func newFromHtmlRequest(model, html string) *openai.ChatRequest {
-	// model has a limit of 128k tokens
-	// in one example, a string of 1158716 symbols -> 353591 tokens
-	if len(html) > 300_000 {
-		log.Printf("Provided more than 300k HTML characters (%d) but context limit is 128k tokens. Truncating to first 225k and last 75k html characters", len(html))
-		html = html[:225_000] + html[len(html)-75_000:]
-	}
-
 	return &openai.ChatRequest{
 		Model: model,
 		Messages: []openai.Message{
-			openai.MakeSystemMessage(`Determine the following from the provided website HTML:
-- Title (string)
-- Authors (array of string)
-- Publication/Update Date (string, prefering YYYY-MM-DD, but YYYY-MM or YYYY okay)
-
-Use the following guidelines:
-- Prefer user-visible info to hidden values (e.g. html meta tags)
-- The user wants the web page title, which may be different than the title of the whole website.
-- The user wants info about the document itself: don't provide information about external links or references.
-- Provide empty values when the requested information is not present.
-- Produce JSON.
-`),
-			openai.MakeUserMessage(html),
+			openai.MakeSystemMessage(documentmetadata.HTMLPrompt),
+			openai.MakeUserMessage(documentmetadata.PrepareHTML([]byte(html), documentmetadata.DefaultConfig())),
 		},
 		ResponseFormat: NewExtractDocumentMetadataRF(),
 	}
