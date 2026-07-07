@@ -92,7 +92,7 @@ func QueryBibliographic(reference string, rows int) (*CrossrefResponse, error) {
 		params.Add("mailto", config.UserEmail()) // Use polite pool
 	}
 
-	fullURL := fmt.Sprintf("%s?%s", baseURL, params.Encode())
+	fullURL := fmt.Sprintf("%s?%s", baseURL, encodeQuery(params))
 	requestURL := wasmhttp.FetchURL(fullURL)
 
 	// Create HTTP client with timeout
@@ -128,6 +128,18 @@ func QueryBibliographic(reference string, rows int) (*CrossrefResponse, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&crossrefResp); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
-
 	return &crossrefResp, nil
+}
+
+// encodeQuery leaves the @ in Crossref's mailto parameter unescaped, matching
+// the form used in Crossref's API documentation. Other parameters retain the
+// standard query escaping provided by url.Values.Encode.
+func encodeQuery(params url.Values) string {
+	query := params.Encode()
+	if email := params.Get("mailto"); email != "" {
+		escaped := url.QueryEscape(email)
+		mailto := strings.ReplaceAll(escaped, "%40", "@")
+		query = strings.Replace(query, "mailto="+escaped, "mailto="+mailto, 1)
+	}
+	return query
 }
