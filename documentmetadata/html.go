@@ -33,10 +33,10 @@ Use the following guidelines:
 - Produce JSON.
 `
 
-// Config controls how much raw fallback HTML PrepareHTML returns.
+// Config controls how much HTML evidence PrepareHTML returns from each end.
 type Config struct {
-	FallbackStartBytes int
-	FallbackEndBytes   int
+	StartBytes int
+	EndBytes   int
 }
 
 type excerpt struct {
@@ -75,8 +75,8 @@ var metadataTerms = []string{
 // DefaultConfig returns the payload limits used by the metadata extraction clients.
 func DefaultConfig() Config {
 	return Config{
-		FallbackStartBytes: 20_000,
-		FallbackEndBytes:   10_000,
+		StartBytes: 100_000,
+		EndBytes:   28_000,
 	}
 }
 
@@ -85,6 +85,7 @@ func DefaultConfig() Config {
 func PrepareHTML(raw []byte, config Config) (prepared string) {
 	inputBytes := len(raw)
 	defer func() {
+		prepared = limitHTML(prepared, config.StartBytes, config.EndBytes)
 		if inputBytes == 0 {
 			log.Printf("HTML metadata preprocessing: %d -> %d bytes", inputBytes, len(prepared))
 			return
@@ -111,7 +112,7 @@ func PrepareHTML(raw []byte, config Config) (prepared string) {
 		if tt == xhtml.ErrorToken {
 			if z.Err() != nil && z.Err() != io.EOF {
 				log.Printf("HTML metadata preprocessing failed; using raw fallback: %v", z.Err())
-				return rawFallback(raw, config.FallbackStartBytes, config.FallbackEndBytes)
+				return rawFallback(raw)
 			}
 			break
 		}
@@ -237,8 +238,7 @@ func PrepareHTML(raw []byte, config Config) (prepared string) {
 		}
 	}
 
-	// Ignore empty layout containers so they do not consume positions in the
-	// context window used for legacy table-based documents.
+	// Ignore empty layout containers
 	nonempty := blocks[:0]
 	for i := range blocks {
 		if normalize(blocks[i].text.String()) != "" {
@@ -277,9 +277,11 @@ func PrepareHTML(raw []byte, config Config) (prepared string) {
 	}
 
 	if !useful {
-		return rawFallback(raw, config.FallbackStartBytes, config.FallbackEndBytes)
+		prepared = rawFallback(raw)
+	} else {
+		prepared = render(excerpts)
 	}
-	return render(excerpts)
+	return prepared
 }
 
 // appendTextPrefix appends text without allowing b to exceed limit bytes.
@@ -395,16 +397,20 @@ func render(excerpts []excerpt) string {
 	return b.String()
 }
 
-// rawFallback returns configured slices from the beginning and end of unprocessed HTML.
-func rawFallback(raw []byte, startBytes, endBytes int) string {
+// rawFallback labels unprocessed HTML for use when no useful regions were found.
+func rawFallback(raw []byte) string {
 	const header = "[RAW HTML FALLBACK: beginning]\n"
-	const middle = "\n\n[RAW HTML FALLBACK: end]\n"
+	return header + string(raw)
+}
+
+// limitHTML retains configured slices from the beginning and end of HTML.
+func limitHTML(value string, startBytes, endBytes int) string {
 	startBytes = max(0, startBytes)
 	endBytes = max(0, endBytes)
-	if len(raw) <= startBytes+endBytes {
-		return header + string(raw)
+	if len(value) <= startBytes+endBytes {
+		return value
 	}
-	return header + validPrefix(string(raw), startBytes) + middle + validSuffix(string(raw), endBytes)
+	return validPrefix(value, startBytes) + validSuffix(value, endBytes)
 }
 
 // validPrefix returns at most n bytes from the start of s without splitting UTF-8.

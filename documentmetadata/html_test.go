@@ -226,3 +226,42 @@ func TestPrepareHTMLNERSCPerlmutterArchitecturePage(t *testing.T) {
 		t.Fatal("representative NERSC documentation HTML unexpectedly used the raw fallback")
 	}
 }
+
+func TestDefaultConfigRetains100kStartAnd28kEnd(t *testing.T) {
+	config := DefaultConfig()
+	if config.StartBytes != 100_000 || config.EndBytes != 28_000 {
+		t.Fatalf("unexpected default HTML limits: %+v", config)
+	}
+}
+
+func TestPrepareHTMLLimitsRawFallback(t *testing.T) {
+	raw := []byte(strings.Repeat("a", 100_000) + strings.Repeat("discarded", 1_000) + strings.Repeat("z", 28_000))
+	unlimited := rawFallback(raw)
+	got := PrepareHTML(raw, DefaultConfig())
+
+	if got != validPrefix(unlimited, 100_000)+validSuffix(unlimited, 28_000) {
+		t.Fatal("fallback did not retain the configured beginning and end")
+	}
+	if strings.Contains(got, "discarded") {
+		t.Fatal("fallback retained content from the truncated middle")
+	}
+}
+
+func TestPrepareHTMLLimitsHeuristicEvidence(t *testing.T) {
+	excerpts := []excerpt{
+		{label: "start", text: strings.Repeat("a", 110_000)},
+		{label: "end", text: strings.Repeat("z", 40_000)},
+	}
+	rendered := render(excerpts)
+	got := limitHTML(rendered, DefaultConfig().StartBytes, DefaultConfig().EndBytes)
+
+	if !strings.HasPrefix(got, validPrefix(rendered, 100_000)) {
+		t.Fatal("heuristic evidence did not retain its first 100k bytes")
+	}
+	if !strings.HasSuffix(got, validSuffix(rendered, 28_000)) {
+		t.Fatal("heuristic evidence did not retain its last 28k bytes")
+	}
+	if len(got) != 128_000 {
+		t.Fatalf("heuristic evidence has length %d, want 128000", len(got))
+	}
+}
