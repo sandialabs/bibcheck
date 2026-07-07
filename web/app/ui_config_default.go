@@ -7,3 +7,4 @@ package main
 const showOpenRouterKey = true
 const showShirtyKey = false
 const showWarningPage = false
+const showHowItWorksLink = false
