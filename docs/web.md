@@ -52,6 +52,11 @@ go run . serve
 
 Then open <http://localhost:8080>.
 
+The server sends `index.html` with `Cache-Control: no-store` and rewrites its
+WebAssembly and Go runtime references to content-fingerprinted URLs. Those
+fingerprinted assets are served with a one-year immutable cache lifetime, so a
+new build is fetched immediately while unchanged assets remain cacheable.
+
 By default, `/api/fetch` reads at most 25 MiB from an upstream response. Adjust
 that for larger PDFs if needed:
 

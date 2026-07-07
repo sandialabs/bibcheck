@@ -4,6 +4,7 @@ package cmd
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -54,7 +55,7 @@ func serveMux(staticDir string, maxBytes int64) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle(livenessPath, livenessHandler())
 	mux.Handle("/api/fetch", fetchHandler(maxBytes))
-	mux.Handle("/", wasmBundleLogHandler(compressedFileServer(http.Dir(staticDir))))
+	mux.Handle("/", wasmBundleLogHandler(versionedFileServer(http.Dir(staticDir))))
 	return mux
 }
 
@@ -116,7 +117,7 @@ func wasmBundleLogHandler(next http.Handler) http.Handler {
 		next.ServeHTTP(recorder, r)
 
 		name, ok := staticFileName(r.URL.Path)
-		if !ok || name != "app.wasm" || recorder.Status() < 200 || recorder.Status() >= 300 {
+		if !ok || (!strings.HasPrefix(name, "app.") && name != "app.wasm") || !strings.HasSuffix(name, ".wasm") || recorder.Status() < 200 || recorder.Status() >= 300 {
 			return
 		}
 		log.Printf("wasm bundle served method=%s path=%q status=%d bytes=%d %s",
@@ -127,6 +128,109 @@ func wasmBundleLogHandler(next http.Handler) http.Handler {
 			clientAddressLogFields(r),
 		)
 	})
+}
+
+type versionedStaticHandler struct {
+	root       http.Dir
+	fallback   http.Handler
+	assets     map[string]string
+	references map[string]string
+}
+
+func versionedFileServer(root http.Dir) http.Handler {
+	h := versionedStaticHandler{
+		root:       root,
+		fallback:   compressedFileServer(root),
+		assets:     make(map[string]string),
+		references: make(map[string]string),
+	}
+	index, err := root.Open("index.html")
+	if err != nil {
+		log.Printf("index.html not found error=%q", err)
+	} else {
+		_ = index.Close()
+		log.Printf("index.html found")
+	}
+	for _, name := range []string{"app.wasm", "wasm_exec.js"} {
+		versionedName, err := fingerprintedName(root, name)
+		if err != nil {
+			log.Printf("static asset unavailable name=%q versioned_name=%q error=%q", name, versionedName, err)
+			continue
+		}
+		h.assets[versionedName] = name
+		h.references["/"+name] = "/" + versionedName
+		log.Printf("static asset registered name=%q versioned_name=%q",
+			name,
+			versionedName,
+		)
+	}
+	return h
+}
+
+func fingerprintedName(root http.Dir, name string) (string, error) {
+	file, err := root.Open(name)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+	ext := path.Ext(name)
+	base := strings.TrimSuffix(name, ext)
+	return fmt.Sprintf("%s.%x%s", base, hash.Sum(nil), ext), nil
+}
+
+func (h versionedStaticHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	name, ok := staticFileName(r.URL.Path)
+	if !ok {
+		h.fallback.ServeHTTP(w, r)
+		return
+	}
+	if name == "index.html" && (r.Method == http.MethodGet || r.Method == http.MethodHead) {
+		h.serveIndex(w, r)
+		return
+	}
+	if source, ok := h.assets[name]; ok {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		request := r.Clone(r.Context())
+		request.URL.Path = "/" + source
+		request.URL.RawPath = ""
+		h.fallback.ServeHTTP(w, request)
+		return
+	}
+	if name == "app.wasm" || name == "wasm_exec.js" {
+		w.Header().Set("Cache-Control", "no-store")
+	}
+	h.fallback.ServeHTTP(w, r)
+}
+
+func (h versionedStaticHandler) serveIndex(w http.ResponseWriter, r *http.Request) {
+	file, err := h.root.Open("index.html")
+	if err != nil {
+		h.fallback.ServeHTTP(w, r)
+		return
+	}
+	defer file.Close()
+	body, err := io.ReadAll(file)
+	if err != nil {
+		http.Error(w, "failed to read index", http.StatusInternalServerError)
+		return
+	}
+	contents := string(body)
+	for original, versioned := range h.references {
+		contents = strings.ReplaceAll(contents, original, versioned)
+	}
+
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Content-Length", fmt.Sprint(len(contents)))
+	if r.Method == http.MethodHead {
+		return
+	}
+	_, _ = io.WriteString(w, contents)
 }
 
 type compressedStaticHandler struct {
