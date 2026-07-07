@@ -24,8 +24,11 @@ func renderFooter() vecty.ComponentOrHTML {
 				),
 				vecty.Text("sandialabs/bibcheck"),
 			),
-			vecty.If(showHowItWorksLink,
-				vecty.Text(" · "),
+			vecty.Text(" · "+version.String()),
+		),
+		vecty.If(showHowItWorksLink,
+			elem.Div(
+				vecty.Markup(vecty.Class("footer-item")),
 				elem.Anchor(
 					vecty.Markup(
 						prop.Href("https://github.com/sandialabs/bibcheck/blob/main/docs/snl-how-it-works.md"),
@@ -35,7 +38,6 @@ func renderFooter() vecty.ComponentOrHTML {
 					vecty.Text("How it Works"),
 				),
 			),
-			vecty.Text(" · "+version.String()),
 		),
 		elem.Div(
 			vecty.Markup(vecty.Class("footer-item")),
