@@ -24,6 +24,17 @@ func renderFooter() vecty.ComponentOrHTML {
 				),
 				vecty.Text("sandialabs/bibcheck"),
 			),
+			vecty.If(showHowItWorksLink,
+				vecty.Text(" · "),
+				elem.Anchor(
+					vecty.Markup(
+						prop.Href("https://github.com/sandialabs/bibcheck/blob/main/docs/snl-how-it-works.md"),
+						vecty.Attribute("target", "_blank"),
+						vecty.Attribute("rel", "noopener noreferrer"),
+					),
+					vecty.Text("How it Works"),
+				),
+			),
 			vecty.Text(" · "+version.String()),
 		),
 		elem.Div(
