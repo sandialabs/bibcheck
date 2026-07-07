@@ -213,6 +213,74 @@ func TestFetchHandlerRejectsUnsupportedURL(t *testing.T) {
 	}
 }
 
+func TestVersionedFileServerDoesNotStoreIndex(t *testing.T) {
+	dir := staticTestDir(t)
+	writeStaticFile(t, dir, "index.html", `<script src="/wasm_exec.js"></script><script>fetch("/app.wasm")</script>`)
+	writeStaticFile(t, dir, "app.wasm", "wasm contents")
+	writeStaticFile(t, dir, "wasm_exec.js", "javascript contents")
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	resp := httptest.NewRecorder()
+	versionedFileServer(http.Dir(dir)).ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, resp.Code)
+	}
+	if got := resp.Header().Get("Cache-Control"); got != "no-store" {
+		t.Fatalf("expected Cache-Control no-store, got %q", got)
+	}
+	for _, name := range []string{"app.wasm", "wasm_exec.js"} {
+		versionedName, err := fingerprintedName(http.Dir(dir), name)
+		if err != nil {
+			t.Fatalf("fingerprint %s: %v", name, err)
+		}
+		if !strings.Contains(resp.Body.String(), "/"+versionedName) {
+			t.Errorf("expected index to reference %q, got %q", versionedName, resp.Body.String())
+		}
+	}
+}
+
+func TestVersionedFileServerCachesFingerprintedWASM(t *testing.T) {
+	dir := staticTestDir(t)
+	writeStaticFile(t, dir, "app.wasm", "plain wasm")
+	writeStaticFile(t, dir, "app.wasm.br", "brotli wasm")
+	versionedName, err := fingerprintedName(http.Dir(dir), "app.wasm")
+	if err != nil {
+		t.Fatalf("fingerprint app.wasm: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/"+versionedName, nil)
+	req.Header.Set("Accept-Encoding", "br")
+	resp := httptest.NewRecorder()
+	versionedFileServer(http.Dir(dir)).ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, resp.Code)
+	}
+	if got := resp.Header().Get("Cache-Control"); got != "public, max-age=31536000, immutable" {
+		t.Fatalf("unexpected Cache-Control: %q", got)
+	}
+	if got := resp.Header().Get("Content-Encoding"); got != "br" {
+		t.Fatalf("expected br content encoding, got %q", got)
+	}
+	if got := resp.Body.String(); got != "brotli wasm" {
+		t.Fatalf("unexpected body: %q", got)
+	}
+}
+
+func TestVersionedFileServerDoesNotStoreUnversionedWASM(t *testing.T) {
+	dir := staticTestDir(t)
+	writeStaticFile(t, dir, "app.wasm", "plain wasm")
+
+	req := httptest.NewRequest(http.MethodGet, "/app.wasm", nil)
+	resp := httptest.NewRecorder()
+	versionedFileServer(http.Dir(dir)).ServeHTTP(resp, req)
+
+	if got := resp.Header().Get("Cache-Control"); got != "no-store" {
+		t.Fatalf("expected Cache-Control no-store, got %q", got)
+	}
+}
+
 func TestCompressedFileServerServesBrotliWhenAvailable(t *testing.T) {
 	dir := staticTestDir(t)
 	writeStaticFile(t, dir, "app.wasm", "plain wasm")
