@@ -4,6 +4,7 @@ package crossref
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -45,7 +46,10 @@ func NewClient(options ...Option) *Client {
 	c := &Client{
 		httpClient:    &http.Client{Timeout: defaultTimeout},
 		startInterval: defaultStartInterval,
-		semaphore:     make(chan struct{}, maxConcurrent),
+		delay: func(delay time.Duration) {
+			log.Printf("Crossref request delayed by rate limit: %s", delay)
+		},
+		semaphore: make(chan struct{}, maxConcurrent),
 	}
 	for _, option := range options {
 		option(c)
