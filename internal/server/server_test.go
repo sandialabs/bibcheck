@@ -1,6 +1,6 @@
 // Copyright 2025 National Technology and Engineering Solutions of Sandia
 // SPDX-License-Identifier: BSD-3-Clause
-package cmd
+package server
 
 import (
 	"net/http"
@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sandialabs/bibcheck/config"
 	"github.com/sandialabs/bibcheck/internal/wasmhttp"
 )
 
@@ -114,8 +113,8 @@ func TestFetchHandlerForwardsUserAgent(t *testing.T) {
 
 func TestFetchHandlerUsesDefaultUserAgentWhenMissing(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.UserAgent(); got != config.UserAgent() {
-			t.Errorf("expected User-Agent %q, got %q", config.UserAgent(), got)
+		if got := r.UserAgent(); got != defaultUserAgent() {
+			t.Errorf("expected User-Agent %q, got %q", defaultUserAgent(), got)
 		}
 		w.WriteHeader(http.StatusNoContent)
 	}))

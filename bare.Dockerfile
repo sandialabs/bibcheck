@@ -20,7 +20,7 @@ COPY . .
 RUN mkdir -p /out && \
     CGO_ENABLED=0 go build \
       -ldflags "-X github.com/sandialabs/bibcheck/version.gitSha=${GIT_SHA} -X github.com/sandialabs/bibcheck/version.gitRefName=${GIT_REF_NAME}" \
-      -o /out/bibcheck . && \
+      -o /out/bibcheck-server ./cmd/bibcheck-server && \
     GOOS=js GOARCH=wasm go build \
       -ldflags "-X github.com/sandialabs/bibcheck/version.gitSha=${GIT_SHA} -X github.com/sandialabs/bibcheck/version.gitRefName=${GIT_REF_NAME}" \
       -o /out/app.wasm ./web/app && \
@@ -34,7 +34,7 @@ RUN mkdir -p /out && \
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 LABEL org.opencontainers.image.source https://github.com/sandialabs/bibcheck
 
-COPY --from=build --chown=1001:0 /out/bibcheck /usr/local/bin/bibcheck
+COPY --from=build --chown=1001:0 /out/bibcheck-server /usr/local/bin/bibcheck-server
 COPY --from=build --chown=1001:0 /out/app.wasm* /opt/bibcheck/web/
 COPY --from=build --chown=1001:0 /out/wasm_exec.js* /opt/bibcheck/web/
 COPY --from=build --chown=1001:0 /out/index.html* /opt/bibcheck/web/
@@ -45,4 +45,4 @@ COPY --from=build --chown=1001:0 /out/footer.css* /opt/bibcheck/web/
 EXPOSE 8080
 
 USER 1001
-CMD ["bibcheck", "serve", "--addr", ":8080", "--web-dir", "/opt/bibcheck/web"]
+CMD ["bibcheck-server", "--addr", ":8080", "--web-dir", "/opt/bibcheck/web"]

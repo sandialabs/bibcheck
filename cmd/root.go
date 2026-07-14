@@ -250,7 +250,6 @@ func init() {
 	rootCmd.AddCommand(entryCmd)
 	rootCmd.AddCommand(listEntriesCmd)
 	rootCmd.AddCommand(textractCmd)
-	rootCmd.AddCommand(serveCmd)
 }
 
 func Execute() {

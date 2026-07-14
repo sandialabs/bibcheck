@@ -1,6 +1,6 @@
 # Web UI Deployment
 
-The web UI is a Go WebAssembly app served by the `bibcheck serve` command.
+The web UI is a Go WebAssembly app served by the `bibcheck-server` binary.
 The default browser app reads the selected PDF locally and calls Shirty or
 OpenRouter directly with the API key the user pastes into the page.
 
@@ -17,7 +17,7 @@ The endpoint returns a plain-text `200 OK` response with
 
 ## Network Exposure
 
-Do not expose `bibcheck serve` directly to the public internet.
+Do not expose `bibcheck-server` directly to the public internet.
 
 The `/api/fetch` endpoint is intentionally narrow, but it is still a server-side
 URL fetcher. If the service is reachable by untrusted users, they could use it as
@@ -47,7 +47,7 @@ cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" web/static/wasm_exec.js
 Serve the web UI locally:
 
 ```bash
-go run . serve
+go run ./cmd/bibcheck-server
 ```
 
 Then open <http://localhost:8080>.
@@ -61,7 +61,7 @@ By default, `/api/fetch` reads at most 25 MiB from an upstream response. Adjust
 that for larger PDFs if needed:
 
 ```bash
-go run . serve --fetch-max-bytes 52428800
+go run ./cmd/bibcheck-server --fetch-max-bytes 52428800
 ```
 
 The endpoint adds `X-Bibcheck-Fetch-Result` to distinguish responses:
@@ -75,10 +75,10 @@ If the web app receives neither value, it reports `/api/fetch` as unavailable or
 
 Uses a multi-stage container build:
 
-1. A Go builder stage compiles the native `bibcheck` server binary.
+1. A Go builder stage compiles the native `bibcheck-server` binary.
 2. The builder stage compiles `./web/app` to `app.wasm`.
 3. The builder stage copies the matching Go `wasm_exec.js`.
-4. A UBI minimal runtime stage runs `bibcheck serve` on port `8080`.
+4. A UBI minimal runtime stage runs `bibcheck-server` on port `8080`.
 
 The runtime container serves static web assets from `/opt/bibcheck/web` and
 handles `/api/fetch` in the same process.
