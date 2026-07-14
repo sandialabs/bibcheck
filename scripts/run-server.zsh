@@ -37,7 +37,7 @@ export GOCACHE="${build_dir}/go-cache"
 
 cd "${repo_root}"
 log "Building the server binary..."
-CGO_ENABLED=0 go build -o "${build_dir}/bibcheck" .
+CGO_ENABLED=0 go build -o "${build_dir}/bibcheck-server" ./cmd/bibcheck-server
 
 log "Building the WebAssembly application..."
 GOOS=js GOARCH=wasm go build -o "${build_dir}/web/app.wasm" ./web/app
@@ -63,7 +63,7 @@ for file in "${build_dir}"/web/*.(wasm|html|css|js); do
 done
 
 log "Starting server at ${BIBCHECK_ADDR:-:8080} (press Ctrl-C to stop)..."
-"${build_dir}/bibcheck" serve \
+"${build_dir}/bibcheck-server" \
 	--addr "${BIBCHECK_ADDR:-:8080}" \
 	--web-dir "${build_dir}/web" \
 	"$@" &
