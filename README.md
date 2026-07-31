@@ -51,7 +51,7 @@ bibcheck-windows-amd64.exe
 
 ## Quick Start (Build from Source)
 
-1. Install Go >= 1.25.0
+1. Install Go >= 1.26.0
 2. Compile and run:
 ```bash
 go run main.go
