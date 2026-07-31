@@ -21,7 +21,7 @@ func (a *bibcheckApp) renderWarning() app.UI {
 					app.Text("!! UUI/UUR Only !!"),
 				),
 				app.P().Body(
-					app.Text("This application communicates with external resources. Any uploaded document must be UUI or UUR."),
+					app.Text("This application is only approved to process UUI and UUR documents."),
 				),
 				app.P().Class("warning-prompt").Body(
 					app.Text("Click anywhere or press any key to continue"),
