@@ -7,10 +7,12 @@ on:
             - "v*"
         paths-ignore:
             - "docs/**"
+            - "README.md"
     pull_request:
         branches: ["main"]
         paths-ignore:
             - "docs/**"
+            - "README.md"
     workflow_dispatch:
 
 jobs:
