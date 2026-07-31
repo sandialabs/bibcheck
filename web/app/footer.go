@@ -37,7 +37,7 @@ func renderFooter() app.UI {
 	}
 	items = append(items,
 		app.Div().Class("footer-item").Body(
-			app.Text("(c) 2025 National Technology and Engineering Solutions of Sandia"),
+			app.Text("(c) 2026 National Technology and Engineering Solutions of Sandia"),
 		),
 		app.Div().Class("footer-item").Body(
 			app.Text("Point of contact: Carl Pearson <cwpears@sandia.gov>"),
