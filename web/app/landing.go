@@ -7,14 +7,11 @@ package main
 import (
 	"strings"
 
-	"github.com/hexops/vecty"
-	"github.com/hexops/vecty/elem"
-	"github.com/hexops/vecty/event"
-	"github.com/hexops/vecty/prop"
+	"github.com/maxence-charriere/go-app/v11/pkg/app"
 	"github.com/sandialabs/bibcheck/config"
 )
 
-func (a *app) renderLanding() vecty.ComponentOrHTML {
+func (a *bibcheckApp) renderLanding() app.UI {
 	dropClasses := []string{"drop-target"}
 	if a.dragging {
 		dropClasses = append(dropClasses, "dragging")
@@ -23,152 +20,155 @@ func (a *app) renderLanding() vecty.ComponentOrHTML {
 		dropClasses = append(dropClasses, "selected")
 	}
 
-	return elem.Body(
-		elem.Main(
-			vecty.Markup(vecty.Class("shell")),
-			elem.Section(
-				vecty.Markup(vecty.Class("landing")),
-				elem.Heading1(vecty.Text("Bibcheck")),
-				elem.Div(
-					vecty.Markup(vecty.Class("form-grid")),
-					vecty.If(showShirtyKey,
-						elem.Label(
-							vecty.Markup(vecty.Class("field")),
-							elem.Span(vecty.Text("Shirty API key")),
-							elem.Input(
-								vecty.Markup(
-									prop.Type(prop.TypePassword),
-									prop.Placeholder("Paste Shirty API key"),
-									prop.Value(a.shirtyKey),
-									event.Input(func(e *vecty.Event) {
-										a.shirtyKey = e.Target.Get("value").String()
-										saveLocalStorage(shirtyKeyStorageKey, strings.TrimSpace(a.shirtyKey))
-										a.errorMessage = ""
-										vecty.Rerender(a)
-									}),
-								),
-							),
-						),
-					),
-					vecty.If(showOpenRouterKey,
-						elem.Label(
-							vecty.Markup(vecty.Class("field")),
-							elem.Span(vecty.Text("OpenRouter API key")),
-							elem.Input(
-								vecty.Markup(
-									prop.Type(prop.TypePassword),
-									prop.Placeholder("Paste OpenRouter API key"),
-									prop.Value(a.openRouterKey),
-									event.Input(func(e *vecty.Event) {
-										a.openRouterKey = e.Target.Get("value").String()
-										a.errorMessage = ""
-										vecty.Rerender(a)
-									}),
-								),
-							),
-						),
-					),
+	fields := []app.UI{}
+	if showShirtyKey {
+		fields = append(fields,
+			app.Label().Class("field").Body(
+				app.Span().Body(
+					app.Text("Shirty API key"),
 				),
-				elem.Details(
-					vecty.Markup(vecty.Class("advanced-options")),
-					elem.Summary(vecty.Text("Advanced options")),
-					elem.Label(
-						vecty.Markup(vecty.Class("field")),
-						elem.Span(vecty.Text("Bibliography entry")),
-						elem.Input(
-							vecty.Markup(
-								prop.Type(prop.TypeNumber),
-								vecty.Attribute("min", "1"),
-								vecty.Attribute("step", "1"),
-								prop.Placeholder("All entries"),
-								prop.Value(a.entry),
-								event.Input(func(e *vecty.Event) {
-									a.entry = e.Target.Get("value").String()
-									a.errorMessage = ""
-									vecty.Rerender(a)
-								}),
-							),
-						),
-					),
-					vecty.If(showShirtyKey,
-						elem.Label(
-							vecty.Markup(vecty.Class("field")),
-							elem.Span(vecty.Text("Shirty base URL (e.g. https://shirty.sandia.gov/api/v1)")),
-							elem.Input(
-								vecty.Markup(
-									prop.Type(prop.TypeText),
-									prop.Placeholder(config.DefaultShirtyBaseURL),
-									prop.Value(a.shirtyBaseURL),
-									event.Input(func(e *vecty.Event) {
-										a.shirtyBaseURL = e.Target.Get("value").String()
-										a.errorMessage = ""
-										vecty.Rerender(a)
-									}),
-								),
-							),
-						),
-					),
-				),
-				elem.Div(
-					vecty.Markup(
-						vecty.Class(dropClasses...),
-						event.DragEnter(func(e *vecty.Event) {
-							e.Value.Call("preventDefault")
-							a.dragging = true
-							vecty.Rerender(a)
-						}),
-						event.DragOver(func(e *vecty.Event) {
-							e.Value.Call("preventDefault")
-							a.dragging = true
-							vecty.Rerender(a)
-						}),
-						event.DragLeave(func(e *vecty.Event) {
-							e.Value.Call("preventDefault")
-							a.dragging = false
-							vecty.Rerender(a)
-						}),
-						event.Drop(func(e *vecty.Event) {
-							e.Value.Call("preventDefault")
-							a.dragging = false
-							files := e.Value.Get("dataTransfer").Get("files")
-							a.loadFileList(files)
-						}),
-					),
-					elem.Input(
-						vecty.Markup(
-							prop.ID("pdf-file"),
-							prop.Type(prop.TypeFile),
-							vecty.Attribute("accept", "application/pdf,.pdf"),
-							event.Change(func(e *vecty.Event) {
-								a.loadFileList(e.Target.Get("files"))
-							}),
-						),
-					),
-					elem.Label(
-						vecty.Markup(prop.For("pdf-file")),
-						elem.Strong(vecty.Text(dropTitle(a.filename))),
-						elem.Span(vecty.Text(dropSubtitle(a.filename))),
-					),
-				),
-				vecty.If(a.errorMessage != "",
-					elem.Div(vecty.Markup(vecty.Class("error")), vecty.Text(a.errorMessage)),
-				),
-				elem.Button(
-					vecty.Markup(
-						vecty.Class("primary-action"),
-						prop.Type(prop.TypeButton),
-						prop.Disabled(!a.ready()),
-						event.Click(func(e *vecty.Event) {
-							e.Value.Call("preventDefault")
-							a.start()
-						}),
-					),
-					vecty.Text("Analyze PDF"),
-				),
+				app.Input().
+					Type("password").
+					Placeholder("Paste Shirty API key").
+					Value(a.shirtyKey).
+					OnInput(func(ctx app.Context, e app.Event) {
+						a.shirtyKey = e.Get("target").Get("value").String()
+						_ = ctx.LocalStorage().Set(shirtyKeyStorageKey, strings.TrimSpace(a.shirtyKey))
+						a.errorMessage = ""
+					}),
 			),
+		)
+	}
+	if showOpenRouterKey {
+		fields = append(fields,
+			app.Label().Class("field").Body(
+				app.Span().Body(
+					app.Text("OpenRouter API key"),
+				),
+				app.Input().
+					Type("password").
+					Placeholder("Paste OpenRouter API key").
+					Value(a.openRouterKey).
+					OnInput(func(_ app.Context, e app.Event) {
+						a.openRouterKey = e.Get("target").Get("value").String()
+						a.errorMessage = ""
+					}),
+			),
+		)
+	}
+
+	advanced := []app.UI{
+		app.Summary().Body(
+			app.Text("Advanced options"),
+		),
+		app.Label().Class("field").Body(
+			app.Span().Body(
+				app.Text("Bibliography entry"),
+			),
+			app.Input().
+				Type("number").
+				Min(1).
+				Step(1).
+				Placeholder("All entries").
+				Value(a.entry).
+				OnInput(func(_ app.Context, e app.Event) {
+					a.entry = e.Get("target").Get("value").String()
+					a.errorMessage = ""
+				}),
+		),
+	}
+	if showShirtyKey {
+		advanced = append(advanced,
+			app.Label().Class("field").Body(
+				app.Span().Body(
+					app.Text("Shirty base URL (e.g. https://shirty.sandia.gov/api/v1)"),
+				),
+				app.Input().
+					Type("text").
+					Placeholder(config.DefaultShirtyBaseURL).
+					Value(a.shirtyBaseURL).
+					OnInput(func(_ app.Context, e app.Event) {
+						a.shirtyBaseURL = e.Get("target").Get("value").String()
+						a.errorMessage = ""
+					}),
+			),
+		)
+	}
+
+	contents := []app.UI{
+		app.H1().Body(
+			app.Text("Bibcheck"),
+		),
+		app.Div().Class("form-grid").Body(fields...),
+		app.Details().Class("advanced-options").Body(advanced...),
+		a.fileDropTarget(dropClasses),
+	}
+	if a.errorMessage != "" {
+		contents = append(contents,
+			app.Div().Class("error").Body(
+				app.Text(a.errorMessage),
+			),
+		)
+	}
+	contents = append(contents,
+		app.Button().
+			Class("primary-action").
+			Type("button").
+			Disabled(!a.ready()).
+			OnClick(func(_ app.Context, e app.Event) {
+				e.PreventDefault()
+				a.start()
+			}).
+			Body(
+				app.Text("Analyze PDF"),
+			),
+	)
+
+	return app.Div().Class("app-page").Body(
+		app.Main().Class("shell").Body(
+			app.Section().Class("landing").Body(contents...),
 		),
 		renderFooter(),
 	)
+}
+
+func (a *bibcheckApp) fileDropTarget(classes []string) app.UI {
+	return app.Div().
+		Class(classes...).
+		OnDragEnter(func(_ app.Context, e app.Event) {
+			e.PreventDefault()
+			a.dragging = true
+		}).
+		OnDragOver(func(_ app.Context, e app.Event) {
+			e.PreventDefault()
+			a.dragging = true
+		}).
+		OnDragLeave(func(_ app.Context, e app.Event) {
+			e.PreventDefault()
+			a.dragging = false
+		}).
+		OnDrop(func(ctx app.Context, e app.Event) {
+			e.PreventDefault()
+			a.dragging = false
+			a.loadFileList(ctx, e.Get("dataTransfer").Get("files"))
+		}).
+		Body(
+			app.Input().
+				ID("pdf-file").
+				Type("file").
+				Accept("application/pdf,.pdf").
+				OnChange(func(ctx app.Context, e app.Event) {
+					a.loadFileList(ctx, e.Get("target").Get("files"))
+				}),
+			app.Label().For("pdf-file").Body(
+				app.Strong().Body(
+					app.Text(dropTitle(a.filename)),
+				),
+				app.Span().Body(
+					app.Text(dropSubtitle(a.filename)),
+				),
+			),
+		)
 }
 
 func dropTitle(filename string) string {

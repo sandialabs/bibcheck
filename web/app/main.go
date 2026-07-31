@@ -9,17 +9,16 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"syscall/js"
 
-	"github.com/hexops/vecty"
+	"github.com/maxence-charriere/go-app/v11/pkg/app"
 	"github.com/sandialabs/bibcheck/config"
 	"github.com/sandialabs/bibcheck/web/workflow"
 )
 
 const shirtyKeyStorageKey = "bibcheck.shirty_api_key"
 
-type app struct {
-	vecty.Core
+type bibcheckApp struct {
+	app.Compo
 
 	shirtyKey     string
 	shirtyBaseURL string
@@ -34,26 +33,30 @@ type app struct {
 	errorMessage  string
 	state         workflow.State
 	warningRead   bool
+	uiContext     app.Context
 }
 
 func main() {
-	vecty.SetTitle("Bibcheck")
-	vecty.RenderBody(newApp())
-	select {}
+	app.Route("/", func() app.Composer { return newApp() })
+	app.RunWhenOnBrowser()
 }
 
-func newApp() *app {
-	a := &app{
+func newApp() *bibcheckApp {
+	return &bibcheckApp{
 		shirtyBaseURL: config.DefaultShirtyBaseURL,
 		warningRead:   !showWarningPage,
 	}
-	if showShirtyKey {
-		a.shirtyKey = loadLocalStorage(shirtyKeyStorageKey)
-	}
-	return a
 }
 
-func (a *app) Render() vecty.ComponentOrHTML {
+func (a *bibcheckApp) OnMount(ctx app.Context) {
+	a.uiContext = ctx
+	if showShirtyKey {
+		_ = ctx.LocalStorage().Get(shirtyKeyStorageKey, &a.shirtyKey)
+		ctx.Update()
+	}
+}
+
+func (a *bibcheckApp) Render() app.UI {
 	if !a.warningRead {
 		return a.renderWarning()
 	}
@@ -63,104 +66,73 @@ func (a *app) Render() vecty.ComponentOrHTML {
 	return a.renderLanding()
 }
 
-func (a *app) ready() bool {
-	return len(a.pdf) > 0 && (shirtyKey(a) != "" || openRouterKey(a) != "")
+func (a *bibcheckApp) ready() bool {
+	return len(a.pdf) > 0 && (shirtyAPIKey(a) != "" || openRouterAPIKey(a) != "")
 }
 
-func (a *app) start() {
+func (a *bibcheckApp) start() {
 	entry, err := selectedEntry(a.entry)
 	if err != nil {
 		a.errorMessage = err.Error()
-		vecty.Rerender(a)
 		return
 	}
 
 	rt, err := workflow.NewRuntime(workflow.Keys{
-		ShirtyAPIKey:     shirtyKey(a),
+		ShirtyAPIKey:     shirtyAPIKey(a),
 		ShirtyBaseURL:    shirtyBaseURL(a),
-		OpenRouterAPIKey: openRouterKey(a),
+		OpenRouterAPIKey: openRouterAPIKey(a),
 	})
 	if err != nil {
 		a.errorMessage = err.Error()
-		vecty.Rerender(a)
 		return
 	}
 
-	a.running = true
 	if a.cancelRun != nil {
 		a.cancelRun()
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	a.cancelRun = cancel
+	a.running = true
+	a.cancelRun = nil
 	a.runID++
 	runID := a.runID
 	a.errorMessage = ""
 	a.state = workflow.State{Provider: rt.Kind, Phase: "Starting"}
-	vecty.Rerender(a)
-
 	pdf := append([]byte(nil), a.pdf...)
-	options := workflow.Options{Entry: entry}
-	go workflow.AnalyzePDFWithOptions(ctx, rt, pdf, options, func(state workflow.State) {
-		if runID != a.runID {
-			return
-		}
-		a.state = state
-		vecty.Rerender(a)
+	runCtx, cancel := context.WithCancel(context.Background())
+	a.cancelRun = cancel
+
+	a.uiContext.Async(func() {
+		workflow.AnalyzePDFWithOptions(runCtx, rt, pdf, workflow.Options{Entry: entry}, func(state workflow.State) {
+			a.uiContext.Dispatch(func(app.Context) {
+				if runID == a.runID {
+					a.state = state
+				}
+			})
+		})
 	})
 }
 
-func shirtyKey(a *app) string {
+func shirtyAPIKey(a *bibcheckApp) string {
 	if !showShirtyKey {
 		return ""
 	}
 	return strings.TrimSpace(a.shirtyKey)
 }
 
-func shirtyBaseURL(a *app) string {
+func shirtyBaseURL(a *bibcheckApp) string {
 	if !showShirtyKey {
 		return ""
 	}
 	return strings.TrimSpace(a.shirtyBaseURL)
 }
 
-func openRouterKey(a *app) string {
+func openRouterAPIKey(a *bibcheckApp) string {
 	if !showOpenRouterKey {
 		return ""
 	}
 	return strings.TrimSpace(a.openRouterKey)
 }
 
-func loadLocalStorage(key string) string {
-	defer func() {
-		_ = recover()
-	}()
-	storage := js.Global().Get("localStorage")
-	if !storage.Truthy() {
-		return ""
-	}
-	value := storage.Call("getItem", key)
-	if value.IsNull() || value.IsUndefined() {
-		return ""
-	}
-	return value.String()
-}
-
-func saveLocalStorage(key, value string) {
-	defer func() {
-		_ = recover()
-	}()
-	storage := js.Global().Get("localStorage")
-	if !storage.Truthy() {
-		return
-	}
-	if value == "" {
-		storage.Call("removeItem", key)
-		return
-	}
-	storage.Call("setItem", key, value)
-}
-
-func (a *app) reset() {
+func (a *bibcheckApp) reset() {
 	if a.cancelRun != nil {
 		a.cancelRun()
 		a.cancelRun = nil
@@ -171,43 +143,38 @@ func (a *app) reset() {
 	a.running = false
 	a.errorMessage = ""
 	a.state = workflow.State{}
-	vecty.Rerender(a)
 }
 
-func (a *app) loadFileList(files js.Value) {
-	if !files.Truthy() || files.Get("length").Int() < 1 {
+func (a *bibcheckApp) loadFileList(ctx app.Context, files app.Value) {
+	if !files.Truthy() || files.Length() < 1 {
 		return
 	}
 	file := files.Index(0)
 	name := file.Get("name").String()
 	if !strings.HasSuffix(strings.ToLower(name), ".pdf") && file.Get("type").String() != "application/pdf" {
 		a.errorMessage = "Select a PDF file."
-		vecty.Rerender(a)
 		return
 	}
 
-	reader := js.Global().Get("FileReader").New()
-	var onload js.Func
-	var onerror js.Func
-	onload = js.FuncOf(func(this js.Value, args []js.Value) any {
+	reader := app.Window().Get("FileReader").New()
+	var onload, onerror app.Func
+	onload = app.FuncOf(func(_ app.Value, _ []app.Value) any {
 		defer onload.Release()
 		defer onerror.Release()
-
-		array := js.Global().Get("Uint8Array").New(reader.Get("result"))
+		array := app.Window().Get("Uint8Array").New(reader.Get("result"))
 		data := make([]byte, array.Get("byteLength").Int())
-		js.CopyBytesToGo(data, array)
-
-		a.filename = name
-		a.pdf = data
-		a.errorMessage = ""
-		vecty.Rerender(a)
+		app.CopyBytesToGo(data, array)
+		ctx.Dispatch(func(app.Context) {
+			a.filename = name
+			a.pdf = data
+			a.errorMessage = ""
+		})
 		return nil
 	})
-	onerror = js.FuncOf(func(this js.Value, args []js.Value) any {
+	onerror = app.FuncOf(func(_ app.Value, _ []app.Value) any {
 		defer onload.Release()
 		defer onerror.Release()
-		a.errorMessage = "Could not read the selected PDF."
-		vecty.Rerender(a)
+		ctx.Dispatch(func(app.Context) { a.errorMessage = "Could not read the selected PDF." })
 		return nil
 	})
 	reader.Set("onload", onload)

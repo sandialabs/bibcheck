@@ -5,47 +5,44 @@
 package main
 
 import (
-	"github.com/hexops/vecty"
-	"github.com/hexops/vecty/elem"
-	"github.com/hexops/vecty/prop"
+	"github.com/maxence-charriere/go-app/v11/pkg/app"
 	"github.com/sandialabs/bibcheck/version"
 )
 
-func renderFooter() vecty.ComponentOrHTML {
-	return elem.Footer(
-		vecty.Markup(vecty.Class("app-footer")),
-		elem.Div(
-			vecty.Markup(vecty.Class("footer-item")),
-			elem.Anchor(
-				vecty.Markup(
-					prop.Href("https://github.com/sandialabs/bibcheck"),
-					vecty.Attribute("target", "_blank"),
-					vecty.Attribute("rel", "noopener noreferrer"),
+func renderFooter() app.UI {
+	items := []app.UI{
+		app.Div().Class("footer-item").Body(
+			app.A().
+				Href("https://github.com/sandialabs/bibcheck").
+				Attr("target", "_blank").
+				Attr("rel", "noopener noreferrer").
+				Body(
+					app.Text("sandialabs/bibcheck"),
 				),
-				vecty.Text("sandialabs/bibcheck"),
-			),
-			vecty.Text(" · "+version.String()),
+			app.Text(" · "+version.String()),
 		),
-		vecty.If(showHowItWorksLink,
-			elem.Div(
-				vecty.Markup(vecty.Class("footer-item")),
-				elem.Anchor(
-					vecty.Markup(
-						prop.Href("https://github.com/sandialabs/bibcheck/blob/main/docs/snl-how-it-works.md"),
-						vecty.Attribute("target", "_blank"),
-						vecty.Attribute("rel", "noopener noreferrer"),
+	}
+	if showHowItWorksLink {
+		items = append(items,
+			app.Div().Class("footer-item").Body(
+				app.A().
+					Href("https://github.com/sandialabs/bibcheck/blob/main/docs/snl-how-it-works.md").
+					Attr("target", "_blank").
+					Attr("rel", "noopener noreferrer").
+					Body(
+						app.Text("How it Works"),
 					),
-					vecty.Text("How it Works"),
-				),
 			),
+		)
+	}
+	items = append(items,
+		app.Div().Class("footer-item").Body(
+			app.Text("(c) 2025 National Technology and Engineering Solutions of Sandia"),
 		),
-		elem.Div(
-			vecty.Markup(vecty.Class("footer-item")),
-			vecty.Text("(c) 2025 National Technology and Engineering Solutions of Sandia"),
-		),
-		elem.Div(
-			vecty.Markup(vecty.Class("footer-item")),
-			vecty.Text("Point of contact: Carl Pearson <cwpears@sandia.gov>"),
+		app.Div().Class("footer-item").Body(
+			app.Text("Point of contact: Carl Pearson <cwpears@sandia.gov>"),
 		),
 	)
+
+	return app.Footer().Class("app-footer").Body(items...)
 }

@@ -7,59 +7,66 @@ package main
 import (
 	"fmt"
 
-	"github.com/hexops/vecty"
-	"github.com/hexops/vecty/elem"
-	"github.com/hexops/vecty/event"
-	"github.com/hexops/vecty/prop"
+	"github.com/maxence-charriere/go-app/v11/pkg/app"
 )
 
-func (a *app) renderAnalysis() vecty.ComponentOrHTML {
-	return elem.Body(
-		elem.Main(
-			vecty.Markup(vecty.Class("analysis-shell")),
-			elem.Header(
-				vecty.Markup(vecty.Class("analysis-header")),
-				elem.Div(
-					elem.Heading1(vecty.Text("Bibliography Analysis")),
-					elem.Paragraph(vecty.Text(fmt.Sprintf("%s using %s", a.filename, providerText(a.state.Provider)))),
+func (a *bibcheckApp) renderAnalysis() app.UI {
+	contents := []app.UI{
+		app.Header().Class("analysis-header").Body(
+			app.Div().Body(
+				app.H1().Body(
+					app.Text("Bibliography Analysis"),
 				),
-				elem.Button(
-					vecty.Markup(
-						prop.Type(prop.TypeButton),
-						event.Click(func(e *vecty.Event) {
-							e.Value.Call("preventDefault")
-							a.reset()
-						}),
-					),
-					vecty.Text("New PDF"),
+				app.P().Body(
+					app.Text(fmt.Sprintf("%s using %s", a.filename, providerText(a.state.Provider))),
 				),
 			),
-			elem.Section(
-				vecty.Markup(vecty.Class("status-band")),
-				elem.Div(
-					elem.Span(vecty.Markup(vecty.Class("phase")), vecty.Text(nonEmpty(a.state.Phase, "Starting"))),
-					elem.Span(vecty.Text(progressText(a.state))),
+			app.Button().
+				Type("button").
+				OnClick(func(_ app.Context, e app.Event) {
+					e.PreventDefault()
+					a.reset()
+				}).
+				Body(
+					app.Text("New PDF"),
 				),
-				elem.Progress(vecty.Markup(vecty.Attribute("max", maxProgress(a.state)), vecty.Attribute("value", valueProgress(a.state)))),
-			),
-			vecty.If(a.state.Error != "",
-				elem.Div(vecty.Markup(vecty.Class("error")), vecty.Text(a.state.Error)),
-			),
-			elem.Section(
-				vecty.Markup(vecty.Class("entries")),
-				a.renderEntries(),
-			),
 		),
+		app.Section().Class("status-band").Body(
+			app.Div().Body(
+				app.Span().Class("phase").Body(
+					app.Text(nonEmpty(a.state.Phase, "Starting")),
+				),
+				app.Span().Body(
+					app.Text(progressText(a.state)),
+				),
+			),
+			app.Progress().
+				Attr("max", maxProgress(a.state)).
+				Attr("value", valueProgress(a.state)),
+		),
+	}
+	if a.state.Error != "" {
+		contents = append(contents,
+			app.Div().Class("error").Body(
+				app.Text(a.state.Error),
+			),
+		)
+	}
+	contents = append(contents,
+		app.Section().Class("entries").Body(a.renderEntries()...),
+	)
+
+	return app.Div().Class("app-page").Body(
+		app.Main().Class("analysis-shell").Body(contents...),
 		renderFooter(),
 	)
 }
 
-func (a *app) renderEntries() vecty.MarkupOrChild {
+func (a *bibcheckApp) renderEntries() []app.UI {
 	if len(a.state.Entries) == 0 {
-		return elem.Div(vecty.Markup(vecty.Class("empty-state")), vecty.Text("Preparing bibliography."))
+		return nil
 	}
-
-	items := make(vecty.List, 0, len(a.state.Entries))
+	items := make([]app.UI, 0, len(a.state.Entries))
 	for _, entry := range a.state.Entries {
 		items = append(items, renderEntry(entry))
 	}

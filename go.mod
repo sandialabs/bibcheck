@@ -1,10 +1,10 @@
 module github.com/sandialabs/bibcheck
 
-go 1.25.0
+go 1.26.0
 
 require (
-	github.com/hexops/vecty v0.6.0
 	github.com/jedib0t/go-pretty/v6 v6.7.5
+	github.com/maxence-charriere/go-app/v11 v11.0.4
 	github.com/pdfcpu/pdfcpu v0.13.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
@@ -16,6 +16,7 @@ require (
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/hhrutter/lzw v1.0.0 // indirect
 	github.com/hhrutter/pkcs7 v0.2.2 // indirect
 	github.com/hhrutter/tiff v1.0.3 // indirect

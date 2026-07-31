@@ -5,21 +5,22 @@
 package main
 
 import (
-	"github.com/hexops/vecty"
-	"github.com/hexops/vecty/elem"
+	"github.com/maxence-charriere/go-app/v11/pkg/app"
 	"github.com/sandialabs/bibcheck/web/workflow"
 )
 
-func renderEntry(entry workflow.EntryState) vecty.ComponentOrHTML {
+func renderEntry(entry workflow.EntryState) app.UI {
 	status := entryStatus(entry)
-	return elem.Article(
-		vecty.Markup(vecty.Class("entry-card")),
-		elem.Header(
-			elem.Heading2(vecty.Text("Entry "+entry.ID)),
-			elem.Span(vecty.Markup(vecty.Class("status", statusClass(status))), vecty.Text(status)),
+	return app.Article().Class("entry-card").Body(
+		app.Header().Body(
+			app.H2().Body(
+				app.Text("Entry "+entry.ID),
+			),
+			app.Span().Class("status", statusClass(status)).Body(
+				app.Text(status),
+			),
 		),
-		elem.Div(
-			vecty.Markup(vecty.Class("entry-columns")),
+		app.Div().Class("entry-columns").Body(
 			renderExtractedText(entry),
 			renderLookupCards(entry),
 			renderSummary(entry),
@@ -27,71 +28,87 @@ func renderEntry(entry workflow.EntryState) vecty.ComponentOrHTML {
 	)
 }
 
-func renderExtractedText(entry workflow.EntryState) vecty.ComponentOrHTML {
-	return elem.Div(
-		vecty.Markup(vecty.Class("entry-pane", "entry-pane-text", panelStatusClass(entry.TextStatus))),
-		elem.Heading3(vecty.Text("Extracted entry")),
-		elem.Preformatted(vecty.Text(nonEmpty(entry.Text, statusCopy(entry.TextStatus)))),
+func renderExtractedText(entry workflow.EntryState) app.UI {
+	return app.Div().Class("entry-pane", "entry-pane-text", panelStatusClass(entry.TextStatus)).Body(
+		app.H3().Body(
+			app.Text("Extracted entry"),
+		),
+		app.Pre().Body(
+			app.Text(nonEmpty(entry.Text, statusCopy(entry.TextStatus))),
+		),
 	)
 }
 
-func renderLookupCards(entry workflow.EntryState) vecty.ComponentOrHTML {
-	return elem.Div(
-		vecty.Markup(vecty.Class("entry-pane", "lookup-pane", panelStatusClass(entry.AnalysisStatus))),
-		elem.Heading3(vecty.Text("Lookups")),
+func renderLookupCards(entry workflow.EntryState) app.UI {
+	return app.Div().Class("entry-pane", "lookup-pane", panelStatusClass(entry.AnalysisStatus)).Body(
+		app.H3().Body(
+			app.Text("Lookups"),
+		),
 		renderLookupCardList(entry),
 	)
 }
 
-func renderLookupCardList(entry workflow.EntryState) vecty.MarkupOrChild {
+func renderLookupCardList(entry workflow.EntryState) app.UI {
 	if len(entry.LookupCards) == 0 {
-		return elem.Div(vecty.Markup(vecty.Class("empty-card")), vecty.Text(lookupFallback(entry)))
+		return app.Div().Class("empty-card").Body(
+			app.Text(lookupFallback(entry)),
+		)
 	}
-
-	cards := make(vecty.List, 0, len(entry.LookupCards))
+	cards := make([]app.UI, 0, len(entry.LookupCards))
 	for _, card := range entry.LookupCards {
 		cards = append(cards, renderLookupCard(card))
 	}
-	return elem.Div(vecty.Markup(vecty.Class("lookup-cards")), cards)
+	return app.Div().Class("lookup-cards").Body(cards...)
 }
 
-func renderLookupCard(card workflow.LookupCard) vecty.ComponentOrHTML {
-	return elem.Div(
-		vecty.Markup(vecty.Class("lookup-card", lookupStatusClass(card.Status))),
-		elem.Div(
-			vecty.Markup(vecty.Class("lookup-card-header")),
-			elem.Strong(vecty.Text(card.Name)),
-			elem.Span(vecty.Markup(vecty.Class("lookup-status")), vecty.Text(statusLabel(card.Status))),
+func renderLookupCard(card workflow.LookupCard) app.UI {
+	contents := []app.UI{
+		app.Div().Class("lookup-card-header").Body(
+			app.Strong().Body(
+				app.Text(card.Name),
+			),
+			app.Span().Class("lookup-status").Body(
+				app.Text(statusLabel(card.Status)),
+			),
 		),
-		vecty.If(card.Detail != "",
-			elem.Preformatted(vecty.Text(card.Detail)),
-		),
-	)
+	}
+	if card.Detail != "" {
+		contents = append(contents,
+			app.Pre().Body(
+				app.Text(card.Detail),
+			),
+		)
+	}
+	return app.Div().Class("lookup-card", lookupStatusClass(card.Status)).Body(contents...)
 }
 
-func renderSummary(entry workflow.EntryState) vecty.ComponentOrHTML {
+func renderSummary(entry workflow.EntryState) app.UI {
 	summary := entry.Summary
 	if summary.Status == "" {
 		summary.Status = entry.AnalysisStatus
 	}
-	return elem.Div(
-		vecty.Markup(vecty.Class("entry-pane", "summary-pane", summaryStatusClass(summary.Status))),
-		elem.Heading3(vecty.Text("Analysis summary")),
+	return app.Div().Class("entry-pane", "summary-pane", summaryStatusClass(summary.Status)).Body(
+		app.H3().Body(
+			app.Text("Analysis summary"),
+		),
 		renderSummaryCard(entry, summary),
 	)
 }
 
-func renderSummaryCard(entry workflow.EntryState, summary workflow.SummaryView) vecty.ComponentOrHTML {
+func renderSummaryCard(entry workflow.EntryState, summary workflow.SummaryView) app.UI {
 	if summary.Status == "pending" {
-		return elem.Div(vecty.Markup(vecty.Class("empty-card")), vecty.Text(statusCopy(summary.Status)))
+		return app.Div().Class("empty-card").Body(
+			app.Text(statusCopy(summary.Status)),
+		)
 	}
-
-	return elem.Div(
-		vecty.Markup(vecty.Class("summary-card", summaryStatusClass(summary.Status))),
-		elem.Div(
-			vecty.Markup(vecty.Class("summary-card-header")),
-			elem.Strong(vecty.Text(summaryTitle(summary.Status))),
+	return app.Div().Class("summary-card", summaryStatusClass(summary.Status)).Body(
+		app.Div().Class("summary-card-header").Body(
+			app.Strong().Body(
+				app.Text(summaryTitle(summary.Status)),
+			),
 		),
-		elem.Preformatted(vecty.Text(nonEmpty(summary.Comment, summaryFallback(entry, summary.Status)))),
+		app.Pre().Body(
+			app.Text(nonEmpty(summary.Comment, summaryFallback(entry, summary.Status))),
+		),
 	)
 }

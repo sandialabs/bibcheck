@@ -10,7 +10,7 @@
   <script src="/wasm_exec.js"></script>
 </head>
 <body>
-  <div class="boot">Loading Bibcheck...</div>
+  <div class="boot" id="app-wasm-loader-label">Loading Bibcheck...</div>
   <script>
     const go = new Go();
     WebAssembly.instantiateStreaming(fetch("/app.wasm"), go.importObject).then((result) => {

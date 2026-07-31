@@ -31,6 +31,13 @@ body {
   min-height: 100vh;
 }
 
+.app-page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
 body::before {
   content: "";
   display: block;
