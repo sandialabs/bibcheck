@@ -107,7 +107,8 @@ func (c *Client) GetByID(arxivID string) (*Entry, error) {
 	apiURL := fmt.Sprintf("http://export.arxiv.org/api/query?id_list=%s", id)
 
 	// Make the request with proper headers
-	req, err := http.NewRequest("GET", apiURL, nil)
+	// Route this through the proxy when it's in wasm (mixed-content / CORS restrictions)
+	req, err := http.NewRequest("GET", wasmhttp.FetchURL(apiURL), nil)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
