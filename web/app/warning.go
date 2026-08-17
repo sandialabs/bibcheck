@@ -18,7 +18,7 @@ func (a *bibcheckApp) renderWarning() app.UI {
 		Body(
 			app.Section().Class("warning-page").Body(
 				app.H1().Body(
-					app.Text("!! UUI/UUR Only !!"),
+					app.Text("!! UUR Only !!"),
 				),
 				app.P().Body(
 					app.Text("This application is only approved to process UUI and UUR documents."),
