@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/sandialabs/bibcheck/internal/wasmhttp"
-	"github.com/sandialabs/bibcheck/version"
+
 )
 
 func fetchHandler(maxBytes int64) http.Handler {
@@ -57,11 +57,7 @@ func fetchHandlerWithTimeout(maxBytes int64, timeout time.Duration) http.Handler
 			http.Error(w, "create upstream request failed", http.StatusInternalServerError)
 			return
 		}
-		userAgent := r.UserAgent()
-		if userAgent == "" {
-			userAgent = defaultUserAgent()
-		}
-		req.Header.Set("User-Agent", userAgent)
+		req.Header.Set("User-Agent", upstreamUserAgent(targetURL, r.UserAgent()))
 
 		resp, err := client.Do(req)
 		if err != nil {
@@ -101,8 +97,4 @@ func fetchHandlerWithTimeout(maxBytes int64, timeout time.Duration) http.Handler
 			log.Printf("write proxied response failed: %v", err)
 		}
 	})
-}
-
-func defaultUserAgent() string {
-	return "bibcheck / " + version.String() + " github.com/sandialabs/bibcheck"
 }
