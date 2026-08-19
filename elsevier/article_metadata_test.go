@@ -3,12 +3,13 @@ package elsevier
 import (
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/sandialabs/bibcheck/internal/testutil"
 )
 
 func TestProxyReachable(t *testing.T) {
@@ -45,19 +46,16 @@ func TestProxyReachable(t *testing.T) {
 		}
 	}
 
-	conn, err := net.DialTimeout("tcp", proxyHost, 5*time.Second)
-	if err != nil {
-		log.Fatal("Cannot reach proxy: ", err)
-	}
-	conn.Close()
+	testutil.SkipIfTCPUnavailable(t, proxyHost)
 	fmt.Println("Successfully connected to proxy")
 }
 
 func TestElsevierReachable(t *testing.T) {
+	testutil.SkipIfTCPUnavailable(t, "api.elsevier.com:443")
 
 	resp, err := http.Get("https://api.elsevier.com")
 	if err != nil {
-		log.Fatal(err)
+		t.Fatalf("http.Get error: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -65,7 +63,7 @@ func TestElsevierReachable(t *testing.T) {
 
 	_, err = io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatalf("io.ReadAll error: %v", err)
 	}
 }
 
@@ -76,6 +74,7 @@ func TestArticleMetadata(t *testing.T) {
 	if !ok {
 		t.Skipf("ELSEVIER_API_KEY not provided")
 	}
+	testutil.SkipIfTCPUnavailable(t, "api.elsevier.com:443")
 
 	client := NewClient(apiKey, WithTimeout(10*time.Second))
 

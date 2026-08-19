@@ -4,6 +4,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/sandialabs/bibcheck/internal/testutil"
 )
 
 func TestSearch(t *testing.T) {
@@ -13,6 +15,7 @@ func TestSearch(t *testing.T) {
 	if !ok {
 		t.Skipf("ELSEVIER_API_KEY not provided")
 	}
+	testutil.SkipIfTCPUnavailable(t, "api.elsevier.com:443")
 
 	client := NewClient(apiKey, WithTimeout(10*time.Second))
 
