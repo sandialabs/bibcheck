@@ -2,23 +2,19 @@ package osti
 
 import (
 	"io"
-	"log"
-	"net"
 	"net/http"
 	"strings"
 	"testing"
-	"time"
+
+	"github.com/sandialabs/bibcheck/internal/testutil"
 )
 
 func TestOstiDial(t *testing.T) {
-	conn, err := net.DialTimeout("tcp", "www.osti.gov:443", 5*time.Second)
-	if err != nil {
-		log.Fatal("DialTimeout error: ", err)
-	}
-	conn.Close()
+	testutil.SkipIfTCPUnavailable(t, "www.osti.gov:443")
 }
 
 func TestOstiGet(t *testing.T) {
+	testutil.SkipIfTCPUnavailable(t, "www.osti.gov:443")
 
 	resp, err := http.Get("https://www.osti.gov")
 	if err != nil {
