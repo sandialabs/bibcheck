@@ -5,10 +5,11 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
+	"github.com/sandialabs/bibcheck/crossref"
 	"github.com/sandialabs/bibcheck/internal/wasmhttp"
-
 )
 
 func fetchHandler(maxBytes int64) http.Handler {
@@ -25,7 +26,16 @@ func fetchHandlerWithTimeout(maxBytes int64, timeout time.Duration) http.Handler
 			return nil
 		},
 	}
+	return fetchHandlerWithClient(maxBytes, timeout, client)
+}
 
+func fetchHandlerWithClient(maxBytes int64, timeout time.Duration, client *http.Client) http.Handler {
+	crossrefClient := crossref.NewClient(
+		crossref.WithHTTPClient(client),
+		crossref.WithDelayCallback(func(delay time.Duration) {
+			log.Printf("proxy Crossref request delayed by rate limit: %s", delay)
+		}),
+	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set(wasmhttp.FetchResultHeader, wasmhttp.FetchResultProxyError)
 
@@ -59,7 +69,11 @@ func fetchHandlerWithTimeout(maxBytes int64, timeout time.Duration) http.Handler
 		}
 		req.Header.Set("User-Agent", upstreamUserAgent(targetURL, r.UserAgent()))
 
-		resp, err := client.Do(req)
+		do := client.Do
+		if isCrossrefURL(targetURL) {
+			do = crossrefClient.Do
+		}
+		resp, err := do(req)
 		if err != nil {
 			log.Printf("proxy GET failed url=%q: %v", targetURL.String(), err)
 			if isTimeoutError(err) {
@@ -97,4 +111,8 @@ func fetchHandlerWithTimeout(maxBytes int64, timeout time.Duration) http.Handler
 			log.Printf("write proxied response failed: %v", err)
 		}
 	})
+}
+
+func isCrossrefURL(target *url.URL) bool {
+	return target != nil && strings.EqualFold(target.Hostname(), "api.crossref.org")
 }

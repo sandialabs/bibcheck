@@ -3,12 +3,17 @@
 package server
 
 import (
+	"bytes"
+	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -209,6 +214,97 @@ func TestFetchHandlerRejectsUnsupportedURL(t *testing.T) {
 	}
 	if got := resp.Header().Get(wasmhttp.FetchResultHeader); got != wasmhttp.FetchResultProxyError {
 		t.Fatalf("expected fetch result %q, got %q", wasmhttp.FetchResultProxyError, got)
+	}
+}
+
+type serverRoundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f serverRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func TestFetchHandlerSharesCrossrefRateLimit(t *testing.T) {
+	var logs bytes.Buffer
+	previousLogOutput := log.Writer()
+	log.SetOutput(&logs)
+	defer log.SetOutput(previousLogOutput)
+
+	starts := make(chan time.Time, 4)
+	client := &http.Client{Transport: serverRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if got := req.URL.Query().Get("mailto"); got != "user@example.com" {
+			t.Errorf("mailto = %q, want user@example.com", got)
+		}
+		if got := req.UserAgent(); got != defaultUserAgent() {
+			t.Errorf("User-Agent = %q, want %q", got, defaultUserAgent())
+		}
+		starts <- time.Now()
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": {"application/json"}},
+			Body:       io.NopCloser(strings.NewReader(`{"status":"ok"}`)),
+		}, nil
+	})}
+	handler := fetchHandlerWithClient(1024, time.Second, client)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			req := httptest.NewRequest(http.MethodGet, "/api/fetch?url="+url.QueryEscape("https://api.crossref.org/v1/works?mailto=user@example.com"), nil)
+			resp := httptest.NewRecorder()
+			handler.ServeHTTP(resp, req)
+			if resp.Code != http.StatusOK {
+				t.Errorf("expected status %d, got %d: %s", http.StatusOK, resp.Code, resp.Body.String())
+			}
+			if got := resp.Header().Get(wasmhttp.FetchResultHeader); got != wasmhttp.FetchResultUpstream {
+				t.Errorf("expected fetch result %q, got %q", wasmhttp.FetchResultUpstream, got)
+			}
+		}()
+	}
+	wg.Wait()
+
+	times := make([]time.Time, 0, 4)
+	for i := 0; i < 4; i++ {
+		times = append(times, <-starts)
+	}
+	sort.Slice(times, func(i, j int) bool { return times[i].Before(times[j]) })
+	if delay := times[3].Sub(times[2]); delay < 70*time.Millisecond {
+		t.Fatalf("fourth Crossref request started only %s after the burst", delay)
+	}
+	if got := logs.String(); !strings.Contains(got, "proxy Crossref request delayed by rate limit:") {
+		t.Fatalf("missing Crossref rate-limit log in %q", got)
+	}
+}
+
+func TestFetchHandlerDoesNotRateLimitOtherHosts(t *testing.T) {
+	client := &http.Client{Transport: serverRoundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusNoContent,
+			Header:     make(http.Header),
+			Body:       http.NoBody,
+		}, nil
+	})}
+	handler := fetchHandlerWithClient(1024, time.Second, client)
+
+	for i := 0; i < 3; i++ {
+		req := httptest.NewRequest(http.MethodGet, "/api/fetch?url="+url.QueryEscape("https://api.crossref.org/v1/works"), nil)
+		resp := httptest.NewRecorder()
+		handler.ServeHTTP(resp, req)
+		if resp.Code != http.StatusNoContent {
+			t.Fatalf("Crossref request %d returned %d", i, resp.Code)
+		}
+	}
+
+	started := time.Now()
+	req := httptest.NewRequest(http.MethodGet, "/api/fetch?url="+url.QueryEscape("https://example.invalid/resource"), nil)
+	resp := httptest.NewRecorder()
+	handler.ServeHTTP(resp, req)
+	if resp.Code != http.StatusNoContent {
+		t.Fatalf("non-Crossref request returned %d", resp.Code)
+	}
+	if elapsed := time.Since(started); elapsed > 50*time.Millisecond {
+		t.Fatalf("non-Crossref request was delayed by %s", elapsed)
 	}
 }
 
