@@ -92,7 +92,7 @@ func queryBibliographic(
 	if config.UserEmail() != "" {
 		params.Add("mailto", config.UserEmail()) // puts us in the polite pool
 	}
-	requestURL := baseURL + "?" + encodeQuery(params)
+	requestURL := wasmhttp.FetchURL(baseURL + "?" + encodeQuery(params))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)

@@ -3,28 +3,25 @@
 package crossref
 
 import (
-	"context"
 	"log"
 	"net/http"
-	"sync"
 	"time"
 )
 
 const (
-	defaultTimeout       = 30 * time.Second
-	defaultStartInterval = 334 * time.Millisecond
-	maxConcurrent        = 3
+	defaultTimeout    = 30 * time.Second
+	requestsPerSecond = 10
+	burstSize         = 3
+	maxConcurrent     = 3
 )
 
 // Client is a rate-limited client for the Crossref API. A Client is safe for
 // concurrent use and should be shared by all work in one process.
 type Client struct {
-	httpClient    *http.Client
-	startInterval time.Duration
-	delay         func(time.Duration)
-	semaphore     chan struct{}
-	startMu       sync.Mutex
-	lastStart     time.Time
+	httpClient *http.Client
+	delay      func(time.Duration)
+	semaphore  chan struct{}
+	limiter    *tokenBucket
 }
 
 // Option configures a Client.
@@ -40,16 +37,19 @@ func WithDelayCallback(callback func(time.Duration)) Option {
 	return func(c *Client) { c.delay = callback }
 }
 
-// NewClient returns a Crossref client limited to one request start every 334ms
-// and at most three concurrent upstream requests.
+// NewClient returns a Crossref client limited to 10 request starts per second,
+// with a burst of three and at most three concurrent upstream requests.
 func NewClient(options ...Option) *Client {
 	c := &Client{
-		httpClient:    &http.Client{Timeout: defaultTimeout},
-		startInterval: defaultStartInterval,
+		httpClient: &http.Client{Timeout: defaultTimeout},
 		delay: func(delay time.Duration) {
 			log.Printf("Crossref request delayed by rate limit: %s", delay)
 		},
 		semaphore: make(chan struct{}, maxConcurrent),
+		limiter: &tokenBucket{
+			tokens:     burstSize,
+			lastRefill: time.Now(),
+		},
 	}
 	for _, option := range options {
 		option(c)
@@ -61,6 +61,7 @@ func NewClient(options ...Option) *Client {
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	waitStarted := time.Now()
 	delayed := false
+
 	select {
 	case c.semaphore <- struct{}{}:
 	default:
@@ -73,30 +74,14 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	}
 	defer func() { <-c.semaphore }()
 
-	rateDelayed, err := c.waitForStart(req.Context())
+	rateDelayed, err := c.limiter.wait(req.Context())
 	if err != nil {
 		return nil, err
 	}
-	if (delayed || rateDelayed) && c.delay != nil {
+	delayed = delayed || rateDelayed
+
+	if delayed && c.delay != nil {
 		c.delay(time.Since(waitStarted))
 	}
 	return c.httpClient.Do(req)
-}
-
-func (c *Client) waitForStart(ctx context.Context) (bool, error) {
-	c.startMu.Lock()
-	defer c.startMu.Unlock()
-
-	delay := time.Until(c.lastStart.Add(c.startInterval))
-	if delay > 0 {
-		timer := time.NewTimer(delay)
-		defer timer.Stop()
-		select {
-		case <-timer.C:
-		case <-ctx.Done():
-			return false, ctx.Err()
-		}
-	}
-	c.lastStart = time.Now()
-	return delay > 0, nil
 }
