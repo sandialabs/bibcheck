@@ -10,19 +10,44 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/sandialabs/bibcheck/config"
+	"github.com/sandialabs/bibcheck/internal/ratelimit"
 	"github.com/sandialabs/bibcheck/internal/wasmhttp"
+)
+
+const (
+	defaultTimeout    = 30 * time.Second
+	requestsPerSecond = 1.0 / 3.0
+	burstSize         = 1
+	maxConcurrent     = 1
 )
 
 var ErrDoesNotExist = errors.New("no arxiv entry found")
 
-// Client represents a client for the arXiv API
+// Client is a rate-limited client for the arXiv API. A Client is safe for
+// concurrent use and should be shared by all work in one process.
 type Client struct {
 	httpClient *http.Client
+	delay      func(time.Duration)
+	limiter    *ratelimit.Client
+}
+
+// Option configures a Client.
+type Option func(*Client)
+
+// WithHTTPClient replaces the HTTP client used for upstream requests.
+func WithHTTPClient(client *http.Client) Option {
+	return func(c *Client) { c.httpClient = client }
+}
+
+// WithDelayCallback registers a callback for requests delayed by rate limiting.
+func WithDelayCallback(callback func(time.Duration)) Option {
+	return func(c *Client) { c.delay = callback }
 }
 
 // Feed represents the Atom feed response from arXiv
@@ -89,13 +114,33 @@ func (e *Entry) ToString() string {
 	return s
 }
 
-// NewClient creates a new arXiv API client with proper identification
-func NewClient() *Client {
-	return &Client{
-		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+// NewClient creates an arXiv API client limited to one request start every
+// three seconds and one concurrent upstream request.
+func NewClient(options ...Option) *Client {
+	c := &Client{
+		httpClient: &http.Client{Timeout: defaultTimeout},
+		delay: func(delay time.Duration) {
+			log.Printf("arXiv request delayed by rate limit: %s", delay)
 		},
 	}
+	for _, option := range options {
+		option(c)
+	}
+	c.limiter = ratelimit.NewClient(c.httpClient, ratelimit.Policy{
+		RequestsPerSecond: requestsPerSecond,
+		Burst:             burstSize,
+		MaxConcurrent:     maxConcurrent,
+	}, c.delay)
+	return c
+}
+
+// Do performs a rate-limited HTTP request. WASM requests rely on the shared
+// fetch proxy's limiter instead of applying a second browser-local limit.
+func (c *Client) Do(req *http.Request) (*http.Response, error) {
+	if wasmhttp.UsesFetchProxy() {
+		return c.httpClient.Do(req)
+	}
+	return c.limiter.Do(req)
 }
 
 // GetByID retrieves metadata for a specific arXiv ID
@@ -117,7 +162,7 @@ func (c *Client) GetByID(arxivID string) (*Entry, error) {
 	req.Header.Set("User-Agent", config.UserAgent())
 	wasmhttp.ConfigureRequest(req)
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("making request: %w", err)
 	}

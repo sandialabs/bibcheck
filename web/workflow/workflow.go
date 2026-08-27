@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	analysisrunner "github.com/sandialabs/bibcheck/analysis"
+	"github.com/sandialabs/bibcheck/arxiv"
 	"github.com/sandialabs/bibcheck/config"
 	"github.com/sandialabs/bibcheck/crossref"
 	"github.com/sandialabs/bibcheck/documents"
@@ -87,6 +88,7 @@ type Runtime struct {
 	Provider       Provider
 	Counter        Counter
 	CrossrefClient *crossref.Client
+	ArxivClient    *arxiv.Client
 }
 
 type shirtyCounter struct {
@@ -120,6 +122,7 @@ func NewRuntime(keys Keys) (*Runtime, error) {
 			Provider:       client,
 			Counter:        shirtyCounter{client: client},
 			CrossrefClient: crossref.NewClient(),
+			ArxivClient:    arxiv.NewClient(),
 		}, nil
 	}
 
@@ -130,6 +133,7 @@ func NewRuntime(keys Keys) (*Runtime, error) {
 			Provider:       client,
 			Counter:        openRouterCounter{client: client},
 			CrossrefClient: crossref.NewClient(),
+			ArxivClient:    arxiv.NewClient(),
 		}, nil
 	}
 
@@ -193,6 +197,7 @@ func AnalyzePDFWithOptions(ctx context.Context, rt *Runtime, pdf []byte, options
 		Lookup: func(text string) (*lookup.Result, error) {
 			return lookup.Entry(text, "auto", rt.Provider, rt.Provider, rt.Provider, &lookup.EntryConfig{
 				CrossrefClient: rt.CrossrefClient,
+				ArxivClient:    rt.ArxivClient,
 			})
 		},
 		Summarize: func(result *lookup.Result) (analysisrunner.Summary, error) {

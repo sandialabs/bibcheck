@@ -6,6 +6,9 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/sandialabs/bibcheck/internal/ratelimit"
+	"github.com/sandialabs/bibcheck/internal/wasmhttp"
 )
 
 const (
@@ -20,8 +23,7 @@ const (
 type Client struct {
 	httpClient *http.Client
 	delay      func(time.Duration)
-	semaphore  chan struct{}
-	limiter    *tokenBucket
+	limiter    *ratelimit.Client
 }
 
 // Option configures a Client.
@@ -45,43 +47,23 @@ func NewClient(options ...Option) *Client {
 		delay: func(delay time.Duration) {
 			log.Printf("Crossref request delayed by rate limit: %s", delay)
 		},
-		semaphore: make(chan struct{}, maxConcurrent),
-		limiter: &tokenBucket{
-			tokens:     burstSize,
-			lastRefill: time.Now(),
-		},
 	}
 	for _, option := range options {
 		option(c)
 	}
+	c.limiter = ratelimit.NewClient(c.httpClient, ratelimit.Policy{
+		RequestsPerSecond: requestsPerSecond,
+		Burst:             burstSize,
+		MaxConcurrent:     maxConcurrent,
+	}, c.delay)
 	return c
 }
 
-// Do performs a rate-limited HTTP request.
+// Do performs a rate-limited HTTP request. WASM requests rely on the shared
+// fetch proxy's limiter instead of applying a second browser-local limit.
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
-	waitStarted := time.Now()
-	delayed := false
-
-	select {
-	case c.semaphore <- struct{}{}:
-	default:
-		delayed = true
-		select {
-		case c.semaphore <- struct{}{}:
-		case <-req.Context().Done():
-			return nil, req.Context().Err()
-		}
+	if wasmhttp.UsesFetchProxy() {
+		return c.httpClient.Do(req)
 	}
-	defer func() { <-c.semaphore }()
-
-	rateDelayed, err := c.limiter.wait(req.Context())
-	if err != nil {
-		return nil, err
-	}
-	delayed = delayed || rateDelayed
-
-	if delayed && c.delay != nil {
-		c.delay(time.Since(waitStarted))
-	}
-	return c.httpClient.Do(req)
+	return c.limiter.Do(req)
 }

@@ -11,13 +11,19 @@ It does not persist PDF uploads or state, store API keys, or expose analysis API
 endpoints. All analysis state is held in browser memory for the current page
 session.
 
-WebAssembly Crossref requests always use this proxy. A shared limiter in each
-`bibcheck-server` process permits 10 Crossref request starts per second with a
-burst of three and no more than three concurrent Crossref requests. This limit
-is shared by every browser using that server process; deployments with multiple
-server replicas have one independent limiter per replica. The Crossref request
-includes Bibcheck's `mailto` parameter for polite-pool access, and the proxy
-preserves it when forwarding the request.
+WebAssembly Crossref and arXiv API requests always use this proxy. Each
+`bibcheck-server` process has shared, host-specific limits:
+
+- Crossref permits 10 request starts per second with a burst of three and no
+  more than three concurrent requests.
+- The arXiv legacy API permits one request start every three seconds and one
+  concurrent request.
+
+These limits are shared by every browser using that server process;
+deployments with multiple server replicas have one independent set of limits
+per replica. Browser clients do not apply an additional local limit. Crossref
+requests include Bibcheck's `mailto` parameter for polite-pool access, and the
+proxy preserves it when forwarding the request.
 
 For deployment liveness probes, the server exposes `GET` and `HEAD /livez`.
 The endpoint returns a plain-text `200 OK` response with

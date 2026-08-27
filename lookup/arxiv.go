@@ -9,11 +9,14 @@ import (
 	"github.com/sandialabs/bibcheck/arxiv"
 )
 
+var defaultArxivClient = arxiv.NewClient()
+
 // returns nil if not found
 func GetArxivMetadata(id, rawEntry string) (*arxiv.Entry, error) {
+	return getArxivMetadata(defaultArxivClient, id, rawEntry)
+}
 
-	arxivClient := arxiv.NewClient()
-
+func getArxivMetadata(arxivClient *arxiv.Client, id, rawEntry string) (*arxiv.Entry, error) {
 	rec, err := arxivClient.GetByID(id)
 
 	if errors.Is(err, arxiv.ErrDoesNotExist) {
