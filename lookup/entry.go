@@ -99,6 +99,7 @@ type Result struct {
 type EntryConfig struct {
 	ElsevierClient *elsevier.Client
 	CrossrefClient *crossref.Client
+	ArxivClient    *arxiv.Client
 }
 
 func retrieveUrl(url string) ([]byte, string, error) {
@@ -219,7 +220,11 @@ func Entry(text string, mode string,
 	// Finding the ID should provide enough info to evaluate the entry
 	if id := entries.ExtractArxiv(text); id != "" {
 		log.Printf("Detected arXiv %s", id)
-		if entry, err := GetArxivMetadata(id, text); err != nil {
+		arxivClient := defaultArxivClient
+		if cfg != nil && cfg.ArxivClient != nil {
+			arxivClient = cfg.ArxivClient
+		}
+		if entry, err := getArxivMetadata(arxivClient, id, text); err != nil {
 			EA.Arxiv.Error = fmt.Errorf("arxiv check error: %w", err)
 		} else {
 			EA.Arxiv.Entry = entry

@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	analysisrunner "github.com/sandialabs/bibcheck/analysis"
+	"github.com/sandialabs/bibcheck/arxiv"
 	"github.com/sandialabs/bibcheck/config"
 	"github.com/sandialabs/bibcheck/crossref"
 	"github.com/sandialabs/bibcheck/documents"
@@ -150,6 +151,7 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 		cfg := &lookup.EntryConfig{
 			ElsevierClient: elsevierClient,
 			CrossrefClient: crossref.NewClient(),
+			ArxivClient:    arxiv.NewClient(),
 		}
 
 		var summarizer summarizer

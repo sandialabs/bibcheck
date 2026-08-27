@@ -123,14 +123,37 @@ func TestClientLimitsConcurrentRequests(t *testing.T) {
 }
 
 func TestClientCancellationWhileWaitingForConcurrency(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
 	var calls atomic.Int32
-	client := NewClient(WithHTTPClient(&http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
-		calls.Add(1)
-		return response(http.StatusNoContent, ""), nil
-	})}))
+	client := NewClient(
+		WithHTTPClient(&http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+			calls.Add(1)
+			started <- struct{}{}
+			<-release
+			return response(http.StatusNoContent, ""), nil
+		})}),
+		WithDelayCallback(func(time.Duration) {}),
+	)
+
+	var wg sync.WaitGroup
 	for i := 0; i < maxConcurrent; i++ {
-		client.semaphore <- struct{}{}
-		defer func() { <-client.semaphore }()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			req, _ := http.NewRequest(http.MethodGet, "https://api.crossref.org/v1/works", nil)
+			resp, err := client.Do(req)
+			if err == nil {
+				resp.Body.Close()
+			}
+		}()
+	}
+	for i := 0; i < maxConcurrent; i++ {
+		select {
+		case <-started:
+		case <-time.After(time.Second):
+			t.Fatal("timed out waiting for requests to occupy concurrency slots")
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
@@ -142,8 +165,10 @@ func TestClientCancellationWhileWaitingForConcurrency(t *testing.T) {
 	if _, err := client.Do(req); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("expected deadline exceeded, got %v", err)
 	}
-	if got := calls.Load(); got != 0 {
-		t.Fatalf("transport called %d times", got)
+	close(release)
+	wg.Wait()
+	if got := calls.Load(); got != maxConcurrent {
+		t.Fatalf("transport called %d times, want %d", got, maxConcurrent)
 	}
 }
 

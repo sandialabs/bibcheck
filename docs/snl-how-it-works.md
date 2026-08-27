@@ -6,8 +6,8 @@ written to disk, or sent across the public internet.
 The only network service that receives PDF content is Shirty, which is also inside Sandia's network.
 
 Shirty extracts the bibliography, and Bibcheck checks the resulting citation information against public metadata providers such as arXiv, Crossref, and OSTI.
-Crossref requests pass through the Bibcheck server's fetch proxy. The client includes Bibcheck's `mailto` parameter for Crossref polite-pool access, and the proxy preserves it while applying a shared token-bucket limit of 10 requests per second with a burst and concurrency limit of three.
-The limit is global across browsers using one Bibcheck server process; separate server replicas have independent limits.
+Crossref and arXiv API requests pass through the Bibcheck server's fetch proxy. The client includes Bibcheck's `mailto` parameter for Crossref polite-pool access, and the proxy preserves it while applying shared, host-specific limits. Crossref allows 10 request starts per second with a burst and concurrency limit of three; arXiv allows one request every three seconds and one concurrent request.
+The limits are global across browsers using one Bibcheck server process; browser clients do not apply duplicate local limits, and separate server replicas have independent limits.
 
 For services and public websites that cannot be fetched directly because of browser security rules, the browser sends a `GET /api/fetch?url=...` request to the Bibcheck server.
 The server validates the target as an absolute HTTP or HTTPS URL, fetches it, and returns the upstream response to the browser.
@@ -29,14 +29,14 @@ flowchart LR
 
     subgraph public[Public internet]
         D[Other public metadata services]
-        C[Crossref]
+        C[Rate-limited metadata services<br/>Crossref and arXiv]
         O[OSTI]
         W[Public websites]
     end
 
     B <-->|Citation metadata| D
     B -.->|GET /api/fetch with target URL| P
-    P -.->|Rate-limited citation metadata requests| C
+    P -.->|Host-rate-limited citation metadata requests| C
     P -.->|OSTI metadata request| O
     P -.->|Fetch public resource| W
 ```

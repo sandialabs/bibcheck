@@ -34,6 +34,9 @@ func TestNewRuntimePrefersShirty(t *testing.T) {
 	if rt.CrossrefClient == nil {
 		t.Fatal("missing Crossref client")
 	}
+	if rt.ArxivClient == nil {
+		t.Fatal("missing arXiv client")
+	}
 }
 
 func TestNewRuntimeUsesDefaultShirtyBaseURL(t *testing.T) {

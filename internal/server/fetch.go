@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sandialabs/bibcheck/arxiv"
 	"github.com/sandialabs/bibcheck/crossref"
 	"github.com/sandialabs/bibcheck/internal/wasmhttp"
 )
@@ -36,6 +37,16 @@ func fetchHandlerWithClient(maxBytes int64, timeout time.Duration, client *http.
 			log.Printf("proxy Crossref request delayed by rate limit: %s", delay)
 		}),
 	)
+	arxivClient := arxiv.NewClient(
+		arxiv.WithHTTPClient(client),
+		arxiv.WithDelayCallback(func(delay time.Duration) {
+			log.Printf("proxy arXiv request delayed by rate limit: %s", delay)
+		}),
+	)
+	rateLimitedClients := map[string]requestDoer{
+		"api.crossref.org": crossrefClient,
+		"export.arxiv.org": arxivClient,
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set(wasmhttp.FetchResultHeader, wasmhttp.FetchResultProxyError)
 
@@ -69,11 +80,12 @@ func fetchHandlerWithClient(maxBytes int64, timeout time.Duration, client *http.
 		}
 		req.Header.Set("User-Agent", upstreamUserAgent(targetURL, r.UserAgent()))
 
-		do := client.Do
-		if isCrossrefURL(targetURL) {
-			do = crossrefClient.Do
+		doer := requestDoer(client)
+		hostname := strings.TrimSuffix(strings.ToLower(targetURL.Hostname()), ".")
+		if limited, ok := rateLimitedClients[hostname]; ok {
+			doer = limited
 		}
-		resp, err := do(req)
+		resp, err := doer.Do(req)
 		if err != nil {
 			log.Printf("proxy GET failed url=%q: %v", targetURL.String(), err)
 			if isTimeoutError(err) {
@@ -113,6 +125,6 @@ func fetchHandlerWithClient(maxBytes int64, timeout time.Duration, client *http.
 	})
 }
 
-func isCrossrefURL(target *url.URL) bool {
-	return target != nil && strings.EqualFold(target.Hostname(), "api.crossref.org")
+type requestDoer interface {
+	Do(*http.Request) (*http.Response, error)
 }
