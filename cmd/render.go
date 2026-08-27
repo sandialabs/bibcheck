@@ -4,11 +4,50 @@ package cmd
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"strings"
 
 	prettytext "github.com/jedib0t/go-pretty/v6/text"
+	analysisrunner "github.com/sandialabs/bibcheck/analysis"
 	"github.com/sandialabs/bibcheck/lookup"
 )
+
+// renderRun writes a completed analysis run to stdout in the requested format.
+func renderRun(run analysisrunner.Snapshot, format outputFormat, carelessHideOK, singleEntry bool) error {
+	views := []entryView{}
+	for _, entry := range run.Entries {
+		if entry.Result == nil {
+			if entry.ExtractionError != nil {
+				log.Printf("entry %d extraction error: %v", entry.ID, entry.ExtractionError)
+			} else if entry.LookupError != nil {
+				log.Printf("entry %d analysis error: %v", entry.ID, entry.LookupError)
+			}
+			continue
+		}
+		outcome := summaryOutcome{
+			mismatch: entry.Summary.Mismatch,
+			comment:  entry.Summary.Comment,
+			err:      entry.SummaryError,
+		}
+		views = append(views, buildEntryView(entry.ID, entry.Result, outcome))
+	}
+
+	doc := buildDocumentView(views, carelessHideOK)
+	switch format {
+	case outputFormatText:
+		fmt.Fprint(os.Stdout, renderDocument(doc, views, carelessHideOK, singleEntry))
+	case outputFormatJSON:
+		rendered, err := renderJSONDocument(doc, views, carelessHideOK, singleEntry)
+		if err != nil {
+			return fmt.Errorf("render json output: %w", err)
+		}
+		fmt.Fprint(os.Stdout, rendered)
+	default:
+		return fmt.Errorf("unsupported output format %q", format)
+	}
+	return nil
+}
 
 type summaryState string
 

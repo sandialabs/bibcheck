@@ -4,7 +4,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -189,39 +188,7 @@ A tool that analyzes bibliography entries in PDF files and verifies their existe
 			return err
 		}
 
-		views := []entryView{}
-		singleEntry := cmd.Flags().Changed(FlagEntry)
-		for _, entry := range run.Entries {
-			if entry.Result == nil {
-				if entry.ExtractionError != nil {
-					log.Printf("entry %d extraction error: %v", entry.ID, entry.ExtractionError)
-				} else if entry.LookupError != nil {
-					log.Printf("entry %d analysis error: %v", entry.ID, entry.LookupError)
-				}
-				continue
-			}
-			outcome := summaryOutcome{
-				mismatch: entry.Summary.Mismatch,
-				comment:  entry.Summary.Comment,
-				err:      entry.SummaryError,
-			}
-			views = append(views, buildEntryView(entry.ID, entry.Result, outcome))
-		}
-
-		doc := buildDocumentView(views, carelessHideOK)
-		switch format {
-		case outputFormatText:
-			fmt.Fprint(os.Stdout, renderDocument(doc, views, carelessHideOK, singleEntry))
-		case outputFormatJSON:
-			rendered, err := renderJSONDocument(doc, views, carelessHideOK, singleEntry)
-			if err != nil {
-				return fmt.Errorf("render json output: %w", err)
-			}
-			fmt.Fprint(os.Stdout, rendered)
-		default:
-			return fmt.Errorf("unsupported output format %q", format)
-		}
-		return nil
+		return renderRun(run, format, carelessHideOK, cmd.Flags().Changed(FlagEntry))
 	},
 }
 
@@ -249,6 +216,7 @@ func init() {
 	rootCmd.AddCommand(doiCmd)
 	rootCmd.AddCommand(entryCmd)
 	rootCmd.AddCommand(listEntriesCmd)
+	rootCmd.AddCommand(textCmd)
 	rootCmd.AddCommand(textractCmd)
 }
 

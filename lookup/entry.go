@@ -235,7 +235,7 @@ func Entry(text string, mode string,
 	// * crossref
 
 	// Elsevier search
-	if cfg != nil && cfg.ElsevierClient != nil {
+	if cfg != nil && cfg.ElsevierClient != nil && entryParser != nil {
 
 		log.Println("Extracting metadata for Elsevier search...")
 		var wg sync.WaitGroup
@@ -315,6 +315,10 @@ func Entry(text string, mode string,
 	}
 
 	// otherwise, let's try to treat this as a generic online resource
+	if entryParser == nil || extract == nil {
+		log.Println("skipping online lookup: no entry parser / metadata extractor configured")
+		return EA, nil
+	}
 	if online, err := entryParser.ParseOnline(text); err != nil {
 		EA.Online.Error = fmt.Errorf("ParseOnline error: %v", err)
 	} else if parsedURL, err := url.Parse(online.URL); err != nil {
